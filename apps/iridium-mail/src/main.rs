@@ -39,6 +39,7 @@ Options:
   -h, --help            Print this help and exit
 
 Arguments:
+  <file>                Open a message, calendar, contact or note file
   mailto:<address>      Open a new message (RFC 6068 mailto: link)
 
 Environment:
@@ -66,6 +67,8 @@ struct Args {
     help: bool,
     /// A `mailto:` link to open as a new message.
     mailto: Option<String>,
+    /// Files to open, named on the command line.
+    files: Vec<String>,
 }
 
 fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Args, String> {
@@ -102,7 +105,8 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Args, String> {
             m if m.get(..7).is_some_and(|p| p.eq_ignore_ascii_case("mailto:")) => {
                 out.mailto = Some(a.clone())
             }
-            other => return Err(format!("unknown option `{other}`")),
+            other if other.starts_with('-') => return Err(format!("unknown option `{other}`")),
+            other => out.files.push(other.to_owned()),
         }
     }
     Ok(out)
@@ -171,7 +175,7 @@ fn main() -> ExitCode {
     iridium_mail_ui_egui::backstage::set_build_info(BUILD_INFO);
 
     let launch = Launch {
-        files: Vec::new(),
+        files: args.files.clone(),
         profile: args.profile,
         store: args.store,
         sample: args.sample,
@@ -258,7 +262,10 @@ mod tests {
         assert!(parse(&["--bogus"]).is_err());
         let m = parse(&["--sample", "mailto:ann@example.org?subject=Hi"]).unwrap();
         assert_eq!(m.mailto.as_deref(), Some("mailto:ann@example.org?subject=Hi"));
-        assert!(parse(&["ann@example.org"]).is_err(), "only mailto: links are arguments");
+        // A bare argument is a file to open. The desktop entry passes the file the user
+        // double-clicked, so it has to reach the app.
+        assert_eq!(parse(&["ann@example.org"]).unwrap().files, vec!["ann@example.org".to_owned()]);
+        assert!(parse(&["--bogus"]).is_err(), "an unknown option is still an error");
     }
 
     #[test]
