@@ -1,7 +1,7 @@
 # Releasing Mail
 
 Releases are built by GitHub Actions on GitHub-hosted runners (`.github/workflows/release.yml`) and
-published as a [GitHub release](https://github.com/MonkeySaint/iridium-mail/releases) with every package and a
+published as a [GitHub release](https://github.com/ngjordan/mail/releases) with every package and a
 `SHA256SUMS` file. Nothing needs registering: the workflows run as soon as they are on GitHub. Everything in
 this document can also be run by hand on a developer machine.
 
@@ -21,7 +21,7 @@ this document can also be run by hand on a developer machine.
    git tag -a v0.2.0 -m "Mail 0.2.0"
    ```
 
-4. Push the commit, then the tag to `origin` (`git@github.com:MonkeySaint/iridium-mail.git`; pushing is the
+4. Push the commit, then the tag to `origin` (`git@github.com:ngjordan/mail.git`; pushing is the
    owner's call):
 
    ```sh
@@ -30,8 +30,8 @@ this document can also be run by hand on a developer machine.
    ```
 
 5. Watch the `release` workflow under the repository's
-   [Actions tab](https://github.com/MonkeySaint/iridium-mail/actions). When it succeeds, the release appears
-   under [Releases](https://github.com/MonkeySaint/iridium-mail/releases) with the notes generated from the
+   [Actions tab](https://github.com/ngjordan/mail/actions). When it succeeds, the release appears
+   under [Releases](https://github.com/ngjordan/mail/releases) with the notes generated from the
    commit subjects since the previous tag. Edit the notes there if needed. Re-running a failed `publish`
    job replaces the files of a release that already exists.
 
@@ -80,7 +80,7 @@ id `ph.mail`.
 - **deb / rpm** (built with [nfpm](https://nfpm.goreleaser.com), MIT): install into `/usr`; the post-install
   hook refreshes the desktop and icon caches.
 - **AppImage**: carries the update information
-  `gh-releases-zsync|MonkeySaint|iridium-mail|latest|Mail-*ARCH.AppImage.zsync`, so AppImageUpdate
+  `gh-releases-zsync|ngjordan|mail|latest|Mail-*ARCH.AppImage.zsync`, so AppImageUpdate
   fetches the matching `.zsync` from the newest GitHub release; this is why the AppImage file name has no
   version in it.
   It carries the windowing libraries the app opens at run time, see below.
@@ -177,7 +177,7 @@ signing secrets the Windows and macOS packages are built unsigned (ad-hoc signed
 | `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD` | secrets | Notarisation with `xcrun notarytool` (app-specific password) and stapling, after signing. |
 | `RELEASE_WINDOWS`, `RELEASE_MACOS`, `RELEASE_FREEBSD` | variables | `false` skips that platform's job. |
 
-The deb/rpm maintainer field defaults to `MonkeySaint <monkey@saint.dev>`; set `IRIDIUM_MAIL_MAINTAINER` in
+The deb/rpm maintainer field defaults to `Mail maintainers <mail@iridium.ph>`; set `IRIDIUM_MAIL_MAINTAINER` in
 the environment to change it.
 
 ## Building packages locally

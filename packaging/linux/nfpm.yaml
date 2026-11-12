@@ -14,7 +14,7 @@ release: "1"
 section: mail
 priority: optional
 maintainer: ${MC_MAINTAINER}
-vendor: Mail contributors
+vendor: Iridium Technologies, Inc.
 homepage: ${MC_HOMEPAGE}
 # nfpm does not expand variables here; packaging/check.sh keeps it equal to LICENSE_SPDX in env.sh.
 license: MIT OR Apache-2.0

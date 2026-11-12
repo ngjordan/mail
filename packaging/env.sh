@@ -18,14 +18,14 @@ APP_SUMMARY="Desktop mail, calendar and contacts in the classic three-pane layou
 APP_BINS="iridium-mail iridium-mail-cli"
 
 # GitHub repository (owner/name): homepage, issues, releases.
-GH_OWNER="MonkeySaint"
-GH_REPO="iridium-mail"
+GH_OWNER="ngjordan"
+GH_REPO="mail"
 HOMEPAGE="https://github.com/$GH_OWNER/$GH_REPO"
 # Files on the default branch (AppStream screenshots).
-RAW_URL="https://raw.githubusercontent.com/$GH_OWNER/$GH_REPO/master"
+RAW_URL="https://raw.githubusercontent.com/$GH_OWNER/$GH_REPO/main"
 # deb/rpm Maintainer/Packager (Debian policy wants a name and an address).
-MAINTAINER="${IRIDIUM_MAIL_MAINTAINER:-MonkeySaint <monkey@saint.dev>}"
-VENDOR="Mail contributors"
+MAINTAINER="${IRIDIUM_MAIL_MAINTAINER:-Mail maintainers <mail@iridium.ph>}"
+VENDOR="Iridium Technologies, Inc."
 LICENSE_SPDX="MIT OR Apache-2.0"
 
 # Repository root, whatever the caller's working directory.

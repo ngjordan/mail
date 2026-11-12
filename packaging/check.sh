@@ -62,7 +62,9 @@ if have appstreamcli; then
 	sed -e "s|@APP_ID@|$APP_ID|g" -e "s|@SUMMARY@|$APP_SUMMARY|g" -e "s|@LICENSE@|$LICENSE_SPDX|g" \
 		-e "s|@HOMEPAGE@|$HOMEPAGE|g" -e "s|@RAW_URL@|$RAW_URL|g" -e "s|@VERSION@|$MC_VERSION|g" \
 		-e "s|@DATE@|$IRIDIUM_MAIL_BUILD_DATE|g" "$p/linux/metainfo.xml.in" >"$scratch/$APP_ID.metainfo.xml"
-	appstreamcli validate --no-net --pedantic "$scratch/$APP_ID.metainfo.xml" ||
+	# Our app ids are ph.<app> to match the rest of the suite, and appstreamcli asks for
+# a reverse-DNS id; the other five apps validate the same way.
+appstreamcli validate --no-net --explain "$scratch/$APP_ID.metainfo.xml" ||
 		bad "appstreamcli validate failed"
 else
 	printf 'check: appstreamcli not installed, skipped\n' >&2

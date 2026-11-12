@@ -7,7 +7,7 @@
   <project_license>@LICENSE@</project_license>
   <name>Mail</name>
   <summary>@SUMMARY@</summary>
-  <developer id="saint.dev">
+  <developer id="ph.mail">
     <name>Mail contributors</name>
   </developer>
   <description>

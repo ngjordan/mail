@@ -24,8 +24,8 @@
          format from the extension; without one, Start menu shortcuts show a blank icon. -->
     <Icon Id="Mail.ico" SourceFile="$(var.RepoDir)\assets\app-icon\iridium-mail.ico" />
     <Property Id="ARPPRODUCTICON" Value="Mail.ico" />
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/MonkeySaint/iridium-mail" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/MonkeySaint/iridium-mail/issues" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/ngjordan/mail" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/ngjordan/mail/issues" />
 
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="Mail">

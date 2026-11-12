@@ -6,7 +6,7 @@
 # Expects the binaries to be built already (packaging/linux/package.sh --build does that).
 # Output: Mail-ARCH.AppImage and Mail-ARCH.AppImage.zsync. The name carries no version on purpose:
 # the update information embedded in the AppImage is
-#     gh-releases-zsync|MonkeySaint|iridium-mail|latest|Mail-*ARCH.AppImage.zsync
+#     gh-releases-zsync|ngjordan|mail|latest|Mail-*ARCH.AppImage.zsync
 # and AppImageUpdate fetches the matching file from the newest GitHub release.
 #
 # The windowing libraries the app opens at run time come from the build system:
