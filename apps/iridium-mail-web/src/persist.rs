@@ -24,8 +24,12 @@ pub const STORAGE_KEY: &str = "iridium-mail.mailbox";
 /// Envelope format tag written; a stored document with an unknown tag is ignored (the sample mailbox opens
 /// instead).
 pub const FORMAT: &str = "iridium-mail-web/2";
+/// The same format before the rename, still read.
+pub const FORMAT_LEGACY: &str = "mailcraft-web/2";
 /// The format before message content moved out of the items (still read).
 pub const FORMAT_V1: &str = "iridium-mail-web/1";
+/// The version 1 format before the rename, still read.
+pub const FORMAT_V1_LEGACY: &str = "mailcraft-web/1";
 /// Largest stored document read back (characters). Browsers cap storage at a few megabytes per site anyway;
 /// anything bigger did not come from us.
 pub const MAX_STORED_CHARS: usize = 32 << 20;
@@ -99,7 +103,13 @@ pub fn decode(text: &str) -> Result<(Mailbox, BodyStore), String> {
         serde_json::from_str(text).map_err(|e| format!("the saved mailbox could not be read: {e}"))?;
     let mut mailbox = env.mailbox;
     let mut bodies = BodyStore::in_memory();
-    match env.format.as_str() {
+    // A document written before the rename carries the old format tag.
+    let format = match env.format.as_str() {
+        FORMAT_LEGACY => FORMAT,
+        FORMAT_V1_LEGACY => FORMAT_V1,
+        other => other,
+    };
+    match format {
         FORMAT => {
             let sources = env
                 .content

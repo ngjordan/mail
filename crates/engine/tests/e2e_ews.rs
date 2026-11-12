@@ -316,7 +316,8 @@ fn contacts_calendar_and_tasks_synchronise_over_ews() {
     );
     let up = srv.ews_items(PAT, "contacts");
     assert_eq!(up.len(), 2, "{up:?}");
-    assert!(up.iter().any(|(_, x)| x.contains("Sam") && x.contains("MailUid")), "{up:?}");
+    // The property name is the one the server holds, so an item already there is found.
+    assert!(up.iter().any(|(_, x)| x.contains("Sam") && x.contains("MailCraftUid")), "{up:?}");
     let series = s
         .mailbox
         .appointments

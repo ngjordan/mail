@@ -259,7 +259,7 @@ fn edited_card_fields_replace_every_name_they_are_read_from() {
     });
     assert!(!out.contains("Alex") && !out.contains("alexim"), "the old values are gone: {out}");
     assert!(!out.contains("X-ABLABEL"), "the label of a removed line goes with it: {out}");
-    assert!(out.contains("X-IRIDIUM_MAIL-SPOUSE:Sam") && out.contains("IMPP:samim"), "{out}");
+    assert!(out.contains("X-IRIDIUM-MAIL-SPOUSE:Sam") && out.contains("IMPP:samim"), "{out}");
     assert!(out.contains("RELATED;TYPE=child:Robin"), "another relation stays: {out}");
     assert!(out.contains("X-AIM:other-account"), "another IM account stays: {out}");
     let back = crate::vcf::read_str(&out).remove(0);

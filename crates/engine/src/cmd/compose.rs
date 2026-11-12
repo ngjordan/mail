@@ -2402,7 +2402,9 @@ fn write_theme_file(path: &str, file: &ThemeFile) -> Result<(), CmdError> {
 /// A theme file (Save Current Theme / Browse for Themes): Mail's own JSON format.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ThemeFile {
-    #[serde(rename = "iridium-mailTheme")]
+    // A theme file written before the rename has the old key. It is still read, and a
+    // theme written now has the new one.
+    #[serde(rename = "iridium-mailTheme", alias = "mailcraftTheme")]
     version: u32,
     pub name: String,
     colors: Vec<String>,
@@ -3082,13 +3084,21 @@ pub const DSN_HEADER: &str = "X-Mail-Submit-DSN";
 pub const DSN_REQUEST: &str = "NOTIFY=SUCCESS,FAILURE; RET=HDRS";
 /// Submission-only header carrying Save Sent Item To: `none` or `folder=<id>`.
 pub const SAVE_SENT_HEADER: &str = "X-Mail-Submit-Save-Sent";
+/// The same header before the rename. A message queued then carries it, and the
+/// save-to-sent choice it holds would otherwise be ignored.
+pub const SAVE_SENT_HEADER_LEGACY: &str = "X-MailCraft-Submit-Save-Sent";
 /// Prefix of every submission-only header (never transmitted; see `iridium_mail_net::smtp`).
 pub const SUBMIT_PREFIX: &str = "X-Mail-Submit-";
 /// Voting buttons a message offers ("Approve;Reject"). Mail's own header: the Exchange voting
 /// properties are not used.
 pub const VOTING_HEADER: &str = "X-Mail-Voting";
+/// The same header before the rename: a message that offers voting buttons keeps them
+/// under the old name, and the buttons would not be offered.
+pub const VOTING_HEADER_LEGACY: &str = "X-MailCraft-Voting";
 /// The choice a voting response carries.
 pub const VOTE_HEADER: &str = "X-Mail-Vote";
+/// The same header before the rename.
+pub const VOTE_HEADER_LEGACY: &str = "X-MailCraft-Vote";
 /// Most voting choices kept.
 const MAX_VOTING_CHOICES: usize = 20;
 /// Longest voting choice (chars).
@@ -3189,7 +3199,11 @@ pub fn file_sent_copy(s: &mut Session, item: ItemId) -> bool {
     let Some(raw) = s.mailbox.mail.get(item).and_then(|m| stored_raw(s, m)) else {
         return false;
     };
-    let choice = raw_headers(&raw).get(SAVE_SENT_HEADER).map(|v| v.trim().to_ascii_lowercase());
+    let headers = raw_headers(&raw);
+    let choice = headers
+        .get(SAVE_SENT_HEADER)
+        .or_else(|| headers.get(SAVE_SENT_HEADER_LEGACY))
+        .map(|v| v.trim().to_ascii_lowercase());
     match choice.as_deref() {
         Some("none") => {
             s.mailbox.mail.remove(item);
@@ -3425,7 +3439,9 @@ fn read_report(msg: &iridium_mail_mime::Message, mid: &str, when: DateTime, rows
 /// colon ("Approve: Budget").
 fn vote_of(s: &Session, m: &MailItem, choices: &[String]) -> Option<String> {
     let from_header = stored_raw(s, m)
-        .and_then(|raw| raw_headers(&raw).text(VOTE_HEADER))
+        .and_then(|raw| {
+            raw_headers(&raw).text(VOTE_HEADER).or_else(|| raw_headers(&raw).text(VOTE_HEADER_LEGACY))
+        })
         .map(|v| v.trim().to_owned())
         .filter(|v| !v.is_empty());
     let pick = |v: &str| choices.iter().find(|c| c.eq_ignore_ascii_case(v.trim())).cloned();
@@ -3458,7 +3474,9 @@ pub(crate) fn record_vote(s: &mut Session, response: ItemId) -> Option<ItemId> {
         .find(|m| m.message_id.as_deref().map(bare_id).is_some_and(|mid| parents.contains(&mid)))
         .filter(|m| item_sent_by_me(s, m))?;
     let choices = stored_raw(s, original)
-        .and_then(|raw| raw_headers(&raw).text(VOTING_HEADER))
+        .and_then(|raw| {
+            raw_headers(&raw).text(VOTING_HEADER).or_else(|| raw_headers(&raw).text(VOTING_HEADER_LEGACY))
+        })
         .map(|v| voting_choices(&v))
         .unwrap_or_default();
     if choices.is_empty() {
@@ -3494,7 +3512,11 @@ pub fn tracking(s: &Session, id: ItemId) -> Option<Tracking> {
     let m = s.mailbox.mail.get(id)?;
     let headers = stored_raw(s, m).map(|r| raw_headers(&r)).unwrap_or_default();
     let mut t = Tracking {
-        choices: headers.text(VOTING_HEADER).map(|v| voting_choices(&v)).unwrap_or_default(),
+        choices: headers
+            .text(VOTING_HEADER)
+            .or_else(|| headers.text(VOTING_HEADER_LEGACY))
+            .map(|v| voting_choices(&v))
+            .unwrap_or_default(),
         sent_by_me: item_sent_by_me(s, m),
         ..Default::default()
     };

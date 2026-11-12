@@ -93,22 +93,22 @@ fn tag(change_key: &str) -> String {
 const LIST_SHAPE_CAL: &str = concat!(
     "<t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>",
     r#"<t:FieldURI FieldURI="calendar:UID"/><t:FieldURI FieldURI="calendar:CalendarItemType"/>"#,
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const LIST_SHAPE: &str = concat!(
     "<t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const FULL_SHAPE: &str = concat!(
     "<t:BaseShape>AllProperties</t:BaseShape><t:BodyType>Text</t:BodyType><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const FULL_SHAPE_CAL: &str = concat!(
     "<t:BaseShape>AllProperties</t:BaseShape><t:BodyType>Text</t:BodyType><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
     r#"<t:FieldURI FieldURI="calendar:RequiredAttendees"/><t:FieldURI FieldURI="calendar:OptionalAttendees"/>"#,
     r#"<t:FieldURI FieldURI="calendar:Resources"/><t:FieldURI FieldURI="calendar:ModifiedOccurrences"/>"#,
     r#"<t:FieldURI FieldURI="calendar:DeletedOccurrences"/>"#,
@@ -135,7 +135,7 @@ pub(super) fn occurrence_signature(data: &str, tz_offset_min: i32) -> Option<(Ve
 }
 
 fn uid_of(el: &Element, id: &str) -> String {
-    extended_named(el, "MailUid")
+    extended_named(el, "MailCraftUid")
         .or_else(|| el.child_text("UID").map(str::to_owned))
         .map(|u| u.trim().to_owned())
         .filter(|u| !u.is_empty())

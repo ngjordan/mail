@@ -76,7 +76,7 @@ pub const LAST_VERB: &str = r#"<t:ExtendedFieldURI PropertyTag="0x1081" Property
 pub const MESSAGE_FLAGS: &str = r#"<t:ExtendedFieldURI PropertyTag="0x0E07" PropertyType="Integer"/>"#;
 /// Mail's own UID of a contact, task or event made here (a named string property), so its address
 /// stays the same across runs.
-pub const ITEM_UID: &str = r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#;
+pub const ITEM_UID: &str = r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#;
 
 /// XML-escapes text and attribute values.
 pub fn esc(s: &str) -> String {

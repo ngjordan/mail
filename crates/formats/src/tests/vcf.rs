@@ -130,11 +130,11 @@ fn details_fields_and_photo_round_trip() {
     assert!(v4.contains("\r\nROLE:Engineer\\; civil\r\n"), "{v4}");
     assert!(v4.contains("\r\nANNIVERSARY:20100619\r\n"), "{v4}");
     assert!(v4.contains("\r\nRELATED;VALUE=text;TYPE=spouse:Sam Lee\r\n"), "{v4}");
-    assert!(v4.contains("\r\nX-IRIDIUM_MAIL-MANAGER:Rivera\\, Alice\r\n"), "{v4}");
+    assert!(v4.contains("\r\nX-IRIDIUM-MAIL-MANAGER:Rivera\\, Alice\r\n"), "{v4}");
     let v3 = vcf::write(std::slice::from_ref(&c), Version::V3);
     assert!(v3.contains("\r\nPHOTO;ENCODING=b;TYPE=JPEG:/9j/"), "{v3}");
     assert!(v3.contains("\r\nX-ANNIVERSARY:2010-06-19\r\n"), "{v3}");
-    assert!(v3.contains("\r\nX-IRIDIUM_MAIL-SPOUSE:Sam Lee\r\n"), "{v3}");
+    assert!(v3.contains("\r\nX-IRIDIUM-MAIL-SPOUSE:Sam Lee\r\n"), "{v3}");
     // A PNG picture keeps its type.
     let mut p = c.clone();
     p.picture = iridium_mail_model::contact::ContactPicture::sniff(&png_2x1());

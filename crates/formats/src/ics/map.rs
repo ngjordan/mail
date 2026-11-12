@@ -443,7 +443,12 @@ pub(crate) fn task_from(c: &Component, ctx: &Ctx<'_>) -> Task {
         start.map(|s| DateTime::from_unix(s.unix.saturating_add(d), s.offset_min))
     });
     let upper = |name: &str| c.text(name).map(|v| v.trim().to_ascii_uppercase()).unwrap_or_default();
-    let status = match (upper("X-IRIDIUM_MAIL-STATUS").as_str(), upper("STATUS").as_str()) {
+    // A calendar written before the rename keeps the old status property.
+    let x_status = {
+        let now = upper("X-IRIDIUM-MAIL-STATUS");
+        if now.is_empty() { upper("X-MAILCRAFT-STATUS") } else { now }
+    };
+    let status = match (x_status.as_str(), upper("STATUS").as_str()) {
         ("WAITING", _) => TaskStatus::WaitingOnSomeoneElse,
         ("DEFERRED", _) | (_, "CANCELLED") => TaskStatus::Deferred,
         (_, "COMPLETED") => TaskStatus::Completed,
@@ -771,7 +776,7 @@ pub(crate) fn task_component(t: &Task, now: DateTime, offsets: &mut UsedZones) -
     };
     c.props.push(line("STATUS", vec![], status));
     if let Some(x) = x {
-        c.props.push(line("X-IRIDIUM_MAIL-STATUS", vec![], x));
+        c.props.push(line("X-IRIDIUM-MAIL-STATUS", vec![], x));
     }
     let prio = match t.priority {
         TaskPriority::High => "1",

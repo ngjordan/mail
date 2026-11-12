@@ -138,9 +138,23 @@ impl Extensions {
 
 /// Prefix of submission-only header fields (removed by [`SmtpClient::send`] before DATA).
 pub const SUBMIT_HEADER_PREFIX: &str = "X-Mail-Submit-";
+/// The prefix before the rename. A message queued then still carries these fields: they
+/// must be stripped and read like the current ones, or the envelope options are lost and
+/// the fields reach the recipient.
+pub const SUBMIT_HEADER_PREFIX_LEGACY: &str = "X-MailCraft-Submit-";
 /// Submission-only field asking for a delivery status notification, e.g.
 /// `X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS`.
 pub const DSN_HEADER: &str = "X-Mail-Submit-DSN";
+/// The same header before the rename.
+pub const DSN_HEADER_LEGACY: &str = "X-MailCraft-Submit-DSN";
+
+/// Whether `name` is one of the submission-only fields, under the current name or the
+/// one before the rename.
+fn is_submit_header(name: &str) -> bool {
+    [SUBMIT_HEADER_PREFIX, SUBMIT_HEADER_PREFIX_LEGACY]
+        .iter()
+        .any(|p| name.len() >= p.len() && name.get(..p.len()).is_some_and(|s| s.eq_ignore_ascii_case(p)))
+}
 /// Longest ENVID (RFC 3461 section 4.4: 100 characters).
 const MAX_ENVID: usize = 100;
 
@@ -247,12 +261,9 @@ pub fn take_submit_options(raw: &[u8]) -> (Option<DsnRequest>, Vec<u8>) {
         let name = name.trim();
         let value: String =
             value.split(['\r', '\n']).map(str::trim).filter(|v| !v.is_empty()).collect::<Vec<_>>().join(" ");
-        let skipping = name.len() >= SUBMIT_HEADER_PREFIX.len()
-            && name
-                .get(..SUBMIT_HEADER_PREFIX.len())
-                .is_some_and(|p| p.eq_ignore_ascii_case(SUBMIT_HEADER_PREFIX));
+        let skipping = is_submit_header(name);
         if skipping {
-            if name.eq_ignore_ascii_case(DSN_HEADER) {
+            if name.eq_ignore_ascii_case(DSN_HEADER) || name.eq_ignore_ascii_case(DSN_HEADER_LEGACY) {
                 dsn = DsnRequest::parse(&value);
             }
             continue;
