@@ -142,6 +142,13 @@ impl Shell {
         true
     }
 
+    /// The zoom the app uses.
+    ///
+    /// Mail's interface has no zoom of its own, so it is always the default one.
+    pub fn zoom(&self) -> f32 {
+        1.0
+    }
+
     /// The font set the app installed.
     pub fn fonts(&self) -> egui::FontDefinitions {
         self.fonts.clone()
