@@ -32,17 +32,17 @@ manifest="$p/linux/flatpak/$APP_ID.yml"
 [ -f "$manifest" ] && { grep -qx "id: $APP_ID" "$manifest" || bad "$manifest: id is not $APP_ID"; }
 [ -f "$desktop" ] && { grep -qx "Icon=$APP_ID" "$desktop" || bad "$desktop: Icon is not $APP_ID"; }
 [ -f "$desktop" ] && { grep -qx "StartupWMClass=$APP_ID" "$desktop" || bad "$desktop: StartupWMClass is not $APP_ID"; }
-grep -q "Value=\"$HOMEPAGE\"" "$p/windows/mailcraft.wxs" || bad "mailcraft.wxs: ARPURLINFOABOUT is not $HOMEPAGE"
+grep -q "Value=\"$HOMEPAGE\"" "$p/windows/iridium-mail.wxs" || bad "iridium-mail.wxs: ARPURLINFOABOUT is not $HOMEPAGE"
 grep -qx "license: $LICENSE_SPDX" "$p/linux/nfpm.yaml" || bad "nfpm.yaml: license is not $LICENSE_SPDX"
 grep -qx "vendor: $VENDOR" "$p/linux/nfpm.yaml" || bad "nfpm.yaml: vendor is not $VENDOR"
 grep -q '@APP_ID@' "$p/linux/metainfo.xml.in" || bad "metainfo.xml.in does not use @APP_ID@"
 grep -q '@APP_ID@' "$p/macos/Info.plist.in" || bad "Info.plist.in does not use @APP_ID@"
 for size in 16x16 24x24 32x32 48x48 64x64 128x128 256x256 512x512; do
-	[ -f "$MC_ROOT/assets/app-icon/hicolor/$size/apps/mailcraft.png" ] || bad "missing $size icon"
+	[ -f "$MC_ROOT/assets/app-icon/hicolor/$size/apps/iridium-mail.png" ] || bad "missing $size icon"
 done
-[ -f "$MC_ROOT/assets/app-icon/hicolor/scalable/apps/mailcraft.svg" ] || bad "missing scalable icon"
-[ -f "$MC_ROOT/assets/app-icon/mailcraft.ico" ] || bad "missing mailcraft.ico"
-[ -f "$MC_ROOT/assets/app-icon/mailcraft.icns" ] || bad "missing mailcraft.icns"
+[ -f "$MC_ROOT/assets/app-icon/hicolor/scalable/apps/iridium-mail.svg" ] || bad "missing scalable icon"
+[ -f "$MC_ROOT/assets/app-icon/iridium-mail.ico" ] || bad "missing iridium-mail.ico"
+[ -f "$MC_ROOT/assets/app-icon/iridium-mail.icns" ] || bad "missing iridium-mail.icns"
 
 if have desktop-file-validate; then
 	desktop-file-validate "$desktop" || bad "desktop-file-validate failed"
@@ -51,7 +51,7 @@ else
 fi
 
 if have xmllint; then
-	for f in "$p/linux/metainfo.xml.in" "$p/macos/Info.plist.in" "$p/macos/entitlements.plist" "$p/windows/mailcraft.wxs"; do
+	for f in "$p/linux/metainfo.xml.in" "$p/macos/Info.plist.in" "$p/macos/entitlements.plist" "$p/windows/iridium-mail.wxs"; do
 		xmllint --noout "$f" || bad "$f is not well-formed XML"
 	done
 fi
@@ -61,7 +61,7 @@ if have appstreamcli; then
 	mkdir -p "$scratch"
 	sed -e "s|@APP_ID@|$APP_ID|g" -e "s|@SUMMARY@|$APP_SUMMARY|g" -e "s|@LICENSE@|$LICENSE_SPDX|g" \
 		-e "s|@HOMEPAGE@|$HOMEPAGE|g" -e "s|@RAW_URL@|$RAW_URL|g" -e "s|@VERSION@|$MC_VERSION|g" \
-		-e "s|@DATE@|$MAILCRAFT_BUILD_DATE|g" "$p/linux/metainfo.xml.in" >"$scratch/$APP_ID.metainfo.xml"
+		-e "s|@DATE@|$IRIDIUM_MAIL_BUILD_DATE|g" "$p/linux/metainfo.xml.in" >"$scratch/$APP_ID.metainfo.xml"
 	appstreamcli validate --no-net --pedantic "$scratch/$APP_ID.metainfo.xml" ||
 		bad "appstreamcli validate failed"
 else
@@ -74,7 +74,7 @@ if have readelf; then
 	fake="${CARGO_TARGET_DIR:-$MC_ROOT/target}/packaging/check/fake.AppDir"
 	rm -rf "$fake"
 	mkdir -p "$fake/usr/bin"
-	cp "$(readlink -f "$(command -v sh)")" "$fake/usr/bin/mailcraft"
+	cp "$(readlink -f "$(command -v sh)")" "$fake/usr/bin/iridium-mail"
 	out="$("$p/linux/appimage-libs.sh" --check "$fake" 2>&1)" && bad "appimage-libs.sh --check passed an AppDir without libraries"
 	grep -q 'run-time library libXcursor.so.1 is not bundled' <<<"$out" ||
 		bad "appimage-libs.sh --check did not report the missing libXcursor.so.1: $out"
@@ -84,18 +84,18 @@ if have readelf; then
 	# Bundled libraries must be found through the executable's RPATH, never through an LD_LIBRARY_PATH that
 	# AppRun exports (every program the app opens would inherit it).
 	mkdir -p "$fake/usr/lib"
-	cp "$fake/usr/bin/mailcraft" "$fake/usr/lib/libXcursor.so.1"
+	cp "$fake/usr/bin/iridium-mail" "$fake/usr/lib/libXcursor.so.1"
 	# shellcheck disable=SC2016 # the AppRun text, not expanded here
 	printf '#!/bin/sh\nLD_LIBRARY_PATH="$(dirname "$0")/usr/lib"\nexport LD_LIBRARY_PATH\n' >"$fake/AppRun"
 	out="$("$p/linux/appimage-libs.sh" --check "$fake" 2>&1)" || true
-	grep -q "usr/bin/mailcraft has RPATH 'none'" <<<"$out" ||
+	grep -q "usr/bin/iridium-mail has RPATH 'none'" <<<"$out" ||
 		bad "appimage-libs.sh --check did not report the missing RPATH: $out"
 	grep -q 'AppRun sets LD_LIBRARY_PATH' <<<"$out" ||
 		bad "appimage-libs.sh --check did not report LD_LIBRARY_PATH in AppRun: $out"
 	if have patchelf; then
-		patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" "$fake/usr/bin/mailcraft"
+		patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" "$fake/usr/bin/iridium-mail"
 		out="$("$p/linux/appimage-libs.sh" --check "$fake" 2>&1)" || true
-		if grep -q 'usr/bin/mailcraft has RPATH' <<<"$out"; then
+		if grep -q 'usr/bin/iridium-mail has RPATH' <<<"$out"; then
 			bad "appimage-libs.sh --check rejected the RPATH \$ORIGIN/../lib: $out"
 		fi
 	fi

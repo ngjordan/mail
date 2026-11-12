@@ -3,9 +3,9 @@
 //! recipe stays with the picture, so the graphic can be opened again and edited, and is redrawn when the
 //! theme changes.
 
-use mailcraft_geom::Color;
-use mailcraft_model::rich::Align;
-use mailcraft_model::{Block, Doc, Inline, ParaStyle, TextStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::Align;
+use iridium_mail_model::{Block, Doc, Inline, ParaStyle, TextStyle};
 
 use super::{
     EFFECT_MARGIN, Effect, Img, MAX_RASTER_SIDE, Mask, RASTER_SCALE, composite, dev, effect_style, lighten,
@@ -333,7 +333,7 @@ fn label_mask(
     rect: (f32, f32, f32, f32),
     dw: usize,
     dh: usize,
-    fonts: &mailcraft_fonts::FontDb,
+    fonts: &iridium_mail_fonts::FontDb,
 ) -> Mask {
     let (x, y, w, h) = rect;
     let style = TextStyle { size_pt: Some(size), font_family: Some(font.to_owned()), ..TextStyle::default() };
@@ -344,8 +344,8 @@ fn label_mask(
         }],
         ..Doc::default()
     };
-    let lo = mailcraft_layout::LayoutOptions { width: w.max(8.0), ..Default::default() };
-    let layout = mailcraft_layout::layout_doc(&doc, fonts, &lo);
+    let lo = iridium_mail_layout::LayoutOptions { width: w.max(8.0), ..Default::default() };
+    let layout = iridium_mail_layout::layout_doc(&doc, fonts, &lo);
     let mut list = layout.display;
     translate(&mut list, x, y + ((h - layout.height) / 2.0).max(0.0));
     let m = Mask::from_list(&list, dw, dh, fonts);
@@ -363,21 +363,21 @@ fn draw(
     h: f32,
     theme: &ResolvedTheme,
 ) -> Option<(Vec<u8>, f32, f32)> {
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let fx = effect_style(theme.effects);
     let mut img = Img::new(dev(w), dev(h));
     let grey = Color::rgb(0x9e, 0x9e, 0x9e);
     if !polys.is_empty() || !lines.is_empty() {
-        let mut list = mailcraft_layout::DisplayList::default();
+        let mut list = iridium_mail_layout::DisplayList::default();
         for p in polys {
             polygon_list(p, &mut list);
         }
         for l in lines {
             for pair in l.windows(2) {
                 if let [a, b] = pair {
-                    list.items.push(mailcraft_layout::DisplayItem::Line {
-                        from: mailcraft_geom::Point::new(a.0, a.1),
-                        to: mailcraft_geom::Point::new(b.0, b.1),
+                    list.items.push(iridium_mail_layout::DisplayItem::Line {
+                        from: iridium_mail_geom::Point::new(a.0, a.1),
+                        to: iridium_mail_geom::Point::new(b.0, b.1),
                         color: Color::BLACK,
                         width: 2.0,
                     });
@@ -399,7 +399,7 @@ fn draw(
         let (bx, by) = ((x0 - m).max(0.0), (y0 - m).max(0.0));
         let (lw, lh) = (x1 - bx + m, y1 - by + m);
         let local: Vec<P> = nd.pts.iter().map(|(x, y)| (x - bx, y - by)).collect();
-        let mut list = mailcraft_layout::DisplayList::default();
+        let mut list = iridium_mail_layout::DisplayList::default();
         polygon_list(&local, &mut list);
         let mask = Mask::from_list(&list, dev(lw), dev(lh), &fonts);
         let at = ((bx * RASTER_SCALE) as usize, (by * RASTER_SCALE) as usize);

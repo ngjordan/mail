@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="color-scheme" content="light dark">
+  <title>Mail</title>
+
+  <!-- The Rust app (this crate's binary), compiled to wasm by Trunk. -->
+  <!-- Rust 1.87+ emits bulk-memory, sign-ext and the other post-MVP features by default; wasm-opt must accept them. -->
+  <link data-trunk rel="rust" data-bin="iridium-mail-web" data-wasm-opt="z" data-wasm-opt-params="--enable-bulk-memory --enable-bulk-memory-opt --enable-nontrapping-float-to-int --enable-sign-ext --enable-mutable-globals --enable-reference-types --enable-multivalue">
+  <!-- Our own app icon (assets/app-icon, see ATTRIBUTION.md): favicon and loading screen. -->
+  <link data-trunk rel="copy-file" href="../../assets/app-icon/hicolor/128x128/apps/iridium-mail.png">
+  <link rel="icon" type="image/png" href="iridium-mail.png">
+
+  <style>
+    :root { --bg: #eceef1; --fg: #2b2f36; --muted: #626a75; --bad: #b3261e; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #15171a; --fg: #e6e8eb; --muted: #9aa3ad; --bad: #f2b8b5; }
+    }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+    body { font: 15px/1.4 system-ui, sans-serif; color: var(--fg); }
+    canvas#iridium_mail_canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    #iridium_mail_loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px; text-align: center; padding: 0 16px; color: var(--muted);
+      pointer-events: none;
+    }
+    #iridium_mail_loading img { width: 96px; height: 96px; }
+    #iridium_mail_loading.failed { color: var(--bad); background: var(--bg); pointer-events: auto; }
+    #iridium_mail_loading .spinner {
+      width: 22px; height: 22px; border-radius: 50%; border: 3px solid currentColor;
+      border-right-color: transparent; animation: spin 0.9s linear infinite;
+    }
+    #iridium_mail_loading.failed .spinner { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { #iridium_mail_loading .spinner { animation: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="iridium_mail_canvas"></canvas>
+  <div id="iridium_mail_loading" role="status" aria-live="polite">
+    <img src="iridium-mail.png" alt="">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="text">Loading Mail…</div>
+  </div>
+  <noscript>Mail needs JavaScript and WebAssembly.</noscript>
+  <script>
+    // If the app stops (a WebAssembly trap), say so instead of leaving a frozen canvas.
+    window.addEventListener("error", function (ev) {
+      var msg = String((ev && ev.message) || "");
+      if (!/RuntimeError|unreachable|wasm/i.test(msg)) return;
+      var el = document.getElementById("iridium_mail_loading");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "iridium_mail_loading";
+        el.setAttribute("role", "alert");
+        document.body.appendChild(el);
+      }
+      el.className = "failed";
+      el.textContent = "Mail stopped unexpectedly. Reload the page to continue; " +
+        "changes are saved in this browser a few seconds after they are made.";
+    });
+  </script>
+</body>
+</html>

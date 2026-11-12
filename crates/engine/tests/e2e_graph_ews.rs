@@ -7,9 +7,9 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -57,7 +57,7 @@ fn subjects(srv: &TestServers, user: &str, mailbox: &str) -> Vec<String> {
     srv.messages(user, mailbox)
         .unwrap()
         .iter()
-        .filter_map(|m| mailcraft_mime::parse(&m.raw).ok().map(|x| x.subject()))
+        .filter_map(|m| iridium_mail_mime::parse(&m.raw).ok().map(|x| x.subject()))
         .collect()
 }
 
@@ -65,7 +65,7 @@ fn flags(srv: &TestServers, user: &str, mailbox: &str, subject: &str) -> Vec<Str
     srv.messages(user, mailbox)
         .unwrap()
         .into_iter()
-        .find(|m| mailcraft_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
+        .find(|m| iridium_mail_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
         .map(|m| m.flags)
         .unwrap_or_default()
 }

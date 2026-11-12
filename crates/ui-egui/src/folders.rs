@@ -10,9 +10,9 @@ use std::collections::BTreeSet;
 
 use egui::epaint::TextShape;
 use egui::{Id, Rect, Role, Sense, Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2};
-use mailcraft_engine::Module;
-use mailcraft_engine::queries::{self, FolderRow, FolderRowKind};
-use mailcraft_model::{FolderId, FolderKind, FolderPaneState, FolderRole};
+use iridium_mail_engine::Module;
+use iridium_mail_engine::queries::{self, FolderRow, FolderRowKind};
+use iridium_mail_model::{FolderId, FolderKind, FolderPaneState, FolderRole};
 use serde_json::{Value, json};
 
 use crate::App;
@@ -33,7 +33,7 @@ struct PaneState {
 }
 
 fn state_id() -> Id {
-    Id::unique("mailcraft.folders.state")
+    Id::unique("iridium-mail.folders.state")
 }
 
 fn run(ui: &Ui, app: &mut App, id: &str, params: Value) {
@@ -103,7 +103,12 @@ fn drop_items(ui: &Ui, app: &mut App, ids: &[u64], folder: FolderId) {
         .iter()
         .copied()
         .filter(|id| {
-            copy || app.s.mailbox.mail.get(mailcraft_model::ItemId(*id)).is_some_and(|m| m.folder != folder)
+            copy || app
+                .s
+                .mailbox
+                .mail
+                .get(iridium_mail_model::ItemId(*id))
+                .is_some_and(|m| m.folder != folder)
         })
         .collect();
     if ids.is_empty() {
@@ -139,7 +144,7 @@ pub fn folder_pane(ui: &mut Ui, app: &mut App, frame: &Frame) {
 
 fn full_pane(ui: &mut Ui, app: &mut App, rect: Rect, st: &mut PaneState) {
     let mut child = ui.new_child(UiBuilder::new().max_rect(rect));
-    egui::ScrollArea::vertical().id_salt("mailcraft.folders.scroll").auto_shrink([false, false]).show(
+    egui::ScrollArea::vertical().id_salt("iridium-mail.folders.scroll").auto_shrink([false, false]).show(
         &mut child,
         |ui| {
             ui.spacing_mut().item_spacing.y = 0.0;
@@ -149,7 +154,7 @@ fn full_pane(ui: &mut Ui, app: &mut App, rect: Rect, st: &mut PaneState) {
     // « collapse button, top-right (on top of the first row).
     let th = app.theme.clone();
     let b = Rect::from_min_size(pos2(rect.right() - 19.0 - 6.0, rect.top() + 7.5), vec2(19.0, 19.0));
-    let resp = ui.interact(b, Id::unique("mailcraft.folders.minimize"), Sense::click());
+    let resp = ui.interact(b, Id::unique("iridium-mail.folders.minimize"), Sense::click());
     if resp.hovered() {
         ui.painter().rect_filled(b, 3.0, th.hover);
     }
@@ -239,7 +244,7 @@ fn section_row(ui: &mut Ui, app: &mut App, row: &FolderRow, collapsed: bool) -> 
     let w = ui.available_width();
     let (_, rect) = ui.allocate_space(vec2(w, size::ACCOUNT_ROW));
     let key = section_key(row);
-    let resp = ui.interact(rect, Id::unique(("mailcraft.folders.section", &key)), Sense::click());
+    let resp = ui.interact(rect, Id::unique(("iridium-mail.folders.section", &key)), Sense::click());
     let painter = ui.painter().clone();
     if resp.hovered() {
         painter.rect_filled(rect, 3.0, th.hover);
@@ -264,7 +269,7 @@ fn section_row(ui: &mut Ui, app: &mut App, row: &FolderRow, collapsed: bool) -> 
 /// Widget id (keyboard focus target) of a folder's row in the folder pane: its Favorites row when `favorite`,
 /// else its row in the account tree. A folder listed in both has one row of each.
 pub fn row_focus_id(folder: FolderId, favorite: bool) -> Id {
-    Id::unique(("mailcraft.folders.row", if favorite { "fav" } else { "tree" }, folder.0))
+    Id::unique(("iridium-mail.folders.row", if favorite { "fav" } else { "tree" }, folder.0))
 }
 
 /// One folder (or favourite) row; `highlight` = drawn as the selected row. Returns true when it was clicked
@@ -350,8 +355,11 @@ fn folder_row(ui: &mut Ui, app: &mut App, row: &FolderRow, highlight: bool) -> b
     if row.has_children {
         let chevron = if row.expanded { "chevron-down" } else { "chevron-right" };
         app.icons.paint(ui, icon_rect(chevron_rect.center(), 12.0), chevron, th.text_muted);
-        let cresp =
-            ui.interact(chevron_rect, Id::unique(("mailcraft.folders.chevron", tag, fid.0)), Sense::click());
+        let cresp = ui.interact(
+            chevron_rect,
+            Id::unique(("iridium-mail.folders.chevron", tag, fid.0)),
+            Sense::click(),
+        );
         let label = if row.expanded { "Collapse" } else { "Expand" };
         cresp.widget_info(|| WidgetInfo::labeled(Role::Button, true, format!("{label} {}", row.name)));
         if cresp.clicked() {
@@ -369,7 +377,7 @@ fn folder_row(ui: &mut Ui, app: &mut App, row: &FolderRow, highlight: bool) -> b
 /// The name box of a folder renamed in place: Enter (or leaving the box) renames, Escape keeps the name.
 fn inline_rename(ui: &mut Ui, app: &mut App, fid: FolderId, rect: Rect) {
     let Some(mut r) = app.ui.inline_rename.take() else { return };
-    let id = Id::unique(("mailcraft.folders.rename", fid.0));
+    let id = Id::unique(("iridium-mail.folders.rename", fid.0));
     let resp = ui.put(rect, egui::TextEdit::singleline(&mut r.text).id(id).desired_width(rect.width()));
     resp.widget_info(|| WidgetInfo::labeled(Role::TextInput, true, "Folder name"));
     if !r.focused {
@@ -404,7 +412,7 @@ fn minimized_strip(ui: &mut Ui, app: &mut App, rect: Rect, auto: bool, st: &mut 
     let strip = rect;
     let painter = ui.painter_at(strip);
     let b = Rect::from_min_size(pos2(strip.center().x - 9.5, strip.top() + 7.5), vec2(19.0, 19.0));
-    let resp = ui.interact(b, Id::unique("mailcraft.folders.expand"), Sense::click());
+    let resp = ui.interact(b, Id::unique("iridium-mail.folders.expand"), Sense::click());
     if resp.hovered() || st.flyout {
         painter.rect_filled(b, 3.0, th.hover);
     }
@@ -445,7 +453,7 @@ fn minimized_strip(ui: &mut Ui, app: &mut App, rect: Rect, auto: bool, st: &mut 
         let t = Text::new(ui, &label, 13.0, false, th.text, max_len, 1);
         let len = t.width();
         let item = Rect::from_min_size(pos2(strip.left(), y - 6.0), vec2(strip.width(), len + 12.0));
-        let iresp = ui.interact(item, Id::unique(("mailcraft.folders.vertical", fid.0)), Sense::click());
+        let iresp = ui.interact(item, Id::unique(("iridium-mail.folders.vertical", fid.0)), Sense::click());
         let drop_hover = accepts_mail(app, fid) && iresp.dnd_hover_payload::<DraggedItems>().is_some();
         if drop_hover {
             painter.rect_filled(item.shrink2(vec2(2.0, 0.0)), 3.0, th.selected);
@@ -474,7 +482,7 @@ fn minimized_strip(ui: &mut Ui, app: &mut App, rect: Rect, auto: bool, st: &mut 
     // Flyout: the full tree over the content while the window is too narrow for the pane.
     if auto && st.flyout {
         let pos = pos2(strip.right() + 2.0, strip.top());
-        let area = egui::Area::new(Id::unique("mailcraft.folders.flyout"))
+        let area = egui::Area::new(Id::unique("iridium-mail.folders.flyout"))
             .order(egui::Order::Foreground)
             .fixed_pos(pos)
             .show(ui.ctx(), |ui| {
@@ -482,7 +490,7 @@ fn minimized_strip(ui: &mut Ui, app: &mut App, rect: Rect, auto: bool, st: &mut 
                     ui.set_width(size::FOLDER_PANE);
                     ui.set_max_height((strip.height() - 16.0).max(100.0));
                     egui::ScrollArea::vertical()
-                        .id_salt("mailcraft.folders.flyout.scroll")
+                        .id_salt("iridium-mail.folders.flyout.scroll")
                         .auto_shrink([false, true])
                         .show(ui, |ui| {
                             ui.spacing_mut().item_spacing.y = 0.0;
@@ -507,7 +515,7 @@ mod tests {
     use super::*;
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::{SAMPLE_USER_ADDR, sample_session};
+    use iridium_mail_engine::sample::{SAMPLE_USER_ADDR, sample_session};
 
     fn harness(app: App, size: egui::Vec2) -> Harness<'static, App> {
         crate::test_harness().with_size(size).build_ui_state(
@@ -702,7 +710,7 @@ mod tests {
         );
         h.step();
         let app = h.state();
-        assert_eq!(app.s.mailbox.mail.get(mailcraft_model::ItemId(id)).unwrap().folder, deleted);
+        assert_eq!(app.s.mailbox.mail.get(iridium_mail_model::ItemId(id)).unwrap().folder, deleted);
         assert!(app.ui.toast.is_none(), "{:?}", app.ui.toast);
     }
 

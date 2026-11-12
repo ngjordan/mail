@@ -31,10 +31,10 @@ use crate::cmd::people::display_name;
 use crate::cmd::util::opt_bool;
 use crate::queries::RowStyle;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::dates::LocalTime;
-use mailcraft_model::task::TaskRequestState;
-use mailcraft_model::view::{ExpandDefault, MAX_GROUP_LEVELS, MAX_SORT_KEYS, TableOther};
-use mailcraft_model::{
+use iridium_mail_model::dates::LocalTime;
+use iridium_mail_model::task::TaskRequestState;
+use iridium_mail_model::view::{ExpandDefault, MAX_GROUP_LEVELS, MAX_SORT_KEYS, TableOther};
+use iridium_mail_model::{
     Contact, DateTime, FlagState, FolderId, Importance, ItemId, ListTime, MailItem, Task, TaskPriority,
     TaskStatus,
 };
@@ -556,7 +556,7 @@ fn address(c: &Contact, kind: &str) -> String {
 }
 
 /// The business address, else the first one.
-fn main_address(c: &Contact) -> Option<&mailcraft_model::contact::PostalAddress> {
+fn main_address(c: &Contact) -> Option<&iridium_mail_model::contact::PostalAddress> {
     c.addresses.iter().find(|a| a.kind.eq_ignore_ascii_case("Business")).or(c.addresses.first())
 }
 
@@ -705,10 +705,10 @@ pub fn task_cell(s: &Session, it: Item<'_>, id: &str) -> String {
                 "inFolder" => folder_name(m.folder),
                 "categories" => m.categories.join(", "),
                 "sensitivity" => match m.sensitivity {
-                    mailcraft_model::Sensitivity::Normal => "Normal",
-                    mailcraft_model::Sensitivity::Personal => "Personal",
-                    mailcraft_model::Sensitivity::Private => "Private",
-                    mailcraft_model::Sensitivity::Confidential => "Confidential",
+                    iridium_mail_model::Sensitivity::Normal => "Normal",
+                    iridium_mail_model::Sensitivity::Personal => "Personal",
+                    iridium_mail_model::Sensitivity::Private => "Private",
+                    iridium_mail_model::Sensitivity::Confidential => "Confidential",
                 }
                 .to_owned(),
                 "flagStatus" => flag_text(&m.flag).to_owned(),
@@ -1244,7 +1244,7 @@ pub(crate) fn apply_settings(
             None => Ok(None),
             Some(v) => {
                 let n = v.as_u64().ok_or_else(|| CmdError::Params(format!("`{key}` must be a font size")))?;
-                Ok(Some(mailcraft_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX))))
+                Ok(Some(iridium_mail_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX))))
             }
         }
     };
@@ -1629,7 +1629,7 @@ mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
     use crate::{Notice, Selection};
-    use mailcraft_model::FolderRole;
+    use iridium_mail_model::FolderRole;
 
     fn run(s: &mut Session, id: &str, p: Value) -> Value {
         s.run(id, &p).unwrap_or_else(|e| panic!("{id}: {e}"))

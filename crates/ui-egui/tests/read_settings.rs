@@ -6,9 +6,9 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use mailcraft_engine::queries::{self, ListRow};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_ui_egui::App;
+use iridium_mail_engine::queries::{self, ListRow};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_ui_egui::App;
 use serde_json::json;
 
 fn build(app: App, w: f32, h: f32) -> Harness<'static, App> {
@@ -70,14 +70,15 @@ fn select_first(h: &mut Harness<'_, App>) -> u64 {
 fn always_preview_off_keeps_the_message_out_of_the_reading_pane() {
     let mut h = build(app_with(&[("mail.readingPane.alwaysPreview", json!(false))]), 1600.0, 1000.0);
     let id = select_first(&mut h);
-    let subject = h.state().s.mailbox.mail.get(mailcraft_engine::model::ItemId(id)).unwrap().subject.clone();
-    assert!(has(&h, mailcraft_ui_egui::reading::PREVIEW_OFF));
+    let subject =
+        h.state().s.mailbox.mail.get(iridium_mail_engine::model::ItemId(id)).unwrap().subject.clone();
+    assert!(has(&h, iridium_mail_ui_egui::reading::PREVIEW_OFF));
     assert!(!has(&h, "More actions"), "no message header in the pane");
     // The link turns previews on again.
-    h.get_by_label(mailcraft_ui_egui::reading::ALWAYS_PREVIEW_LINK).click();
+    h.get_by_label(iridium_mail_ui_egui::reading::ALWAYS_PREVIEW_LINK).click();
     h.run_steps(3);
     assert!(h.state().s.settings.bool("mail.readingPane.alwaysPreview"));
-    assert!(!has(&h, mailcraft_ui_egui::reading::PREVIEW_OFF));
+    assert!(!has(&h, iridium_mail_ui_egui::reading::PREVIEW_OFF));
     assert!(has(&h, "More actions"));
     assert!(has_part(&h, &subject));
 }
@@ -90,19 +91,20 @@ fn read_windows_show_next_and_previous_links_per_the_option() {
     app.ui.read_windows.push(second);
     let mut h = build(app, 1600.0, 1000.0);
     assert!(
-        has(&h, mailcraft_ui_egui::reading::NEXT_LINK) && has(&h, mailcraft_ui_egui::reading::PREVIOUS_LINK)
+        has(&h, iridium_mail_ui_egui::reading::NEXT_LINK)
+            && has(&h, iridium_mail_ui_egui::reading::PREVIOUS_LINK)
     );
-    h.get_by_label(mailcraft_ui_egui::reading::NEXT_LINK).click();
+    h.get_by_label(iridium_mail_ui_egui::reading::NEXT_LINK).click();
     h.run_steps(3);
     assert_eq!(h.state().ui.read_windows, vec![order[2].0], "the window moved to the next message");
-    h.get_by_label(mailcraft_ui_egui::reading::PREVIOUS_LINK).click();
+    h.get_by_label(iridium_mail_ui_egui::reading::PREVIOUS_LINK).click();
     h.run_steps(3);
     assert_eq!(h.state().ui.read_windows, vec![second]);
     // Off: no links.
     h.state_mut().run("options.set", json!({"key": "mail.other.nextPreviousLinks", "value": false}));
     h.run_steps(3);
-    assert!(!has(&h, mailcraft_ui_egui::reading::NEXT_LINK));
-    assert!(!has(&h, mailcraft_ui_egui::reading::PREVIOUS_LINK));
+    assert!(!has(&h, iridium_mail_ui_egui::reading::NEXT_LINK));
+    assert!(!has(&h, iridium_mail_ui_egui::reading::PREVIOUS_LINK));
 }
 
 #[test]
@@ -128,10 +130,10 @@ fn portrait_windows_read_full_screen_only_with_the_option() {
 fn f4_finds_in_the_message() {
     let mut h = build(App::new(sample_session()), 1600.0, 1000.0);
     select_first(&mut h);
-    assert!(!has(&h, mailcraft_ui_egui::reading::FIND_LABEL));
+    assert!(!has(&h, iridium_mail_ui_egui::reading::FIND_LABEL));
     h.key_press(egui::Key::F4);
     h.run_steps(4);
-    assert!(has(&h, mailcraft_ui_egui::reading::FIND_LABEL), "F4 opened the find bar");
+    assert!(has(&h, iridium_mail_ui_egui::reading::FIND_LABEL), "F4 opened the find bar");
 }
 
 /// Runs `n` frames and counts the window icon commands they sent.
@@ -160,7 +162,7 @@ fn new_mail_lights_the_envelope_when_the_option_is_on() {
         let mut h = build(app, 1600.0, 1000.0);
         assert!(!has(&h, "1 new message"));
         assert_eq!(icon_commands(&mut h, 2), 0, "the app keeps its plain icon");
-        mailcraft_engine::sync::arrival::on_new_mail(&mut h.state_mut().s, &[m]);
+        iridium_mail_engine::sync::arrival::on_new_mail(&mut h.state_mut().s, &[m]);
         let badge = icon_commands(&mut h, 3);
         assert_eq!(has(&h, "1 new message"), on, "status bar envelope");
         assert_eq!(badge, usize::from(on), "window icon badge");
@@ -172,9 +174,13 @@ fn new_mail_lights_the_envelope_when_the_option_is_on() {
             assert_eq!(restored, 1, "plain icon back");
         }
     }
-    let (rgba, w, hgt) = mailcraft_ui_egui::app_icon_with_envelope_rgba(64).unwrap();
+    let (rgba, w, hgt) = iridium_mail_ui_egui::app_icon_with_envelope_rgba(64).unwrap();
     assert_eq!((rgba.len(), w, hgt), (64 * 64 * 4, 64, 64));
-    assert_ne!(Some(rgba), mailcraft_ui_egui::app_icon_rgba(64).map(|i| i.0), "the badge changes the icon");
+    assert_ne!(
+        Some(rgba),
+        iridium_mail_ui_egui::app_icon_rgba(64).map(|i| i.0),
+        "the badge changes the icon"
+    );
 }
 
 /// General › "When using multiple displays" is not applicable (see settings.rs): whichever choice is made, a
@@ -234,7 +240,7 @@ fn show_read_aloud_off_takes_it_off_the_ribbon() {
 fn incomplete_search_notice_sits_above_the_results() {
     let mut app = App::new(sample_session());
     if let Some(a) = app.s.mailbox.accounts.first_mut() {
-        a.kind = mailcraft_engine::model::AccountKind::Imap;
+        a.kind = iridium_mail_engine::model::AccountKind::Imap;
     }
     let inbox = app.s.selection.folder;
     let m = app.s.mailbox.items_in(inbox)[0].id;
@@ -298,11 +304,11 @@ fn people_peek_lists_names_with_or_without_details() {
         // Tooltips wait for the pointer to rest.
         for _ in 0..90 {
             h.step();
-            if has(&h, mailcraft_ui_egui::chrome::PEOPLE_PEEK) {
+            if has(&h, iridium_mail_ui_egui::chrome::PEOPLE_PEEK) {
                 break;
             }
         }
-        assert!(has(&h, mailcraft_ui_egui::chrome::PEOPLE_PEEK), "the peek opened");
+        assert!(has(&h, iridium_mail_ui_egui::chrome::PEOPLE_PEEK), "the peek opened");
         assert!(has(&h, "Ann Lee"));
         assert_eq!(has(&h, "ann@example.com"), !names_only);
     }

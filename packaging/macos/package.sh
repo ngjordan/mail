@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# macOS: universal (Apple silicon + Intel) MailCraft.app in a DMG. Runs on a Mac (the GitHub-hosted
+# macOS: universal (Apple silicon + Intel) Mail.app in a DMG. Runs on a Mac (the GitHub-hosted
 # macos-latest runner in release.yml) with Xcode command-line tools and rustup.
 #
 #     packaging/macos/package.sh [--out DIR] [--no-build]
 #
-# Steps: cargo build --release for aarch64-apple-darwin and x86_64-apple-darwin → lipo → MailCraft.app
-# (Contents/MacOS/mailcraft and mailcraft-cli, Resources/mailcraft.icns, Info.plist from Info.plist.in) →
+# Steps: cargo build --release for aarch64-apple-darwin and x86_64-apple-darwin → lipo → Mail.app
+# (Contents/MacOS/iridium-mail and iridium-mail-cli, Resources/iridium-mail.icns, Info.plist from Info.plist.in) →
 # codesign → DMG (hdiutil) → notarise and staple.
 #
 # Signing and notarisation happen only when the secrets are present; otherwise the app is ad-hoc signed
@@ -15,7 +15,7 @@
 #   APPLE_SIGNING_IDENTITY   e.g. "Developer ID Application: Name (TEAMID)"
 #   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   (app-specific password) for `xcrun notarytool`
 #
-# Output: MailCraft-VERSION-macos-universal.dmg
+# Output: Mail-VERSION-macos-universal.dmg
 set -euo pipefail
 here="$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck source=packaging/env.sh
@@ -40,14 +40,14 @@ if [ "$build" = 1 ]; then
 		rustup target add $targets
 	fi
 	for t in $targets; do
-		mc_log "cargo build --release --target $t (git $MAILCRAFT_GIT_HASH, $MAILCRAFT_BUILD_DATE)"
+		mc_log "cargo build --release --target $t (git $IRIDIUM_MAIL_GIT_HASH, $IRIDIUM_MAIL_BUILD_DATE)"
 		(cd "$MC_ROOT" && MACOSX_DEPLOYMENT_TARGET=11.0 cargo build --locked --release --target "$t" \
-			-p mailcraft -p mailcraft-cli)
+			-p iridium-mail -p iridium-mail-cli)
 	done
 fi
 
 work="${CARGO_TARGET_DIR:-$MC_ROOT/target}/packaging/macos"
-app="$work/MailCraft.app"
+app="$work/Mail.app"
 rm -rf "$work"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/licences" "$out"
 out="$(cd "$out" && pwd)"
@@ -68,7 +68,7 @@ build_number="$(git -C "$MC_ROOT" rev-list --count HEAD 2>/dev/null || echo 1)"
 sed -e "s|@APP_ID@|$APP_ID|g" -e "s|@VERSION@|${MC_VERSION%%[-+]*}|g" -e "s|@BUILD@|$build_number|g" \
 	"$here/Info.plist.in" >"$app/Contents/Info.plist"
 plutil -lint "$app/Contents/Info.plist" >&2
-cp "$MC_ROOT/assets/app-icon/mailcraft.icns" "$app/Contents/Resources/mailcraft.icns"
+cp "$MC_ROOT/assets/app-icon/iridium-mail.icns" "$app/Contents/Resources/iridium-mail.icns"
 for f in README.md LICENSE-MIT LICENSE-APACHE NOTICE ATTRIBUTION.md "$MC_ROOT"/assets/fonts/OFL-*.txt; do
 	case "$f" in /*) cp "$f" "$app/Contents/Resources/licences/" ;; *) cp "$MC_ROOT/$f" "$app/Contents/Resources/licences/" ;; esac
 done
@@ -97,7 +97,7 @@ if [ -n "${APPLE_CERT_P12:-}" ] && [ -n "${APPLE_CERT_PASSWORD:-}" ] && [ -n "$i
 	rm -f "$work/cert.p12"
 	sign=(codesign --force --timestamp --options runtime --entitlements "$here/entitlements.plist"
 		--keychain "$keychain" --sign "$identity")
-	"${sign[@]}" "$app/Contents/MacOS/mailcraft-cli"
+	"${sign[@]}" "$app/Contents/MacOS/iridium-mail-cli"
 	"${sign[@]}" "$app"
 	codesign --verify --strict --verbose=2 "$app"
 else
@@ -110,9 +110,9 @@ dmg_root="$work/dmg"
 mkdir -p "$dmg_root"
 cp -R "$app" "$dmg_root/"
 ln -s /Applications "$dmg_root/Applications"
-dmg="$out/MailCraft-$MC_VERSION-macos-universal.dmg"
+dmg="$out/Mail-$MC_VERSION-macos-universal.dmg"
 rm -f "$dmg"
-hdiutil create -volname "MailCraft $MC_VERSION" -srcfolder "$dmg_root" -ov -format UDZO "$dmg"
+hdiutil create -volname "Mail $MC_VERSION" -srcfolder "$dmg_root" -ov -format UDZO "$dmg"
 
 if [ -n "$identity" ]; then
 	codesign --force --timestamp --keychain "$keychain" --sign "$identity" "$dmg"

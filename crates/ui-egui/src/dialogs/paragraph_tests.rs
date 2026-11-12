@@ -6,8 +6,8 @@ use egui_kittest::kittest::Queryable;
 use serde_json::{Value, json};
 
 use crate::App;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{Block, Inline};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{Block, Inline};
 
 fn harness(app: App) -> Harness<'static, App> {
     let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(
@@ -214,7 +214,7 @@ fn insert_hyperlink_browse_attaches_the_file() {
             None
         }
     }
-    let dir = std::env::temp_dir().join(format!("mailcraft-link-browse-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("iridium-mail-link-browse-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let file = dir.join("plan.txt");
     std::fs::write(&file, b"synthetic").unwrap();

@@ -1,0 +1,23 @@
+[package]
+name = "iridium-mail-bench"
+description = "Mail storage benchmarks: synthetic profiles of 10k to 2M messages, open, list, search, sync and command timings (dev tool, not shipped)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "iridium-mail-bench"
+path = "src/main.rs"
+
+[dependencies]
+iridium-mail-engine = { workspace = true, features = ["synthetic-sync"] }
+iridium-mail-store.workspace = true
+iridium-mail-search.workspace = true
+iridium-mail-net.workspace = true
+iridium-mail-testmail.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

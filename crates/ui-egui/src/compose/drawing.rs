@@ -1,5 +1,5 @@
 //! Floating drawing objects in the compose body editor (text boxes, shapes, WordArt, drawing canvases,
-//! groups; see `mailcraft_engine::cmd::drawing`).
+//! groups; see `iridium_mail_engine::cmd::drawing`).
 //!
 //! The editor paints each drawing from the engine's pixels (`cmd::insert::drawing::raster`, the same picture
 //! the recipient gets), behind the text or in front of it, and handles the pointer before the text does:
@@ -27,13 +27,13 @@ use std::hash::{Hash, Hasher};
 use egui::{Color32, Event, Id, Key, Pos2, Rect, Response, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::drawing as engine_cmd;
-use mailcraft_engine::cmd::insert::drawing::{self as engine_drawing, Raster};
-use mailcraft_engine::cmd::insert::freeform::{self, Node};
-use mailcraft_engine::cmd::insert::shapes;
-use mailcraft_engine::compose::{ComposeState, DocPos};
-use mailcraft_layout::{DisplayItem, Layout};
-use mailcraft_model::rich::{Align, Drawing, DrawingKind, PointKind, WrapStyle};
+use iridium_mail_engine::cmd::drawing as engine_cmd;
+use iridium_mail_engine::cmd::insert::drawing::{self as engine_drawing, Raster};
+use iridium_mail_engine::cmd::insert::freeform::{self, Node};
+use iridium_mail_engine::cmd::insert::shapes;
+use iridium_mail_engine::compose::{ComposeState, DocPos};
+use iridium_mail_layout::{DisplayItem, Layout};
+use iridium_mail_model::rich::{Align, Drawing, DrawingKind, PointKind, WrapStyle};
 
 use super::editor::EditorHost;
 
@@ -105,7 +105,7 @@ struct Mem {
 }
 
 fn mem_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-drawings", cid))
+    Id::unique(("iridium-mail-compose-drawings", cid))
 }
 
 /// Textures of drawn objects, by content key.
@@ -115,10 +115,10 @@ struct Textures {
 }
 
 fn textures_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-drawing-textures", cid))
+    Id::unique(("iridium-mail-compose-drawing-textures", cid))
 }
 
-fn key_of(d: &Drawing, theme: &mailcraft_engine::compose::ResolvedTheme, with_text: bool) -> u64 {
+fn key_of(d: &Drawing, theme: &iridium_mail_engine::compose::ResolvedTheme, with_text: bool) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     let mut shape = d.clone();
     shape.x = 0.0;
@@ -138,7 +138,7 @@ fn texture(
     ctx: &egui::Context,
     cid: u64,
     d: &Drawing,
-    theme: &mailcraft_engine::compose::ResolvedTheme,
+    theme: &iridium_mail_engine::compose::ResolvedTheme,
     with_text: bool,
     used: &mut HashSet<u64>,
 ) -> Option<(egui::TextureHandle, [f32; 4])> {
@@ -156,7 +156,7 @@ fn texture(
     }
     let img = egui::ColorImage::from_rgba_premultiplied(size, &r.rgba);
     let tex =
-        ctx.load_texture(format!("mailcraft-drawing-{cid}-{key:016x}"), img, egui::TextureOptions::LINEAR);
+        ctx.load_texture(format!("iridium-mail-drawing-{cid}-{key:016x}"), img, egui::TextureOptions::LINEAR);
     let (w, h) = r.size();
     let entry = (tex, [r.left, r.top, w, h]);
     ctx.data_mut(|m| {
@@ -183,7 +183,7 @@ pub(crate) fn displayed(c: &ComposeState, layout: Option<&Layout>, zoom: f32) ->
         let mut places: HashMap<u32, [f32; 4]> = HashMap::new();
         for item in layout.map(|l| l.display.items.as_slice()).unwrap_or_default() {
             if let DisplayItem::Image { rect, src, .. } = item
-                && let Some(id) = mailcraft_model::rich::inline_drawing_id(src)
+                && let Some(id) = iridium_mail_model::rich::inline_drawing_id(src)
             {
                 places.entry(id).or_insert([rect.x / zoom, rect.y / zoom, rect.w / zoom, rect.h / zoom]);
             }
@@ -686,7 +686,7 @@ pub(crate) fn flush(ctx: &egui::Context, host: &mut dyn EditorHost, cid: u64) {
 }
 
 fn edit_focus_id() -> Id {
-    Id::unique("mailcraft-compose-drawing-edit-focus")
+    Id::unique("iridium-mail-compose-drawing-edit-focus")
 }
 
 /// The compose whose drawing text has the keyboard focus, if any (formatting shortcuts then do not reach the
@@ -1344,7 +1344,7 @@ fn edit_text(
         _ if d.kind == DrawingKind::Shape => egui::Align::Center,
         _ => egui::Align::LEFT,
     };
-    let id = Id::unique(("mailcraft-drawing-text", cid, e.id));
+    let id = Id::unique(("iridium-mail-drawing-text", cid, e.id));
     let te = egui::TextEdit::multiline(&mut e.text)
         .id(id)
         .frame(egui::Frame::NONE)
@@ -1353,7 +1353,8 @@ fn edit_text(
         .align(egui::Align2([align, egui::Align::TOP]))
         .desired_width(r.width())
         .desired_rows(1);
-    let mut child = ui.new_child(egui::UiBuilder::new().max_rect(r).id_salt(("mailcraft-drawing-edit", cid)));
+    let mut child =
+        ui.new_child(egui::UiBuilder::new().max_rect(r).id_salt(("iridium-mail-drawing-edit", cid)));
     let out = child.add_sized(r.size(), te);
     if e.focus {
         // The caret goes after the text (or the placeholder is selected, to be typed over).
@@ -1455,7 +1456,7 @@ mod tests {
     /// now drawn and picked where it runs, and the picked point's curve handles can be caught.
     #[test]
     fn curved_segments_are_hit_where_they_run_and_handles_are_caught() {
-        use mailcraft_model::rich::PointHandles;
+        use iridium_mail_model::rich::PointHandles;
         // The top side bent upward by its two handles (drawn at 100 % in a 100 × 100 box at 0, 0).
         let d = Drawing {
             id: 1,
@@ -1500,7 +1501,7 @@ mod tests {
     /// segment types, and each item asks `drawing.editPoints` for the change.
     #[test]
     fn the_edit_points_menu_offers_what_the_spot_can_change() {
-        let mut app = crate::App::new(mailcraft_engine::sample::sample_session());
+        let mut app = crate::App::new(iridium_mail_engine::sample::sample_session());
         let cid = app
             .run("mail.newEmail", json!({}))
             .and_then(|v| v.get("compose").and_then(serde_json::Value::as_u64))
@@ -1569,8 +1570,8 @@ mod tests {
     /// Regression: Delete in Edit Points deleted the whole drawing.
     #[test]
     fn delete_in_edit_points_takes_a_point_not_the_drawing() {
-        use mailcraft_engine::compose::{ComposeKind, ComposeState};
-        let mut app = crate::App::new(mailcraft_engine::sample::sample_session());
+        use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+        let mut app = crate::App::new(iridium_mail_engine::sample::sample_session());
         let cid = app.s.open_compose(ComposeState { kind: ComposeKind::New, ..ComposeState::default() });
         let r = app.run("insert.shape", json!({"compose": cid, "kind": "rectangle", "x": 0, "y": 0}));
         let id = r.and_then(|r| r["drawing"].as_u64()).unwrap() as u32;

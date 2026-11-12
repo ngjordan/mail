@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use crate::cmd::rules::{clean_name, dialog};
 use crate::cmd::util::{opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::{Category, CategoryColor};
+use iridium_mail_model::{Category, CategoryColor};
 
 /// Most categories kept in the master list.
 const MAX_CATEGORIES: usize = 1_000;
@@ -193,7 +193,7 @@ fn rename(s: &mut Session, p: &Value) -> CmdResult {
 /// Runs `f` on the category list of every mail, appointment, contact, task and note; returns how many
 /// lists `f` reported as changed.
 fn for_each_item_categories(
-    mb: &mut mailcraft_model::Mailbox,
+    mb: &mut iridium_mail_model::Mailbox,
     mut f: impl FnMut(&mut Vec<String>) -> bool,
 ) -> usize {
     let lists = mb
@@ -285,7 +285,7 @@ fn set_quick_click(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::rules::tests::session;
-    use mailcraft_model::ItemId;
+    use iridium_mail_model::ItemId;
 
     #[test]
     fn new_rename_delete_follow_items() {
@@ -428,7 +428,7 @@ mod tests {
         s.run("mail.flag", &json!({"ids": [id.0]})).unwrap();
         assert!(matches!(
             &s.mailbox.mail.get(id).unwrap().flag,
-            mailcraft_model::FlagState::Flagged { due: None, start: None, .. }
+            iridium_mail_model::FlagState::Flagged { due: None, start: None, .. }
         ));
     }
 }

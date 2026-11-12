@@ -23,22 +23,22 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
-use mailcraft_net::oauth::{OAuthProvider, TokenSet};
-use mailcraft_net::pop3::{Pop3Client, Pop3Settings};
-use mailcraft_net::smtp::{SmtpClient, SmtpSettings};
-use mailcraft_net::sync::{
+use iridium_mail_net::oauth::{OAuthProvider, TokenSet};
+use iridium_mail_net::pop3::{Pop3Client, Pop3Settings};
+use iridium_mail_net::smtp::{SmtpClient, SmtpSettings};
+use iridium_mail_net::sync::{
     FetchProgress, FolderState, ImapAccount, ImapSettings, ListScope, NewMessage, RemoteFolder, SharedRoot,
     SyncDelta,
 };
-use mailcraft_net::{ConnectOptions, Credentials, NetError};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError};
 
 use super::*;
 use crate::accounts::{
     DownloadMode, account_options, account_secret, client_secret_key, pem_certificates, refresh_key,
     secret_key,
 };
-use mailcraft_model::account::CredentialKind;
-use mailcraft_model::{Account, FolderRole, ServerSettings};
+use iridium_mail_model::account::CredentialKind;
+use iridium_mail_model::{Account, FolderRole, ServerSettings};
 
 /// Most batches of new messages fetched for one folder in one run.
 const MAX_ROUNDS_PER_FOLDER: usize = 50;
@@ -109,7 +109,7 @@ pub(super) struct Conn {
     pub(super) smtp: Option<SmtpSettings>,
     pub(super) oauth: Option<OAuthRefresh>,
     /// The OAuth access token renewed during this run (the DAV part signs in with it too).
-    pub(super) renewed: Option<mailcraft_net::dav::DavAuth>,
+    pub(super) renewed: Option<iridium_mail_net::dav::DavAuth>,
 }
 
 impl Conn {
@@ -130,7 +130,7 @@ impl Conn {
         if let Some(c) = self.smtp.as_mut().and_then(|s| s.credentials.as_mut()) {
             swap(c);
         }
-        self.renewed = Some(mailcraft_net::dav::DavAuth::Bearer(token.to_owned()));
+        self.renewed = Some(iridium_mail_net::dav::DavAuth::Bearer(token.to_owned()));
     }
 }
 
@@ -190,7 +190,7 @@ struct Job {
 /// downloaded again).
 struct ImapSearch {
     generation: u64,
-    criterion: mailcraft_net::search::Criterion,
+    criterion: iridium_mail_net::search::Criterion,
     folders: Vec<SearchFolder>,
 }
 
@@ -297,7 +297,7 @@ pub(super) enum Event {
     /// The mailbox quota the server reported (`None` = no limits).
     Quota {
         account: AccountId,
-        quota: Option<mailcraft_net::sync::Quota>,
+        quota: Option<iridium_mail_net::sync::Quota>,
     },
     /// The transfer rate a run measured (bytes per second).
     LinkSpeed {
@@ -508,7 +508,7 @@ impl Runtime {
                 let events = Events { tx: self.tx.clone(), serial };
                 let (c2, w2) = (Arc::clone(&cancel), Arc::clone(&wake));
                 std::thread::Builder::new()
-                    .name(format!("mailcraft-sync-{}", account.0))
+                    .name(format!("iridium-mail-sync-{}", account.0))
                     .spawn(move || worker_main(account, jrx, events, c2, w2))
                     .map_err(|e| format!("cannot start the send/receive thread: {e}"))?;
                 self.workers.insert(account, Worker { jobs: jtx, cancel, wake, serial });
@@ -701,7 +701,7 @@ fn outgoing_items(s: &Session, a: &Account, plan: &Plan, now: i64) -> Vec<Outgoi
     let envelope = |addr: &str| {
         let addr = addr.trim();
         if idn {
-            mailcraft_mime::idn::addr_to_ascii(addr).unwrap_or_else(|_| addr.to_owned())
+            iridium_mail_mime::idn::addr_to_ascii(addr).unwrap_or_else(|_| addr.to_owned())
         } else {
             addr.to_owned()
         }
@@ -895,7 +895,7 @@ pub(super) fn dispatch(s: &mut Session, id: AccountId, plan: Plan) -> Result<boo
     let force_headers = s.sync.force_headers.contains(&id);
     // On Slow Connections Download Only Headers: like Download Headers, without the bodies following.
     let slow = super::slow_headers_only(s, id);
-    let window = opts.download_months.map(|m| mailcraft_net::sync::months_before(now, m));
+    let window = opts.download_months.map(|m| iridium_mail_net::sync::months_before(now, m));
     // Contacts, tasks and calendars go to the DAV server; the mail part only sees mail folders.
     let jmap_conn = match &conn.incoming {
         Incoming::Jmap(c) => Some(c),
@@ -1021,7 +1021,7 @@ struct PushLoop {
 
 /// An open JMAP event source and what it last reported.
 struct JmapPush {
-    stream: mailcraft_net::eventsource::EventStream,
+    stream: iridium_mail_net::eventsource::EventStream,
     account_id: String,
     email_state: String,
     mailbox_state: String,
@@ -1042,7 +1042,7 @@ impl PushLoop {
             j.stream.close();
         }
         self.failures = self.failures.saturating_add(1);
-        self.retry_at = Some(mailcraft_net::transport::deadline_after(push_backoff(self.failures)));
+        self.retry_at = Some(iridium_mail_net::transport::deadline_after(push_backoff(self.failures)));
         if matches!(e, NetError::Auth(_)) {
             // A password or token problem will not fix itself: the next run reports it.
             self.target = None;
@@ -1125,7 +1125,7 @@ fn worker_main(
         // Idle step: wait out a reconnect delay, or listen until a change, a message or the slice ends.
         if let Some(t) = push.retry_at {
             if Instant::now() < t {
-                let until = t.min(mailcraft_net::transport::deadline_after(Duration::from_millis(200)));
+                let until = t.min(iridium_mail_net::transport::deadline_after(Duration::from_millis(200)));
                 while Instant::now() < until && !wake.load(Ordering::SeqCst) {
                     std::thread::sleep(Duration::from_millis(20));
                 }
@@ -1196,7 +1196,7 @@ fn imap_push_step(
             }
             // A server that ends IDLE at once must not turn this loop into a busy one.
             if !changed && !wake.load(Ordering::SeqCst) && started.elapsed() < Duration::from_secs(1) {
-                push.retry_at = Some(mailcraft_net::transport::deadline_after(Duration::from_secs(1)));
+                push.retry_at = Some(iridium_mail_net::transport::deadline_after(Duration::from_secs(1)));
             }
             true
         }
@@ -1263,7 +1263,7 @@ fn jmap_push_step(
             if ev.event != "state" {
                 return;
             }
-            let Some(sc) = mailcraft_net::jmap::StateChange::parse(&ev.data) else { return };
+            let Some(sc) = iridium_mail_net::jmap::StateChange::parse(&ev.data) else { return };
             let mut changed = false;
             if let Some(st) = sc.state_of(&j.account_id, "Email")
                 && st != j.email_state
@@ -1329,13 +1329,13 @@ fn transient(e: &NetError) -> bool {
 /// telling the session to store the new tokens. Errors are reported as the run's error by the caller.
 fn refresh_token(account: AccountId, conn: &mut Conn, events: &Events, force: bool) -> Result<bool, String> {
     let Some(o) = conn.oauth.as_mut() else { return Ok(false) };
-    let now = mailcraft_net::oauth::now_unix();
+    let now = iridium_mail_net::oauth::now_unix();
     let due = o.expires_at.is_some_and(|t| now.saturating_add(TOKEN_REFRESH_SKEW) >= t);
     if !force && !due {
         return Ok(false);
     }
-    let http = mailcraft_net::http::HttpClient::new(o.options.clone());
-    let tokens = mailcraft_net::oauth::refresh(&http, &o.provider, &o.refresh_token)
+    let http = iridium_mail_net::http::HttpClient::new(o.options.clone());
+    let tokens = iridium_mail_net::oauth::refresh(&http, &o.provider, &o.refresh_token)
         .map_err(|e| format!("The sign-in could not be renewed ({e}). Sign in again in Account Settings."))?;
     o.expires_at = tokens.expires_at;
     if let Some(r) = &tokens.refresh_token {
@@ -1463,7 +1463,7 @@ fn run_job(
     // built with.
     let dav = match job.dav.as_mut() {
         Some(d) if !cancel.load(Ordering::SeqCst) => {
-            if let Some(mailcraft_net::dav::DavAuth::Bearer(t)) = &job.conn.renewed {
+            if let Some(iridium_mail_net::dav::DavAuth::Bearer(t)) = &job.conn.renewed {
                 d.renew_token(t);
             }
             let mut end = super::dav::run(account, d, events, cancel);
@@ -1472,7 +1472,7 @@ fn run_job(
             if end.refused && d.uses_token() && job.conn.oauth.is_some() {
                 end = match refresh_token(account, &mut job.conn, events, true) {
                     Ok(_) => {
-                        if let Some(mailcraft_net::dav::DavAuth::Bearer(t)) = &job.conn.renewed {
+                        if let Some(iridium_mail_net::dav::DavAuth::Bearer(t)) = &job.conn.renewed {
                             d.renew_token(t);
                         }
                         super::dav::run(account, d, events, cancel)
@@ -2018,7 +2018,7 @@ pub(super) fn test_account(
     }
     let events = s.sync.rt.loose_events();
     std::thread::Builder::new()
-        .name(format!("mailcraft-test-{}", id.0))
+        .name(format!("iridium-mail-test-{}", id.0))
         .spawn(move || {
             let report = catch_unwind(AssertUnwindSafe(|| run_test(id, conn))).unwrap_or_else(|_| {
                 TestReport { account: id.0, incoming: "internal error".into(), ..Default::default() }
@@ -2046,7 +2046,7 @@ pub(super) fn start_oauth(
     device: bool,
 ) -> Result<Value, String> {
     let provider = oauth_provider(s, id).ok_or("no OAuth registration for this account")?;
-    let http = mailcraft_net::http::HttpClient::new(oauth_http_options(s));
+    let http = iridium_mail_net::http::HttpClient::new(oauth_http_options(s));
     if let Some(old) = s.sync.rt.oauth.remove(&id) {
         old.store(true, Ordering::SeqCst);
     }
@@ -2060,16 +2060,16 @@ pub(super) fn start_oauth(
     };
     let c2 = Arc::clone(&cancel);
     let spawn = if device {
-        std::thread::Builder::new().name(format!("mailcraft-oauth-{}", id.0)).spawn(move || {
+        std::thread::Builder::new().name(format!("iridium-mail-oauth-{}", id.0)).spawn(move || {
             let r = catch_unwind(AssertUnwindSafe(|| device_flow(id, &http, &provider, &events, &c2)))
                 .unwrap_or_else(|_| Err("internal error during sign-in".into()));
             events.send(Event::OAuthDone { account: id, result: r });
         })
     } else {
-        let redirect = mailcraft_net::oauth::LoopbackRedirect::bind().map_err(|e| e.to_string())?;
-        let pkce = mailcraft_net::oauth::Pkce::generate().map_err(|e| e.to_string())?;
-        let state = mailcraft_net::oauth::random_state().map_err(|e| e.to_string())?;
-        let url = mailcraft_net::oauth::authorization_url(
+        let redirect = iridium_mail_net::oauth::LoopbackRedirect::bind().map_err(|e| e.to_string())?;
+        let pkce = iridium_mail_net::oauth::Pkce::generate().map_err(|e| e.to_string())?;
+        let state = iridium_mail_net::oauth::random_state().map_err(|e| e.to_string())?;
+        let url = iridium_mail_net::oauth::authorization_url(
             &provider,
             &redirect.redirect_uri(),
             &pkce,
@@ -2079,9 +2079,9 @@ pub(super) fn start_oauth(
         .map_err(|e| e.to_string())?;
         flow.auth_url = Some(url);
         flow.status = "waiting".into();
-        std::thread::Builder::new().name(format!("mailcraft-oauth-{}", id.0)).spawn(move || {
+        std::thread::Builder::new().name(format!("iridium-mail-oauth-{}", id.0)).spawn(move || {
             let r = catch_unwind(AssertUnwindSafe(|| {
-                let deadline = mailcraft_net::transport::deadline_after(BROWSER_SIGN_IN_WAIT);
+                let deadline = iridium_mail_net::transport::deadline_after(BROWSER_SIGN_IN_WAIT);
                 let target = loop {
                     if c2.load(Ordering::SeqCst) {
                         return Err("Sign-in was cancelled.".to_owned());
@@ -2096,9 +2096,15 @@ pub(super) fn start_oauth(
                     }
                 };
                 let code =
-                    mailcraft_net::oauth::parse_redirect(&target, &state).map_err(|e| e.to_string())?;
-                mailcraft_net::oauth::exchange_code(&http, &provider, &code, &redirect.redirect_uri(), &pkce)
-                    .map_err(|e| e.to_string())
+                    iridium_mail_net::oauth::parse_redirect(&target, &state).map_err(|e| e.to_string())?;
+                iridium_mail_net::oauth::exchange_code(
+                    &http,
+                    &provider,
+                    &code,
+                    &redirect.redirect_uri(),
+                    &pkce,
+                )
+                .map_err(|e| e.to_string())
             }))
             .unwrap_or_else(|_| Err("internal error during sign-in".into()));
             events.send(Event::OAuthDone { account: id, result: r });
@@ -2113,12 +2119,12 @@ pub(super) fn start_oauth(
 
 fn device_flow(
     id: AccountId,
-    http: &mailcraft_net::http::HttpClient,
+    http: &iridium_mail_net::http::HttpClient,
     p: &OAuthProvider,
     events: &Events,
     cancel: &AtomicBool,
 ) -> Result<TokenSet, String> {
-    let da = mailcraft_net::oauth::start_device_flow(http, p).map_err(|e| e.to_string())?;
+    let da = iridium_mail_net::oauth::start_device_flow(http, p).map_err(|e| e.to_string())?;
     events.send(Event::OAuthPrompt {
         account: id,
         prompt: json!({
@@ -2128,8 +2134,8 @@ fn device_flow(
             "expiresIn": da.expires_in,
         }),
     });
-    mailcraft_net::oauth::wait_for_device_token(http, p, &da, |d| {
-        let end = mailcraft_net::transport::deadline_after(d);
+    iridium_mail_net::oauth::wait_for_device_token(http, p, &da, |d| {
+        let end = iridium_mail_net::transport::deadline_after(d);
         while Instant::now() < end {
             if cancel.load(Ordering::SeqCst) {
                 return false;
@@ -2448,7 +2454,7 @@ fn oauth_done(s: &mut Session, account: AccountId, result: Result<TokenSet, Stri
 pub(super) fn fill_item(s: &mut Session, id: ItemId, raw: &[u8]) -> bool {
     let now = s.now();
     let Some(old) = s.mailbox.mail.get(id).cloned() else { return false };
-    let mut full = mailcraft_store::import::item_from_raw(raw, old.folder, now);
+    let mut full = iridium_mail_store::import::item_from_raw(raw, old.folder, now);
     if let Err(e) = s.store_source(&mut full, raw) {
         log::error!("could not store the downloaded message {}: {e}", id.0);
         return false;
@@ -2559,7 +2565,7 @@ fn apply_found(
             ids.push(*id);
             continue;
         }
-        let mut item = mailcraft_store::import::item_from_raw(&nm.raw, fid, now);
+        let mut item = iridium_mail_store::import::item_from_raw(&nm.raw, fid, now);
         item.remote_id = Some(nm.uid.to_string());
         apply_server_flags(&mut item, &nm.flags, now);
         strip_to_header(s, &mut item, nm.size);
@@ -2603,7 +2609,7 @@ fn apply_pop3_new(
         return;
     }
     let Some(inbox) = s.mailbox.role_folder(account, FolderRole::Inbox) else { return };
-    let mut item = mailcraft_store::import::item_from_raw(raw, inbox, now);
+    let mut item = iridium_mail_store::import::item_from_raw(raw, inbox, now);
     item.remote_id = Some(format!("{POP3_PREFIX}{uidl}"));
     if headers_only {
         strip_to_header(s, &mut item, size);
@@ -2756,7 +2762,7 @@ fn message_sent(s: &mut Session, account: AccountId, item: ItemId, result: Resul
             match sent {
                 Some(sent) if !saves || s.mailbox.folder(sent).is_some_and(|f| f.remote_name.is_none()) => {
                     // The copy uploaded to the server's Sent folder must not carry the submission-only
-                    // `X-MailCraft-Submit-*` fields.
+                    // `X-Mail-Submit-*` fields.
                     let stripped = s
                         .mailbox
                         .mail
@@ -3050,7 +3056,7 @@ pub(super) fn apply_delta(
         if by_uid.contains_key(&nm.uid) {
             continue;
         }
-        let mut item = mailcraft_store::import::item_from_raw(&nm.raw, fid, now);
+        let mut item = iridium_mail_store::import::item_from_raw(&nm.raw, fid, now);
         // A local copy waiting for this message (uploaded without a reported UID, or the server filed a
         // sent message itself): adopt it instead of showing the message twice.
         let adopt = item.message_id.as_deref().and_then(|mid| local_copy(&s.mailbox, fid, mid));
@@ -3086,7 +3092,7 @@ pub(super) fn apply_delta(
             new_inbox.push(id);
         }
     }
-    let st = mailcraft_model::account::RemoteFolderState {
+    let st = iridium_mail_model::account::RemoteFolderState {
         uidvalidity: delta.state.uidvalidity,
         uidnext: delta.state.uidnext,
         highest_modseq: delta.state.highest_modseq,
@@ -3171,7 +3177,7 @@ mod tests {
     }
 
     fn wait_status(s: &mut Session, id: AccountId, want: &str) -> Value {
-        let end = mailcraft_net::transport::deadline_after(Duration::from_secs(20));
+        let end = iridium_mail_net::transport::deadline_after(Duration::from_secs(20));
         loop {
             s.poll_sync();
             let v = crate::sync::oauth_status(s, id);
@@ -3221,7 +3227,7 @@ mod tests {
         assert!(s.secrets.get(&secret_key(id, true)).is_none(), "the old outgoing password is gone");
         assert_eq!(s.mailbox.account(id).unwrap().credential, CredentialKind::OAuthToken);
         let exp = account_options(&s, id).oauth.unwrap().expires_at.unwrap();
-        assert!(exp > mailcraft_net::oauth::now_unix());
+        assert!(exp > iridium_mail_net::oauth::now_unix());
 
         // The worker refreshes a token about to expire, and the session stores the new one.
         crate::accounts::update_options(&mut s, id, |o| {
@@ -3283,7 +3289,7 @@ mod tests {
         let tokens = |access: String| TokenSet {
             access_token: access,
             token_type: "Bearer".into(),
-            expires_at: Some(mailcraft_net::oauth::now_unix() + 3600),
+            expires_at: Some(iridium_mail_net::oauth::now_unix() + 3600),
             refresh_token: Some("rt-1".into()),
             scope: None,
             id_token: None,
@@ -3323,7 +3329,7 @@ mod tests {
         let v = start_oauth(&mut s, id, "me@example.net", false).unwrap();
         let url = v["authUrl"].as_str().unwrap().to_owned();
         assert!(url.starts_with(&format!("{base}/authorize?")), "{url}");
-        let q = mailcraft_net::oauth::query_params(&url);
+        let q = iridium_mail_net::oauth::query_params(&url);
         let get = |k: &str| q.iter().find(|(a, _)| a == k).map(|(_, b)| b.clone()).unwrap();
         assert_eq!(get("code_challenge_method"), "S256");
         assert_eq!(get("login_hint"), "me@example.net");
@@ -3391,7 +3397,7 @@ mod tests {
         let id = find_pop3(&s, acct, "h1").unwrap();
         assert!(s.body_now(id).text.is_none(), "header only");
         s.run("mail.pin", &json!({"ids": [id.0], "on": true})).unwrap();
-        let vote = mailcraft_model::VoteRecord {
+        let vote = iridium_mail_model::VoteRecord {
             from: "bo@example.org".into(),
             choice: "Yes".into(),
             ..Default::default()
@@ -3485,13 +3491,13 @@ mod tests {
         let ham = by_subject("hello again");
         assert_eq!(ham.folder, inbox);
         assert_eq!(ham.categories, vec!["Red category".to_string()]);
-        assert_eq!(ham.focus, mailcraft_model::FocusClass::Focused);
+        assert_eq!(ham.focus, iridium_mail_model::FocusClass::Focused);
         // Always Move to Other reaches mail that arrives later.
         s.run("options.set", &json!({"key": "mail.focused.otherSenders", "value": ["ann@example.org"]}))
             .unwrap();
         apply_all(&mut s, vec![pop3_new(acct, "u3", "Ann <ann@example.org>", "later")]);
         let later = s.mailbox.mail.items().find(|m| m.subject == "later").unwrap();
-        assert_eq!(later.focus, mailcraft_model::FocusClass::Other);
+        assert_eq!(later.focus, iridium_mail_model::FocusClass::Other);
     }
 
     #[test]
@@ -3506,12 +3512,12 @@ mod tests {
                 "From: me@example.net\r\nTo: {to}\r\nSubject: Report\r\n{extra}\
                  Content-Type: text/plain\r\n\r\nBody\r\n"
             );
-            let item = mailcraft_store::import::item_from_raw(raw.as_bytes(), outbox, s.now());
-            s.add_message(item, &mailcraft_store::Content::source(raw.into_bytes())).unwrap()
+            let item = iridium_mail_store::import::item_from_raw(raw.as_bytes(), outbox, s.now());
+            s.add_message(item, &iridium_mail_store::Content::source(raw.into_bytes())).unwrap()
         };
-        let dropped = queued(&mut s, "X-MailCraft-Submit-Save-Sent: none\r\n", "bo@example.org");
+        let dropped = queued(&mut s, "X-Mail-Submit-Save-Sent: none\r\n", "bo@example.org");
         let filed =
-            queued(&mut s, "X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\n", "cy@example.org");
+            queued(&mut s, "X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\n", "cy@example.org");
         apply_all(
             &mut s,
             vec![
@@ -3523,7 +3529,7 @@ mod tests {
         let m = s.mailbox.mail.get(filed).unwrap();
         assert_eq!(m.folder, sent_folder);
         let raw = String::from_utf8(s.source(m.id).unwrap().unwrap()).unwrap();
-        assert!(!raw.contains("X-MailCraft-Submit"), "{raw}");
+        assert!(!raw.contains("X-Mail-Submit"), "{raw}");
         assert!(raw.contains("Subject: Report"));
         let safe = s.run("mail.junk", &json!({"action": "get"})).unwrap();
         let safe = safe.to_string();
@@ -3540,8 +3546,8 @@ mod tests {
         let outbox = s.mailbox.role_folder(acct, FolderRole::Outbox).unwrap();
         let raw = "From: me@bücher.example\r\nTo: ann@例え.example, Ann@例え.example\r\n\
                    Cc: bo@example.org\r\nSubject: Hello\r\n\r\nBody\r\n";
-        let item = mailcraft_store::import::item_from_raw(raw.as_bytes(), outbox, s.now());
-        s.add_message(item, &mailcraft_store::Content::source(raw.as_bytes().to_vec())).unwrap();
+        let item = iridium_mail_store::import::item_from_raw(raw.as_bytes(), outbox, s.now());
+        s.add_message(item, &iridium_mail_store::Content::source(raw.as_bytes().to_vec())).unwrap();
         let envelope = |s: &Session| {
             let a = s.mailbox.account(acct).unwrap();
             let out = outgoing_items(s, a, &Plan::all(), s.now().unix);
@@ -3565,16 +3571,16 @@ mod tests {
     const PROGRESS_USER: &str = "alice@example.com";
     const PROGRESS_PW: &str = "alice-progress-pw";
 
-    fn progress_servers() -> mailcraft_testmail::TestServers {
-        mailcraft_testmail::TestServers::start(mailcraft_testmail::Config {
+    fn progress_servers() -> iridium_mail_testmail::TestServers {
+        iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config {
             users: vec![(PROGRESS_USER.into(), PROGRESS_PW.into())],
             add_trace_headers: false,
-            ..mailcraft_testmail::Config::default()
+            ..iridium_mail_testmail::Config::default()
         })
         .unwrap()
     }
 
-    fn seed(srv: &mailcraft_testmail::TestServers, mailbox: &str, n: usize) {
+    fn seed(srv: &iridium_mail_testmail::TestServers, mailbox: &str, n: usize) {
         for i in 0..n {
             let raw = format!(
                 "From: bob@example.org\r\nTo: {PROGRESS_USER}\r\nSubject: Note {mailbox} {i}\r\n\
@@ -3585,7 +3591,7 @@ mod tests {
     }
 
     fn progress_session(
-        srv: &mailcraft_testmail::TestServers,
+        srv: &iridium_mail_testmail::TestServers,
         incoming: Value,
         kind: &str,
     ) -> (Session, AccountId) {
@@ -3718,11 +3724,11 @@ mod tests {
     /// the whole run it rode along with, so the account's new mail was not received.
     #[test]
     fn a_refused_jmap_search_does_not_stop_receiving() {
-        let srv = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config {
+        let srv = iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config {
             users: vec![(PROGRESS_USER.into(), PROGRESS_PW.into())],
             add_trace_headers: false,
             jmap_unsupported_filters: vec!["text".into()],
-            ..mailcraft_testmail::Config::default()
+            ..iridium_mail_testmail::Config::default()
         })
         .unwrap();
         seed(&srv, "INBOX", 1);
@@ -3750,11 +3756,11 @@ mod tests {
     /// The same for IMAP: a server that refuses a text SEARCH fails the search, not the receive.
     #[test]
     fn a_refused_imap_search_does_not_stop_receiving() {
-        let srv = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config {
+        let srv = iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config {
             users: vec![(PROGRESS_USER.into(), PROGRESS_PW.into())],
             add_trace_headers: false,
             imap_refuse_text_search: true,
-            ..mailcraft_testmail::Config::default()
+            ..iridium_mail_testmail::Config::default()
         })
         .unwrap();
         seed(&srv, "INBOX", 1);

@@ -30,7 +30,7 @@ use x509_cert::time::{Time, Validity};
 use crate::{Cert, Identity, PrivateKey, oid};
 
 /// Name of the test certificate authority.
-pub const CA_NAME: &str = "MailCraft Test CA";
+pub const CA_NAME: &str = "Mail Test CA";
 /// A fixed "now" inside every default validity period (2026-10-01 00:00 UTC).
 pub const NOW: i64 = 1_790_812_800;
 /// Default validity: 2020-01-01 to 2049-12-31.
@@ -52,8 +52,7 @@ pub fn key(i: usize) -> PrivateKey {
 /// The test CA certificate (self-signed with key 0).
 pub fn ca() -> Cert {
     static CA: OnceLock<Cert> = OnceLock::new();
-    CA.get_or_init(|| issue(&format!("CN={CA_NAME},O=MailCraft Tests"), None, &key(0), None, VALID, true))
-        .clone()
+    CA.get_or_init(|| issue(&format!("CN={CA_NAME},O=Mail Tests"), None, &key(0), None, VALID, true)).clone()
 }
 
 /// The digital ID for `name` <`email`>, issued by [`ca`], valid for [`VALID`]. Each new identity gets its

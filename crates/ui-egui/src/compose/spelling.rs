@@ -10,7 +10,7 @@
 use egui::{Color32, Id, RichText, vec2};
 use serde_json::{Value, json};
 
-use mailcraft_engine::compose::DocPos;
+use iridium_mail_engine::compose::DocPos;
 
 use crate::App;
 
@@ -50,7 +50,7 @@ struct SpellDlg {
 }
 
 fn state_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-spelling", cid))
+    Id::unique(("iridium-mail-compose-spelling", cid))
 }
 
 fn load(ctx: &egui::Context, cid: u64) -> SpellDlg {
@@ -189,7 +189,7 @@ pub(crate) fn dialog(ctx: &egui::Context, app: &mut App, cid: u64) {
     }
     let theme = app.theme.clone();
     let mut choice: Option<Choice> = None;
-    let modal = egui::Modal::new(Id::unique(("mailcraft-compose-spelling-modal", cid))).show(ctx, |ui| {
+    let modal = egui::Modal::new(Id::unique(("iridium-mail-compose-spelling-modal", cid))).show(ctx, |ui| {
         crate::dialogs::form_visuals(ui, &theme);
         ui.set_width(520.0);
         ui.label(RichText::new(format!("{TITLE}: {}", language_name(&st.language))).strong().size(14.0));

@@ -3,10 +3,10 @@
 //! `file.openExport {"action": "importPst"}` imports a PST file into the folders of an account (the PST
 //! file's default folders merge into the account's: its Inbox into the Inbox, and so on) or beneath a chosen
 //! folder; `file.openDataFile` with a `.pst` file imports it into a new data file of its own, named after the
-//! file, which Remove (`file.closeDataFile`) closes again like any other data file. MailCraft never writes
+//! file, which Remove (`file.closeDataFile`) closes again like any other data file. Mail never writes
 //! PST files: the PST file is only read, and what it holds is copied into the profile.
 //!
-//! **Never crash, never hang.** The file is read by `mailcraft_formats::pst` (see its documentation for
+//! **Never crash, never hang.** The file is read by `iridium_mail_formats::pst` (see its documentation for
 //! the caps and the panic guards) off the UI thread, and the results are applied a batch at a time by
 //! [`poll`] from `Session::poll_sync`, so a large file never holds up the window and the user can stop it
 //! (`file.importProgress {"cancel": true}`); what came in before the stop stays. In the desktop app and the
@@ -39,8 +39,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{CmdError, Session};
-use mailcraft_formats::pst::{PstFolder, PstItem, Report};
-use mailcraft_model::{
+use iridium_mail_formats::pst::{PstFolder, PstItem, Report};
+use iridium_mail_model::{
     AccountId, Appointment, Body, Contact, FolderId, FolderKind, FolderRole, ItemId, MailItem, Note, Task,
 };
 
@@ -95,11 +95,11 @@ struct Job {
     new_data_file: bool,
     skip_duplicates: bool,
     rx: mpsc::Receiver<Event>,
-    control: Arc<mailcraft_formats::pst::Control>,
+    control: Arc<iridium_mail_formats::pst::Control>,
     /// The reader process, when one runs.
     child: Arc<std::sync::Mutex<Option<std::process::Child>>>,
     progress: Progress,
-    /// MailCraft folder of each PST folder (by index), or `None` when it could not be made.
+    /// Mail folder of each PST folder (by index), or `None` when it could not be made.
     folders: Vec<Option<FolderId>>,
     imported: Counts,
     duplicates: usize,
@@ -185,7 +185,7 @@ pub fn is_pst(path: &Path) -> bool {
     let mut head = [0u8; 4];
     let read = std::fs::File::open(path).and_then(|mut f| std::io::Read::read_exact(&mut f, &mut head));
     match read {
-        Ok(()) => head == mailcraft_formats::pst::MAGIC,
+        Ok(()) => head == iridium_mail_formats::pst::MAGIC,
         Err(_) => path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("pst")),
     }
 }
@@ -221,7 +221,7 @@ pub(crate) fn start(
             std::fs::File::open(&path).map_err(|e| CmdError::Failed(format!("{}: {e}", path.display())))?;
         f.take(600).read_to_end(&mut head).map_err(|e| CmdError::Failed(e.to_string()))?;
     }
-    match mailcraft_formats::pst::sniff(&head) {
+    match iridium_mail_formats::pst::sniff(&head) {
         None => return Err(CmdError::Failed(format!("{} is not a PST file", path.display()))),
         Some(Err(e)) => return Err(CmdError::Failed(e.to_string())),
         Some(Ok(_)) => {}
@@ -234,9 +234,9 @@ pub(crate) fn start(
     };
     s.pst.next = s.pst.next.saturating_add(1);
     let id = s.pst.next;
-    let control = Arc::new(mailcraft_formats::pst::Control::default());
+    let control = Arc::new(iridium_mail_formats::pst::Control::default());
     let child = Arc::new(std::sync::Mutex::new(None));
-    let options = mailcraft_formats::pst::Options {
+    let options = iridium_mail_formats::pst::Options {
         now: s.now(),
         local_offset_min: s.tz_offset_min,
         ..Default::default()
@@ -311,7 +311,7 @@ pub(crate) fn start(
 struct ToSession(mpsc::SyncSender<Event>);
 
 #[cfg(not(target_arch = "wasm32"))]
-impl mailcraft_formats::pst::Sink for ToSession {
+impl iridium_mail_formats::pst::Sink for ToSession {
     fn folder(&mut self, folder: PstFolder) -> bool {
         self.0.send(Event::Folder(folder)).is_ok()
     }
@@ -323,19 +323,19 @@ impl mailcraft_formats::pst::Sink for ToSession {
 #[cfg(not(target_arch = "wasm32"))]
 fn spawn_thread(
     path: &Path,
-    options: mailcraft_formats::pst::Options,
-    control: &Arc<mailcraft_formats::pst::Control>,
+    options: iridium_mail_formats::pst::Options,
+    control: &Arc<iridium_mail_formats::pst::Control>,
 ) -> Result<mpsc::Receiver<Event>, CmdError> {
     let (tx, rx) = mpsc::sync_channel(CHANNEL_DEPTH);
     let path = path.to_path_buf();
     let control = Arc::clone(control);
     std::thread::Builder::new()
-        .name("mailcraft-pst".into())
+        .name("iridium-mail-pst".into())
         .spawn(move || {
             let mut sink = ToSession(tx.clone());
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                mailcraft_formats::pst::read(
-                    mailcraft_formats::pst::Source::Path(path),
+                iridium_mail_formats::pst::read(
+                    iridium_mail_formats::pst::Source::Path(path),
                     &options,
                     &control,
                     &mut sink,
@@ -441,8 +441,8 @@ impl From<WireReport> for Report {
             skipped: w
                 .skipped
                 .into_iter()
-                .take(mailcraft_formats::pst::MAX_SKIPPED_LISTED)
-                .map(|(folder, item, reason)| mailcraft_formats::pst::Skipped { folder, item, reason })
+                .take(iridium_mail_formats::pst::MAX_SKIPPED_LISTED)
+                .map(|(folder, item, reason)| iridium_mail_formats::pst::Skipped { folder, item, reason })
                 .collect(),
             skipped_count: w.skipped_count,
             stopped: w.stopped,
@@ -501,7 +501,7 @@ impl Wire {
                 };
                 Event::Item(
                     folder,
-                    PstItem::Mail(Box::new((*item, mailcraft_store::Content { source, body }))),
+                    PstItem::Mail(Box::new((*item, iridium_mail_store::Content { source, body }))),
                 )
             }
             Wire::Appointment { folder, item } => Event::Item(folder, PstItem::Appointment(item)),
@@ -531,7 +531,7 @@ pub fn worker_main(args: &[String]) -> i32 {
     let mut out = std::io::BufWriter::new(out.lock());
     struct Lines<'a, W: std::io::Write> {
         out: &'a mut W,
-        control: Arc<mailcraft_formats::pst::Control>,
+        control: Arc<iridium_mail_formats::pst::Control>,
         sent: u64,
     }
     impl<W: std::io::Write> Lines<'_, W> {
@@ -552,7 +552,7 @@ pub fn worker_main(args: &[String]) -> i32 {
             self.line(&Wire::Progress(p)) && self.out.flush().is_ok()
         }
     }
-    impl<W: std::io::Write> mailcraft_formats::pst::Sink for Lines<'_, W> {
+    impl<W: std::io::Write> iridium_mail_formats::pst::Sink for Lines<'_, W> {
         fn folder(&mut self, folder: PstFolder) -> bool {
             self.line(&Wire::of_folder(folder)) && self.progress()
         }
@@ -561,16 +561,16 @@ pub fn worker_main(args: &[String]) -> i32 {
             self.line(&Wire::of_item(folder, item)) && (!self.sent.is_multiple_of(32) || self.progress())
         }
     }
-    let control = Arc::new(mailcraft_formats::pst::Control::default());
-    let options = mailcraft_formats::pst::Options {
-        now: mailcraft_model::DateTime::from_unix(now, offset),
+    let control = Arc::new(iridium_mail_formats::pst::Control::default());
+    let options = iridium_mail_formats::pst::Options {
+        now: iridium_mail_model::DateTime::from_unix(now, offset),
         local_offset_min: offset,
         ..Default::default()
     };
     let mut lines = Lines { out: &mut out, control: Arc::clone(&control), sent: 0 };
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        mailcraft_formats::pst::read(
-            mailcraft_formats::pst::Source::Path(PathBuf::from(path)),
+        iridium_mail_formats::pst::read(
+            iridium_mail_formats::pst::Source::Path(PathBuf::from(path)),
             &options,
             &control,
             &mut lines,
@@ -593,9 +593,9 @@ pub fn worker_main(args: &[String]) -> i32 {
 fn spawn_process(
     exe: &Path,
     path: &Path,
-    options: mailcraft_formats::pst::Options,
+    options: iridium_mail_formats::pst::Options,
     slot: &Arc<std::sync::Mutex<Option<std::process::Child>>>,
-    control: &Arc<mailcraft_formats::pst::Control>,
+    control: &Arc<iridium_mail_formats::pst::Control>,
 ) -> Result<mpsc::Receiver<Event>, CmdError> {
     use std::io::BufRead as _;
     use std::process::{Command, Stdio};
@@ -621,7 +621,7 @@ fn spawn_process(
     let slot = Arc::clone(slot);
     let control = Arc::clone(control);
     std::thread::Builder::new()
-        .name("mailcraft-pst-reader".into())
+        .name("iridium-mail-pst-reader".into())
         .spawn(move || {
             let mut input = std::io::BufReader::new(stdout);
             let mut end = End::Closed;
@@ -855,14 +855,14 @@ fn apply_ready(s: &mut Session, drain: bool, own_record: bool) -> bool {
             s.rollback_changes(recording);
             s.mailbox_changed();
             cancel_job(&job);
-            finished = Some(Err("the import stopped: MailCraft could not file what it read".into()));
+            finished = Some(Err("the import stopped: Mail could not file what it read".into()));
             drop(payload);
         }
         (Err(payload), None) => {
             // Inside a command: what was filed before the failure stays (the command journals it).
             log::error!("applying a PST import panicked; the import stopped");
             cancel_job(&job);
-            finished = Some(Err("the import stopped: MailCraft could not file what it read".into()));
+            finished = Some(Err("the import stopped: Mail could not file what it read".into()));
             drop(payload);
             s.mailbox_changed();
         }
@@ -1037,7 +1037,7 @@ fn add_folder(s: &mut Session, job: &mut Job, f: PstFolder) {
                 made = Some(id);
                 break;
             }
-            Err(mailcraft_model::ModelError::Invalid(m)) if m.contains("already exists") => continue,
+            Err(iridium_mail_model::ModelError::Invalid(m)) if m.contains("already exists") => continue,
             Err(e) => {
                 note(job, &f.name, "", format!("the folder could not be made ({e})"));
                 break;
@@ -1049,7 +1049,7 @@ fn add_folder(s: &mut Session, job: &mut Job, f: PstFolder) {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn set_folder(job: &mut Job, index: usize, id: Option<FolderId>) {
-    if index >= mailcraft_formats::pst::MAX_FOLDERS {
+    if index >= iridium_mail_formats::pst::MAX_FOLDERS {
         return;
     }
     if job.folders.len() <= index {
@@ -1115,7 +1115,7 @@ fn add_item(s: &mut Session, job: &mut Job, folder: usize, item: PstItem) {
                 note(job, &path, &item.subject, format!("its content could not be stored ({e})"));
                 return;
             }
-            match mailcraft_store::import::insert_item(&mut s.mailbox, item) {
+            match iridium_mail_store::import::insert_item(&mut s.mailbox, item) {
                 Ok(_) => {
                     job.imported.mail = job.imported.mail.saturating_add(1);
                     remember(job, target, keys);
@@ -1208,7 +1208,7 @@ fn hash_of(v: impl std::hash::Hash) -> u64 {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn addr_list(list: &[mailcraft_mime::Mailbox]) -> Vec<String> {
+fn addr_list(list: &[iridium_mail_mime::Mailbox]) -> Vec<String> {
     list.iter().map(|m| m.addr.to_ascii_lowercase()).collect()
 }
 
@@ -1240,7 +1240,7 @@ fn appointment_keys(a: &Appointment) -> Vec<u64> {
         a.recurrence.as_ref().map(|r| r.rrule.as_str()),
     ))];
     // The same meeting (its UID came from the file) is the same item whatever was changed since.
-    if !a.uid.is_empty() && !a.uid.ends_with("@mailcraft.invalid") {
+    if !a.uid.is_empty() && !a.uid.ends_with("@iridium-mail.invalid") {
         keys.push(hash_of(("uid", a.uid.as_str(), a.recurrence_id.map(|d| d.unix))));
     }
     keys

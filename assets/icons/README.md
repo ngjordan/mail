@@ -1,11 +1,11 @@
-# MailCraft icons
+# Mail icons
 
-Every SVG in this directory is original MailCraft artwork, drawn for this project from the meaning of each
+Every SVG in this directory is original Mail artwork, drawn for this project from the meaning of each
 command (an envelope for mail, a pennant on a pole for a flag, a box with a lid for archive, and so on). None
 of it is traced from, derived from or modelled on Microsoft, Fluent or Office icons, and no third-party icon
 set is included.
 
-Licence: MIT OR Apache-2.0, the same as the rest of MailCraft.
+Licence: MIT OR Apache-2.0, the same as the rest of Mail.
 
 ## Style
 
@@ -19,5 +19,5 @@ Licence: MIT OR Apache-2.0, the same as the rest of MailCraft.
 
 1. Add `name.svg` here in the same style.
 2. Add `"name"` to the `icon_table!` list in `crates/ui-egui/src/icons.rs`, keeping alphabetical order.
-3. Run `cargo test -p mailcraft-ui-egui icons`. The tests check that the table matches this directory and
+3. Run `cargo test -p iridium-mail-ui-egui icons`. The tests check that the table matches this directory and
    that every file parses and renders.

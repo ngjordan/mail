@@ -5,8 +5,8 @@
 //! rotation, position). OK applies what changed with one `drawing.format`, so it is one undo step.
 
 use egui::{Context, Ui};
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Glow, Reflection, Shadow, ShadowKind, ShapeEffects};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Glow, Reflection, Shadow, ShadowKind, ShapeEffects};
 use serde_json::{Value, json};
 
 use super::super::common::{Dlg, Out, browse_open, heading, muted, window, with_state};
@@ -348,7 +348,7 @@ fn load_picture(path: &str) -> Result<String, String> {
     }
     let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
     let img = image::load_from_memory(&bytes)
-        .map_err(|_| "That file is not a picture MailCraft can read.".to_owned())?;
+        .map_err(|_| "That file is not a picture Mail can read.".to_owned())?;
     let img = if img.width() > PICTURE_SIDE || img.height() > PICTURE_SIDE {
         img.thumbnail(PICTURE_SIDE, PICTURE_SIDE)
     } else {
@@ -356,7 +356,7 @@ fn load_picture(path: &str) -> Result<String, String> {
     };
     let mut out = std::io::Cursor::new(Vec::new());
     img.write_to(&mut out, image::ImageFormat::Png).map_err(|e| e.to_string())?;
-    Ok(mailcraft_mime::transfer::encode_base64_flat(&out.into_inner()))
+    Ok(iridium_mail_mime::transfer::encode_base64_flat(&out.into_inner()))
 }
 
 fn pick(
@@ -496,7 +496,7 @@ fn fill_page(ui: &mut Ui, app: &App, uid: u64, st: &mut FormatState) {
         {
             n.stops.remove(i);
         }
-        if n.stops.len() < mailcraft_engine::cmd::insert::drawing::MAX_GRADIENT_STOPS
+        if n.stops.len() < iridium_mail_engine::cmd::insert::drawing::MAX_GRADIENT_STOPS
             && ui.button("Add Stop").clicked()
         {
             let last =
@@ -595,7 +595,7 @@ fn effects_page(ui: &mut Ui, app: &App, uid: u64, st: &mut FormatState, has_text
     egui::Grid::new(("fs-3d", uid)).num_columns(2).show(ui, |ui| {
         pixels(ui, "Soft edges:", &mut fx.soft_edges, 100.0);
         ui.label("Bevel:");
-        let bevels: Vec<(&str, String)> = mailcraft_engine::cmd::insert::drawing::BEVELS
+        let bevels: Vec<(&str, String)> = iridium_mail_engine::cmd::insert::drawing::BEVELS
             .iter()
             .map(|b| {
                 (*b, if b.is_empty() { "None".to_owned() } else { crate::ribbon::state::bevel_label(b) })
@@ -832,10 +832,10 @@ mod tests {
     /// name), and a new width also sent the old height.
     #[test]
     fn format_shape_on_a_group_formats_the_group() {
-        use mailcraft_engine::Notice;
-        use mailcraft_model::rich::{DrawingKind, WrapStyle};
-        let mut s = mailcraft_engine::sample::sample_session();
-        let cid = s.open_compose(mailcraft_engine::compose::ComposeState::default());
+        use iridium_mail_engine::Notice;
+        use iridium_mail_model::rich::{DrawingKind, WrapStyle};
+        let mut s = iridium_mail_engine::sample::sample_session();
+        let cid = s.open_compose(iridium_mail_engine::compose::ComposeState::default());
         let mut ids = Vec::new();
         for x in [0, 200] {
             let r = s
@@ -892,8 +892,8 @@ mod tests {
             rot_x: 30.0,
             ..ShapeEffects::default()
         };
-        let mut s = mailcraft_engine::sample::sample_session();
-        let cid = s.open_compose(mailcraft_engine::compose::ComposeState::default());
+        let mut s = iridium_mail_engine::sample::sample_session();
+        let cid = s.open_compose(iridium_mail_engine::compose::ComposeState::default());
         let r = s.run("insert.shape", &json!({"compose": cid, "kind": "rectangle"})).unwrap();
         let id = r["drawing"].as_u64().unwrap();
         s.run("drawing.format", &json!({"compose": cid, "id": id, "effects": fx_params(&fx)})).unwrap();

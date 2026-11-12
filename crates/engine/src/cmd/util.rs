@@ -4,7 +4,7 @@
 use serde_json::{Value, json};
 
 use crate::CmdError;
-use mailcraft_model::{FolderId, ItemId};
+use iridium_mail_model::{FolderId, ItemId};
 
 /// Reads an optional u64 param.
 pub fn opt_u64(p: &Value, key: &str) -> Option<u64> {

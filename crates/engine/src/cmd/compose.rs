@@ -4,9 +4,9 @@
 //!
 //! Tracking and delivery options travel with the queued message as header fields: a read receipt request is
 //! `Disposition-Notification-To` (RFC 8098); a delivery receipt and Save Sent Item To are submission-only
-//! `X-MailCraft-Submit-*` fields that the SMTP client turns into RFC 3461 DSN parameters and strips
-//! (`mailcraft_net::smtp`), and that [`file_sent_copy`] reads when the send completes; voting buttons are
-//! MailCraft's own `X-MailCraft-Voting` field, answered with `X-MailCraft-Vote` replies (`compose.vote`) and
+//! `X-Mail-Submit-*` fields that the SMTP client turns into RFC 3461 DSN parameters and strips
+//! (`iridium_mail_net::smtp`), and that [`file_sent_copy`] reads when the send completes; voting buttons are
+//! Mail's own `X-Mail-Voting` field, answered with `X-Mail-Vote` replies (`compose.vote`) and
 //! tallied on the sent item ([`tracking`], `compose.tracking`). `compose.sendReadReceipt` answers a received
 //! read-receipt request with an RFC 8098 disposition notification. Sign and Encrypt (`compose.sign`,
 //! `compose.encrypt`) protect the message with S/MIME when it is sent ([`crate::smime::protect_for_send`]).
@@ -34,9 +34,9 @@ use crate::compose::{
     Bookmark, ComposeAttachment, ComposeKind, ComposeState, DocPos, EditRun, SaveSentTo, SignatureBlock,
 };
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session};
-use mailcraft_geom::Color;
-use mailcraft_mime::{Address, AttachmentSpec, MessageBuilder, parse_address_list};
-use mailcraft_model::{
+use iridium_mail_geom::Color;
+use iridium_mail_mime::{Address, AttachmentSpec, MessageBuilder, parse_address_list};
+use iridium_mail_model::{
     Account, Block, BodyFormat, DateTime, Doc, FlagState, FolderKind, FolderRole, Importance, ItemId,
     MailItem, ResponseState, Sensitivity,
 };
@@ -378,29 +378,29 @@ fn recipient_input(p: &Value) -> Result<RecipientInput, CmdError> {
 
 /// One entry written as an unquoted display name with commas and an angle address ("Rivera, Alice
 /// <alice@example.com>", the way directory names are shown): a single mailbox, not a comma-separated list.
-fn comma_named_mailbox(entry: &str) -> Option<mailcraft_mime::Mailbox> {
+fn comma_named_mailbox(entry: &str) -> Option<iridium_mail_mime::Mailbox> {
     let (name, addr) = entry.trim().strip_suffix('>')?.rsplit_once('<')?;
     let name = name.trim();
     if !name.contains(',') || name.contains(['"', '@', '<', '>', ';']) {
         return None;
     }
-    Some(mailcraft_mime::Mailbox::new(Some(name), addr.trim()))
+    Some(iridium_mail_mime::Mailbox::new(Some(name), addr.trim()))
 }
 
 /// A mailbox as written into a recipient field: "Name <address>" (or the bare address), with the name
 /// quoted only when it holds a character that would split or break the entry (`;`, `"`, `<`, `>`).
-pub(crate) fn field_mailbox(m: &mailcraft_mime::Mailbox) -> String {
+pub(crate) fn field_mailbox(m: &iridium_mail_mime::Mailbox) -> String {
     match m.name.as_deref().map(str::trim) {
-        Some(n) if n.contains([';', '"', '<', '>']) => mailcraft_mime::addr::format_mailbox(m, false),
+        Some(n) if n.contains([';', '"', '<', '>']) => iridium_mail_mime::addr::format_mailbox(m, false),
         Some(n) if !n.is_empty() => format!("{n} <{}>", m.addr),
         _ => m.addr.clone(),
     }
 }
 
 /// The first mailbox of a single-address field such as From (same rules as [`parse_recipients`]).
-pub(crate) fn parse_field_mailbox(text: &str) -> Option<mailcraft_mime::Mailbox> {
+pub(crate) fn parse_field_mailbox(text: &str) -> Option<iridium_mail_mime::Mailbox> {
     let first = split_recipients(text).into_iter().next()?;
-    comma_named_mailbox(first).or_else(|| mailcraft_mime::addr::parse_mailbox(first))
+    comma_named_mailbox(first).or_else(|| iridium_mail_mime::addr::parse_mailbox(first))
 }
 
 /// Parses a stored recipient field ("a@b; Name <c@d>; Last, First <e@f>"): one recipient per `;` entry (see
@@ -485,7 +485,7 @@ pub(crate) fn file_param(p: &Value, cap: u64) -> Result<Option<(String, Vec<u8>)
         if est > cap.saturating_add(3) {
             return Err(CmdError::Failed("the file is too large".into()));
         }
-        let data = mailcraft_mime::transfer::decode_base64(b64.as_bytes());
+        let data = iridium_mail_mime::transfer::decode_base64(b64.as_bytes());
         let name =
             opt_str(p, "name").map(str::trim).filter(|n| !n.is_empty()).unwrap_or("attachment").to_owned();
         return Ok(Some((name, data)));
@@ -525,7 +525,7 @@ pub(crate) fn fold_line(line: &str, out: &mut String) {
 }
 
 /// vCard 3.0 (RFC 2426) for a contact.
-pub(crate) fn vcard(c: &mailcraft_model::Contact) -> String {
+pub(crate) fn vcard(c: &iridium_mail_model::Contact) -> String {
     let mut out = String::new();
     let full = if c.full_name().is_empty() { c.file_as.clone() } else { c.full_name() };
     fold_line("BEGIN:VCARD", &mut out);
@@ -599,13 +599,13 @@ fn ics_utc(t: DateTime) -> String {
 }
 
 /// iCalendar (RFC 5545) for an appointment.
-pub(crate) fn ics_event(a: &mailcraft_model::Appointment, now: DateTime) -> String {
+pub(crate) fn ics_event(a: &iridium_mail_model::Appointment, now: DateTime) -> String {
     let mut out = String::new();
     fold_line("BEGIN:VCALENDAR", &mut out);
     fold_line("VERSION:2.0", &mut out);
-    fold_line("PRODID:-//MailCraft//MailCraft//EN", &mut out);
+    fold_line("PRODID:-//Mail//Mail//EN", &mut out);
     fold_line("BEGIN:VEVENT", &mut out);
-    let uid = if a.uid.is_empty() { format!("{}@mailcraft", a.id.0) } else { a.uid.clone() };
+    let uid = if a.uid.is_empty() { format!("{}@iridium-mail", a.id.0) } else { a.uid.clone() };
     fold_line(&format!("UID:{}", escape_value(&uid)), &mut out);
     fold_line(&format!("DTSTAMP:{}", ics_utc(now)), &mut out);
     if a.all_day {
@@ -635,13 +635,13 @@ pub(crate) fn ics_event(a: &mailcraft_model::Appointment, now: DateTime) -> Stri
 }
 
 /// iCalendar VTODO for a task.
-fn ics_task(t: &mailcraft_model::Task, now: DateTime) -> String {
+fn ics_task(t: &iridium_mail_model::Task, now: DateTime) -> String {
     let mut out = String::new();
     fold_line("BEGIN:VCALENDAR", &mut out);
     fold_line("VERSION:2.0", &mut out);
-    fold_line("PRODID:-//MailCraft//MailCraft//EN", &mut out);
+    fold_line("PRODID:-//Mail//Mail//EN", &mut out);
     fold_line("BEGIN:VTODO", &mut out);
-    fold_line(&format!("UID:{}@mailcraft", t.id.0), &mut out);
+    fold_line(&format!("UID:{}@iridium-mail", t.id.0), &mut out);
     fold_line(&format!("DTSTAMP:{}", ics_utc(now)), &mut out);
     fold_line(&format!("SUMMARY:{}", escape_value(&t.subject)), &mut out);
     if let Some(d) = t.start {
@@ -689,7 +689,7 @@ pub(crate) fn message_source(s: &Session, m: &MailItem) -> Vec<u8> {
     b.subject = m.subject.clone();
     b.date = m.sent.or(Some(m.received));
     b.message_id = m.message_id.clone();
-    b.text = body.text.clone().or_else(|| body.html.as_deref().map(mailcraft_html::html_to_text));
+    b.text = body.text.clone().or_else(|| body.html.as_deref().map(iridium_mail_html::html_to_text));
     b.html = body.html.clone();
     b.keep_bcc = true;
     b.build()
@@ -720,7 +720,7 @@ pub(crate) fn build_message(
     let mut b = MessageBuilder::new();
     let from = account.filter(|a| !a.address.trim().is_empty()).map(|a| {
         let name = if a.sender_name.trim().is_empty() { a.display_name.trim() } else { a.sender_name.trim() };
-        mailcraft_mime::Mailbox::new(Some(name), a.address.trim())
+        iridium_mail_mime::Mailbox::new(Some(name), a.address.trim())
     });
     b.from = from.clone().or_else(|| parse_field_mailbox(&c.from));
     b.to = lenient(&c.to);
@@ -755,7 +755,7 @@ pub(crate) fn build_message(
     }
     b.text = Some(text);
     // Options › Mail › Message format › "When sending messages in Rich Text format to Internet recipients":
-    // converted to HTML (MailCraft has no Rich Text transport, so "Send using Rich Text format" sends HTML
+    // converted to HTML (Mail has no Rich Text transport, so "Send using Rich Text format" sends HTML
     // too) or to plain text.
     let rich_as_plain = c.format == BodyFormat::RichText
         && !for_draft
@@ -767,9 +767,9 @@ pub(crate) fn build_message(
         // the bookmarks come back when a draft is opened again.
         let body = c.body_with_anchors();
         let html = if st.bool("mail.format.reduceSize") && !for_draft {
-            mailcraft_html::doc_to_html(&reduce_formatting(&body))
+            iridium_mail_html::doc_to_html(&reduce_formatting(&body))
         } else {
-            mailcraft_html::doc_to_html(&body)
+            iridium_mail_html::doc_to_html(&body)
         };
         b.html = Some(c.apply_list_formats_html(&html));
     }
@@ -801,7 +801,7 @@ pub(crate) fn build_message(
             }
         }
     }
-    let notify_to = b.from.as_ref().map(|m| mailcraft_mime::addr::format_mailbox(m, true));
+    let notify_to = b.from.as_ref().map(|m| iridium_mail_mime::addr::format_mailbox(m, true));
     if let Some(addr) = &notify_to
         && c.request_read_receipt
     {
@@ -821,10 +821,10 @@ pub(crate) fn build_message(
     let choices = voting_choices(&c.voting);
     if !choices.is_empty() {
         b.extra_headers
-            .push((VOTING_HEADER.into(), mailcraft_mime::encoded::encode_words(&choices.join(";"))));
+            .push((VOTING_HEADER.into(), iridium_mail_mime::encoded::encode_words(&choices.join(";"))));
     }
     if let Some(v) = c.vote_response.as_deref().map(str::trim).filter(|v| !v.is_empty()) {
-        b.extra_headers.push((VOTE_HEADER.into(), mailcraft_mime::encoded::encode_words(v)));
+        b.extra_headers.push((VOTE_HEADER.into(), iridium_mail_mime::encoded::encode_words(v)));
     }
     match c.sensitivity {
         Sensitivity::Normal => {}
@@ -836,8 +836,8 @@ pub(crate) fn build_message(
     }
     if !for_draft && let Some(r) = &c.recipient_flag {
         // Flag for Recipients: the label (the de-facto `X-Message-Flag` header), the due date as the RFC 2156
-        // reply-by date, and the reminder in MailCraft's own header.
-        b.extra_headers.push(("X-Message-Flag".into(), mailcraft_mime::encoded::encode_words(&r.label)));
+        // reply-by date, and the reminder in Mail's own header.
+        b.extra_headers.push(("X-Message-Flag".into(), iridium_mail_mime::encoded::encode_words(&r.label)));
         if let Some(due) = r.due {
             b.extra_headers.push(("Reply-By".into(), due.to_rfc5322()));
         }
@@ -949,7 +949,7 @@ fn item_from(b: &MessageBuilder, now: DateTime) -> (MailItem, Vec<u8>) {
 
 /// An item for the finished message `raw` built from `b`, and `raw` (the caller stores it).
 fn item_from_raw(b: &MessageBuilder, raw: Vec<u8>, now: DateTime) -> (MailItem, Vec<u8>) {
-    let item = match mailcraft_mime::parse(&raw) {
+    let item = match iridium_mail_mime::parse(&raw) {
         Ok(msg) => MailItem::from_message(&msg, &raw, now),
         Err(_) => MailItem {
             subject: b.subject.clone(),
@@ -1006,9 +1006,9 @@ pub fn save_draft(s: &mut Session, cid: u64) -> Result<ItemId, CmdError> {
     item.contacts = crate::cmd::util::split_names(&c.contacts);
     item.no_auto_archive = c.no_auto_archive;
     // The source gives the body; the compose format (plain text, rich text) is kept with it.
-    let mut body = mailcraft_model::Body::from_source(&raw).unwrap_or_default();
+    let mut body = iridium_mail_model::Body::from_source(&raw).unwrap_or_default();
     body.format = c.format;
-    s.store_content(&mut item, &mailcraft_store::Content { source: Some(raw), body: Some(body) })?;
+    s.store_content(&mut item, &iridium_mail_store::Content { source: Some(raw), body: Some(body) })?;
     let id = match existing {
         Some((id, _)) => {
             item.id = id;
@@ -1356,7 +1356,7 @@ fn set_from(s: &mut Session, p: &Value) -> CmdResult {
         .trim()
         .parse::<u32>()
         .ok()
-        .and_then(|n| s.mailbox.account(mailcraft_model::AccountId(n)).cloned())
+        .and_then(|n| s.mailbox.account(iridium_mail_model::AccountId(n)).cloned())
         .or_else(|| {
             let addr = parse_field_mailbox(&v).map(|m| m.addr).unwrap_or_default();
             s.mailbox
@@ -1369,7 +1369,7 @@ fn set_from(s: &mut Session, p: &Value) -> CmdResult {
         Some(a) if !a.address.trim().is_empty() => {
             let name =
                 if a.sender_name.trim().is_empty() { a.display_name.trim() } else { a.sender_name.trim() };
-            field_mailbox(&mailcraft_mime::Mailbox::new(Some(name), a.address.trim()))
+            field_mailbox(&iridium_mail_mime::Mailbox::new(Some(name), a.address.trim()))
         }
         _ => v,
     };
@@ -1457,7 +1457,8 @@ fn lookup_contacts(s: &Session, query: &str) -> Vec<String> {
     let mut partial: Vec<(String, String)> = Vec::new();
     let push = |v: &mut Vec<(String, String)>, name: &str, addr: &str| {
         if !v.iter().any(|(_, a)| a.eq_ignore_ascii_case(addr)) {
-            let line = field_mailbox(&mailcraft_mime::Mailbox::new((!name.is_empty()).then_some(name), addr));
+            let line =
+                field_mailbox(&iridium_mail_mime::Mailbox::new((!name.is_empty()).then_some(name), addr));
             v.push((line, addr.to_owned()));
         }
     };
@@ -1574,7 +1575,7 @@ fn still_there(paths: Vec<String>) -> Vec<String> {
             let epoch = st.epoch;
             let todo = unknown.clone();
             let started =
-                std::thread::Builder::new().name("mailcraft-recent-files".into()).spawn(move || {
+                std::thread::Builder::new().name("iridium-mail-recent-files".into()).spawn(move || {
                     let found: Vec<(String, bool)> =
                         todo.into_iter().map(|p| (p.clone(), std::path::Path::new(&p).is_file())).collect();
                     let _ = with_checks(|st| {
@@ -1838,7 +1839,7 @@ fn signature(s: &mut Session, p: &Value) -> CmdResult {
     let c = compose_mut(s, p)?;
     c.checkpoint();
     let new_blocks: Option<Vec<Block>> = match (html, text) {
-        (Some(h), _) => Some(mailcraft_html::html_to_doc(h).blocks),
+        (Some(h), _) => Some(iridium_mail_html::html_to_doc(h).blocks),
         (None, Some(t)) => Some(Doc::from_plain_text(t).blocks),
         (None, None) if name.is_empty() || name.eq_ignore_ascii_case("none") || name == "(none)" => None,
         (None, None) => match saved {
@@ -1982,12 +1983,12 @@ fn follow_up(s: &mut Session, p: &Value) -> CmdResult {
 }
 
 /// A flag label as typed: control characters dropped, trimmed, at most
-/// [`mailcraft_model::item::MAX_FLAG_LABEL_CHARS`] chars; empty = "Follow up".
+/// [`iridium_mail_model::item::MAX_FLAG_LABEL_CHARS`] chars; empty = "Follow up".
 fn flag_label(text: &str) -> String {
     let clean: String = text
         .chars()
         .filter(|c| !c.is_control())
-        .take(mailcraft_model::item::MAX_FLAG_LABEL_CHARS)
+        .take(iridium_mail_model::item::MAX_FLAG_LABEL_CHARS)
         .collect::<String>()
         .trim()
         .to_owned();
@@ -2144,7 +2145,7 @@ fn save_sent_item_to(s: &mut Session, p: &Value) -> CmdResult {
             let id = f
                 .as_u64()
                 .or_else(|| f.as_str().and_then(|t| t.trim().parse().ok()))
-                .map(mailcraft_model::FolderId)
+                .map(iridium_mail_model::FolderId)
                 .ok_or_else(|| CmdError::Params("`folder` must be a folder id".into()))?;
             match s.mailbox.folder(id) {
                 Some(f) if f.kind == FolderKind::Mail => SaveSentTo::Folder(id),
@@ -2321,7 +2322,7 @@ fn format_cmd(s: &mut Session, p: &Value) -> CmdResult {
     Ok(json!({"format": kind, "converted": converted, "title": c.title()}))
 }
 
-/// Largest MailCraft theme file (and saved-themes file / 16) read.
+/// Largest Mail theme file (and saved-themes file / 16) read.
 const MAX_THEME_FILE: u64 = 64 * 1024;
 /// Largest Office theme file (.thmx package or theme .xml) Browse for Themes reads.
 const MAX_OFFICE_THEME_FILE: u64 = 8 * 1024 * 1024;
@@ -2355,13 +2356,13 @@ fn theme_state_json(c: &ComposeState) -> Value {
     })
 }
 
-/// A theme file read by Browse for Themes: MailCraft's own JSON format, or an Office theme (a `.thmx`
-/// package or a DrawingML theme `.xml` part, see `mailcraft_formats::theme`).
+/// A theme file read by Browse for Themes: Mail's own JSON format, or an Office theme (a `.thmx`
+/// package or a DrawingML theme `.xml` part, see `iridium_mail_formats::theme`).
 fn read_theme_file(data: &[u8]) -> Result<ThemeFile, CmdError> {
     if let Ok(file) = serde_json::from_slice::<ThemeFile>(data) {
         return Ok(file);
     }
-    let office = mailcraft_formats::theme::read_theme(data)
+    let office = iridium_mail_formats::theme::read_theme(data)
         .map_err(|e| CmdError::Failed(format!("this is not a theme file: {e}")))?;
     let effects =
         crate::compose::effect_set(&office.effects).map_or_else(|| "Office".to_owned(), str::to_owned);
@@ -2375,7 +2376,7 @@ fn read_theme_file(data: &[u8]) -> Result<ThemeFile, CmdError> {
     })
 }
 
-/// Writes `file` to `path`: an Office theme package for `.thmx`, a theme part for `.xml`, else MailCraft's
+/// Writes `file` to `path`: an Office theme package for `.thmx`, a theme part for `.xml`, else Mail's
 /// JSON.
 fn write_theme_file(path: &str, file: &ThemeFile) -> Result<(), CmdError> {
     let ext = std::path::Path::new(path)
@@ -2383,7 +2384,7 @@ fn write_theme_file(path: &str, file: &ThemeFile) -> Result<(), CmdError> {
         .and_then(|e| e.to_str())
         .map(str::to_ascii_lowercase)
         .unwrap_or_default();
-    let office = || mailcraft_formats::theme::OfficeTheme {
+    let office = || iridium_mail_formats::theme::OfficeTheme {
         name: file.name.clone(),
         colors: file.colors.clone(),
         heading_font: file.heading_font.clone(),
@@ -2391,17 +2392,17 @@ fn write_theme_file(path: &str, file: &ThemeFile) -> Result<(), CmdError> {
         effects: file.effects.clone(),
     };
     let bytes = match ext.as_str() {
-        "thmx" => mailcraft_formats::theme::write_thmx(&office()),
-        "xml" => mailcraft_formats::theme::theme_xml(&office()).into_bytes(),
+        "thmx" => iridium_mail_formats::theme::write_thmx(&office()),
+        "xml" => iridium_mail_formats::theme::theme_xml(&office()).into_bytes(),
         _ => serde_json::to_vec_pretty(file).map_err(|e| CmdError::Failed(e.to_string()))?,
     };
     std::fs::write(path, bytes).map_err(|e| CmdError::Failed(format!("the theme could not be saved: {e}")))
 }
 
-/// A theme file (Save Current Theme / Browse for Themes): MailCraft's own JSON format.
+/// A theme file (Save Current Theme / Browse for Themes): Mail's own JSON format.
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ThemeFile {
-    #[serde(rename = "mailcraftTheme")]
+    #[serde(rename = "iridium-mailTheme")]
     version: u32,
     pub name: String,
     colors: Vec<String>,
@@ -2746,7 +2747,7 @@ fn page_color(s: &mut Session, p: &Value) -> CmdResult {
                 None
             } else {
                 Some(
-                    mailcraft_html::parse_css_color(t)
+                    iridium_mail_html::parse_css_color(t)
                         .ok_or_else(|| CmdError::Params(format!("unknown colour `{t}`")))?,
                 )
             }
@@ -2873,16 +2874,16 @@ const MAX_SIGNATURE_SOURCE: usize = 1024 * 1024;
 
 /// Records mailbox changes the session's store diff does not cover (signatures, Auto-Complete list,
 /// dictionary) as one undo step plus a journal write; does nothing when the diff already sees them.
-/// `before` is everything but the mail as it was ([`mailcraft_model::Mailbox::without_mail`]); these
+/// `before` is everything but the mail as it was ([`iridium_mail_model::Mailbox::without_mail`]); these
 /// commands do not change mail.
-pub(crate) fn commit_extras(s: &mut Session, before: mailcraft_model::Mailbox, label: &str) {
+pub(crate) fn commit_extras(s: &mut Session, before: iridium_mail_model::Mailbox, label: &str) {
     if before.eq_except_mail(&s.mailbox)
-        || !crate::changes::ops_for(&before, &mailcraft_model::MailChanges::new(), &s.mailbox).is_empty()
+        || !crate::changes::ops_for(&before, &iridium_mail_model::MailChanges::new(), &s.mailbox).is_empty()
     {
         return;
     }
-    s.undo.push(crate::undo::UndoEntry::new(label, Box::new(before), mailcraft_model::MailChanges::new()));
-    s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+    s.undo.push(crate::undo::UndoEntry::new(label, Box::new(before), iridium_mail_model::MailChanges::new()));
+    s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
 }
 
 /// A rich body from `{"html"}` or `{"text"}`.
@@ -2895,7 +2896,7 @@ fn doc_param(p: &Value) -> Result<Option<Doc>, CmdError> {
     if src.len() > MAX_SIGNATURE_SOURCE {
         return Err(CmdError::Params("the signature is too large".into()));
     }
-    Ok(Some(if html { mailcraft_html::html_to_doc(src) } else { Doc::from_plain_text(src) }))
+    Ok(Some(if html { iridium_mail_html::html_to_doc(src) } else { Doc::from_plain_text(src) }))
 }
 
 /// `{"key": "name"}` → Some(Some(name)), `{"key": null}` → Some(None), absent → None.
@@ -2919,7 +2920,7 @@ fn signature_json(s: &Session) -> Value {
                 "defaultNew": g.default_new,
                 "defaultReply": g.default_reply,
                 "text": g.body.to_plain_text(),
-                "html": mailcraft_html::doc_to_html(&g.body),
+                "html": iridium_mail_html::doc_to_html(&g.body),
             })
         })
         .collect();
@@ -2988,7 +2989,7 @@ fn signature_defaults(s: &mut Session, p: &Value) -> CmdResult {
                 .or_else(|| v.as_str().and_then(|t| t.trim().parse().ok()))
                 .and_then(|n| u32::try_from(n).ok())
                 .ok_or_else(|| CmdError::Params("`account` must be an account id".into()))?;
-            Some(mailcraft_model::AccountId(n))
+            Some(iridium_mail_model::AccountId(n))
         }
     };
     let new_messages = choice_param(p, "newMessages")?;
@@ -3075,19 +3076,19 @@ fn table_edit(s: &mut Session, p: &Value) -> CmdResult {
 // =======================================================================================================
 
 /// Submission-only header asking for a delivery status notification. The SMTP client removes it and sends
-/// RFC 3461 envelope parameters instead (same name as `mailcraft_net::smtp::DSN_HEADER`).
-pub const DSN_HEADER: &str = "X-MailCraft-Submit-DSN";
+/// RFC 3461 envelope parameters instead (same name as `iridium_mail_net::smtp::DSN_HEADER`).
+pub const DSN_HEADER: &str = "X-Mail-Submit-DSN";
 /// What a delivery receipt asks for: success and failure reports, headers only.
 pub const DSN_REQUEST: &str = "NOTIFY=SUCCESS,FAILURE; RET=HDRS";
 /// Submission-only header carrying Save Sent Item To: `none` or `folder=<id>`.
-pub const SAVE_SENT_HEADER: &str = "X-MailCraft-Submit-Save-Sent";
-/// Prefix of every submission-only header (never transmitted; see `mailcraft_net::smtp`).
-pub const SUBMIT_PREFIX: &str = "X-MailCraft-Submit-";
-/// Voting buttons a message offers ("Approve;Reject"). MailCraft's own header: the Exchange voting
+pub const SAVE_SENT_HEADER: &str = "X-Mail-Submit-Save-Sent";
+/// Prefix of every submission-only header (never transmitted; see `iridium_mail_net::smtp`).
+pub const SUBMIT_PREFIX: &str = "X-Mail-Submit-";
+/// Voting buttons a message offers ("Approve;Reject"). Mail's own header: the Exchange voting
 /// properties are not used.
-pub const VOTING_HEADER: &str = "X-MailCraft-Voting";
+pub const VOTING_HEADER: &str = "X-Mail-Voting";
 /// The choice a voting response carries.
-pub const VOTE_HEADER: &str = "X-MailCraft-Vote";
+pub const VOTE_HEADER: &str = "X-Mail-Vote";
 /// Most voting choices kept.
 const MAX_VOTING_CHOICES: usize = 20;
 /// Longest voting choice (chars).
@@ -3152,13 +3153,13 @@ fn header_block(raw: &[u8]) -> &[u8] {
 }
 
 /// Header fields of `raw` (only the header section is parsed).
-pub fn raw_headers(raw: &[u8]) -> mailcraft_mime::Headers {
+pub fn raw_headers(raw: &[u8]) -> iridium_mail_mime::Headers {
     let mut head = header_block(raw).to_vec();
     head.extend_from_slice(b"\r\n");
-    mailcraft_mime::parse(&head).map(|m| m.headers).unwrap_or_default()
+    iridium_mail_mime::parse(&head).map(|m| m.headers).unwrap_or_default()
 }
 
-/// `raw` without its submission-only `X-MailCraft-Submit-*` header fields (folded lines included).
+/// `raw` without its submission-only `X-Mail-Submit-*` header fields (folded lines included).
 pub fn strip_submit_headers(raw: &[u8]) -> Vec<u8> {
     let head_len = header_block(raw).len().min(raw.len());
     let (head, body) = raw.split_at(head_len);
@@ -3198,7 +3199,7 @@ pub fn file_sent_copy(s: &mut Session, item: ItemId) -> bool {
             let folder = v
                 .strip_prefix("folder=")
                 .and_then(|n| n.trim().parse::<u64>().ok())
-                .map(mailcraft_model::FolderId)
+                .map(iridium_mail_model::FolderId)
                 .filter(|f| s.mailbox.folder(*f).is_some_and(|f| f.kind == FolderKind::Mail));
             let Some(folder) = folder else {
                 return false;
@@ -3350,13 +3351,13 @@ fn bare_id(v: &str) -> String {
 }
 
 /// Delivery / read receipts for sent message `mid` found in `report` (a parsed report message).
-fn read_report(msg: &mailcraft_mime::Message, mid: &str, when: DateTime, rows: &mut Vec<ReceiptRow>) {
+fn read_report(msg: &iridium_mail_mime::Message, mid: &str, when: DateTime, rows: &mut Vec<ReceiptRow>) {
     let envid = crate::cmd::compose::xtext(mid);
     let refers = msg.in_reply_to().iter().chain(msg.references().iter()).any(|r| bare_id(r) == mid);
     let parts = msg.parts();
     // Headers of the original returned with the report (RET=HDRS / message/rfc822).
     let returned_id = parts.iter().find_map(|p| match (&p.body, p.mime_type()) {
-        (mailcraft_mime::PartBody::Message(m), _) => m.message_id().map(|i| bare_id(&i)),
+        (iridium_mail_mime::PartBody::Message(m), _) => m.message_id().map(|i| bare_id(&i)),
         (_, "text/rfc822-headers") => {
             p.text().and_then(|t| raw_headers(t.as_bytes()).get("Message-ID").map(bare_id))
         }
@@ -3467,9 +3468,9 @@ pub(crate) fn record_vote(s: &mut Session, response: ItemId) -> Option<ItemId> {
     let from = x.from.as_ref().map(|f| f.addr.trim().to_owned()).unwrap_or_default();
     let when = x.sent.unwrap_or(x.received);
     let id = original.id;
-    let record = mailcraft_model::VoteRecord { from, choice, when, response: Some(response) };
+    let record = iridium_mail_model::VoteRecord { from, choice, when, response: Some(response) };
     let o = s.mailbox.mail.get_mut(id)?;
-    let same = |v: &mailcraft_model::VoteRecord| {
+    let same = |v: &iridium_mail_model::VoteRecord| {
         v.response == Some(response) || (!record.from.is_empty() && v.from.eq_ignore_ascii_case(&record.from))
     };
     match o.votes.iter_mut().find(|v| same(v)) {
@@ -3477,7 +3478,7 @@ pub(crate) fn record_vote(s: &mut Session, response: ItemId) -> Option<ItemId> {
         Some(old) if old.when <= record.when => *old = record,
         Some(_) => {}
         None => {
-            if o.votes.len() >= mailcraft_model::item::MAX_VOTE_RECORDS
+            if o.votes.len() >= iridium_mail_model::item::MAX_VOTE_RECORDS
                 && let Some(oldest) = o.votes.iter().enumerate().min_by_key(|(_, v)| v.when).map(|(i, _)| i)
             {
                 o.votes.remove(oldest);
@@ -3564,7 +3565,7 @@ pub fn tracking(s: &Session, id: ItemId) -> Option<Tracking> {
             && raw_headers(&raw)
                 .get("Content-Type")
                 .is_some_and(|c| c.to_ascii_lowercase().contains("report"))
-            && let Ok(msg) = mailcraft_mime::parse(&raw)
+            && let Ok(msg) = iridium_mail_mime::parse(&raw)
         {
             read_report(&msg, &mid, x.received, &mut t.receipts);
         }
@@ -3572,7 +3573,7 @@ pub fn tracking(s: &Session, id: ItemId) -> Option<Tracking> {
     // Votes recorded on the message as they arrived count too, also once their responses are gone for good
     // (a response still in the mailbox and its record are one vote).
     if t.sent_by_me && update_sent && !t.choices.is_empty() {
-        for v in m.votes.iter().take(mailcraft_model::item::MAX_VOTE_RECORDS) {
+        for v in m.votes.iter().take(iridium_mail_model::item::MAX_VOTE_RECORDS) {
             let response = v.response.map_or(0, |i| i.0);
             let live = t.responses.iter_mut().find(|r| {
                 (response != 0 && r.item == response)
@@ -3603,7 +3604,7 @@ pub fn tracking(s: &Session, id: ItemId) -> Option<Tracking> {
 fn receipt_needs_asking(notify_to: &str, return_path: Option<&str>) -> bool {
     let mut asking: Vec<String> = parse_address_list(notify_to)
         .iter()
-        .flat_map(mailcraft_mime::Address::mailboxes)
+        .flat_map(iridium_mail_mime::Address::mailboxes)
         .map(|m| m.addr.trim().to_ascii_lowercase())
         .collect();
     asking.sort();
@@ -3685,7 +3686,7 @@ fn vote(s: &mut Session, p: &Value) -> CmdResult {
         return Err(CmdError::Params(format!("no message with id {}", id.0)));
     };
     let original = s.mailbox.mail.get(id).map(|m| m.subject.clone()).unwrap_or_default();
-    c.subject = format!("{choice}: {}", mailcraft_model::subject::strip_prefixes(&original));
+    c.subject = format!("{choice}: {}", iridium_mail_model::subject::strip_prefixes(&original));
     c.vote_response = Some(choice.clone());
     if opt_bool(p, "edit") == Some(true) {
         let cid = s.open_compose(c);
@@ -3704,7 +3705,7 @@ fn vote(s: &mut Session, p: &Value) -> CmdResult {
 fn mdn_message(
     s: &Session,
     m: &MailItem,
-    from: &mailcraft_mime::Mailbox,
+    from: &iridium_mail_mime::Mailbox,
     to: &str,
     now: DateTime,
     automatic: bool,
@@ -3738,12 +3739,12 @@ was read on {:04}-{:02}-{:02} {:02}:{:02}.\r\n",
     let boundary = format!("=_mdn_{:x}", now.unix.unsigned_abs() ^ 0x5bd1_e995);
     let mut out = String::new();
     let mut header = |k: &str, v: &str| {
-        out.push_str(&mailcraft_mime::header::fold(k, v));
+        out.push_str(&iridium_mail_mime::header::fold(k, v));
         out.push_str("\r\n");
     };
-    header("From", &mailcraft_mime::addr::format_mailbox(from, true));
-    header("To", &mailcraft_mime::format_address_list(&to_list, true));
-    header("Subject", &mailcraft_mime::encoded::encode_words(&b.subject));
+    header("From", &iridium_mail_mime::addr::format_mailbox(from, true));
+    header("To", &iridium_mail_mime::format_address_list(&to_list, true));
+    header("Subject", &iridium_mail_mime::encoded::encode_words(&b.subject));
     header("Date", &now.to_rfc5322());
     header("Message-ID", &format!("<{id}>"));
     if !mid.is_empty() {
@@ -3766,7 +3767,7 @@ was read on {:04}-{:02}-{:02} {:02}:{:02}.\r\n",
     }
     let me = &from.addr;
     out.push_str(&format!("--{boundary}\r\nContent-Type: message/disposition-notification\r\n\r\n"));
-    out.push_str("Reporting-UA: MailCraft\r\n");
+    out.push_str("Reporting-UA: Mail\r\n");
     if me.is_ascii() {
         out.push_str(&format!("Final-Recipient: rfc822;{me}\r\n"));
     } else {
@@ -3829,10 +3830,10 @@ fn send_read_receipt(s: &mut Session, p: &Value) -> CmdResult {
     } else {
         account.sender_name.trim()
     };
-    let from = mailcraft_mime::Mailbox::new(Some(name), account.address.trim());
+    let from = iridium_mail_mime::Mailbox::new(Some(name), account.address.trim());
     let now = s.now();
     let raw = mdn_message(s, &m, &from, &to, now, automatic);
-    let mut item = match mailcraft_mime::parse(&raw) {
+    let mut item = match iridium_mail_mime::parse(&raw) {
         Ok(msg) => MailItem::from_message(&msg, &raw, now),
         Err(e) => return Err(CmdError::Failed(format!("the read receipt could not be built: {e}"))),
     };
@@ -4337,7 +4338,7 @@ pub fn specs() -> Vec<CommandSpec> {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use mailcraft_model::{AccountKind, Mailbox, ServerSettings};
+    use iridium_mail_model::{AccountKind, Mailbox, ServerSettings};
 
     /// Session with a local data file plus an IMAP account that can send, and a fixed clock
     /// (Fri 2026-10-09 12:00 UTC).
@@ -4537,7 +4538,7 @@ pub(crate) mod tests {
         s.source_text(m.id)
     }
 
-    fn folder_of(s: &Session, role: FolderRole) -> mailcraft_model::FolderId {
+    fn folder_of(s: &Session, role: FolderRole) -> iridium_mail_model::FolderId {
         let acc = s.mailbox.accounts.iter().find(|a| a.kind == AccountKind::Imap).unwrap().id;
         s.mailbox.role_folder(acc, role).unwrap()
     }
@@ -4551,9 +4552,9 @@ pub(crate) mod tests {
         s.run("compose.saveSentItemTo", &json!({"mode": "none"})).unwrap();
         assert_eq!(s.run("compose.send", &json!({})).unwrap()["sent"], true);
         let raw = outbox_raw(&s);
-        assert!(raw.contains("X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS"), "{raw}");
+        assert!(raw.contains("X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS"), "{raw}");
         assert!(!raw.contains("Return-Receipt-To"));
-        assert!(raw.contains("X-MailCraft-Submit-Save-Sent: none"));
+        assert!(raw.contains("X-Mail-Submit-Save-Sent: none"));
         // After sending, Do Not Save drops the copy.
         let id = folder_items(&s, FolderRole::Outbox)[0].id;
         assert!(file_sent_copy(&mut s, id));
@@ -4566,30 +4567,30 @@ pub(crate) mod tests {
         s.run("compose.setTo", &json!({"value": "a@example.org"})).unwrap();
         s.run("compose.saveSentItemTo", &json!({"mode": "other", "folder": archive.0})).unwrap();
         s.run("compose.send", &json!({})).unwrap();
-        assert!(outbox_raw(&s).contains(&format!("X-MailCraft-Submit-Save-Sent: folder={}", archive.0)));
+        assert!(outbox_raw(&s).contains(&format!("X-Mail-Submit-Save-Sent: folder={}", archive.0)));
         let id = folder_items(&s, FolderRole::Outbox)[0].id;
         assert!(file_sent_copy(&mut s, id));
         let m = s.mailbox.mail.get(id).unwrap();
         assert_eq!(m.folder, archive);
-        assert!(!s.source_text(m.id).contains("X-MailCraft-Submit"));
+        assert!(!s.source_text(m.id).contains("X-Mail-Submit"));
 
         // Default: the caller files it in Sent Items.
         open(&mut s);
         s.run("compose.setTo", &json!({"value": "a@example.org"})).unwrap();
         s.run("compose.send", &json!({})).unwrap();
         let id = folder_items(&s, FolderRole::Outbox)[0].id;
-        assert!(!outbox_raw(&s).contains("X-MailCraft-Submit"));
+        assert!(!outbox_raw(&s).contains("X-Mail-Submit"));
         assert!(!file_sent_copy(&mut s, id));
     }
 
     #[test]
     fn submit_headers_strip_with_folded_lines() {
-        let raw = b"From: a@example.com\r\nX-MailCraft-Submit-DSN: NOTIFY=SUCCESS,\r\n FAILURE\r\nSubject: x\r\n\r\nX-MailCraft-Submit-DSN: body\r\n";
+        let raw = b"From: a@example.com\r\nX-Mail-Submit-DSN: NOTIFY=SUCCESS,\r\n FAILURE\r\nSubject: x\r\n\r\nX-Mail-Submit-DSN: body\r\n";
         assert_eq!(
             strip_submit_headers(raw),
-            b"From: a@example.com\r\nSubject: x\r\n\r\nX-MailCraft-Submit-DSN: body\r\n".to_vec()
+            b"From: a@example.com\r\nSubject: x\r\n\r\nX-Mail-Submit-DSN: body\r\n".to_vec()
         );
-        assert_eq!(DSN_HEADER, "X-MailCraft-Submit-DSN");
+        assert_eq!(DSN_HEADER, "X-Mail-Submit-DSN");
         assert_eq!(voting_choices(" Approve; Reject;;approve ;x\u{0}y"), vec!["Approve", "Reject", "xy"]);
         assert_eq!(xtext("a+b c"), "a+2Bb+20c");
     }
@@ -4598,10 +4599,10 @@ pub(crate) mod tests {
     fn receive(s: &mut Session, raw: &str) -> ItemId {
         let inbox = folder_of(s, FolderRole::Inbox);
         let raw = raw.replace('\n', "\r\n").into_bytes();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, s.now());
         item.folder = inbox;
-        s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap()
+        s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap()
     }
 
     #[test]
@@ -4613,7 +4614,7 @@ pub(crate) mod tests {
         s.run("compose.setSubject", &json!({"value": "Lunch"})).unwrap();
         s.run("compose.votingButtons", &json!({"choices": "Approve;Reject"})).unwrap();
         s.run("compose.send", &json!({})).unwrap();
-        assert!(outbox_raw(&s).contains("X-MailCraft-Voting: Approve;Reject"));
+        assert!(outbox_raw(&s).contains("X-Mail-Voting: Approve;Reject"));
         let sent = folder_items(&s, FolderRole::Outbox)[0].id;
         let mid = s.mailbox.mail.get(sent).unwrap().message_id.clone().unwrap();
 
@@ -4622,7 +4623,7 @@ pub(crate) mod tests {
         let got = receive(
             &mut r,
             &format!(
-                "From: Me <me@example.net>\nTo: me@example.com\nSubject: Lunch\nMessage-ID: <{mid}>\nX-MailCraft-Voting: Approve;Reject\n\nWhere?\n"
+                "From: Me <me@example.net>\nTo: me@example.com\nSubject: Lunch\nMessage-ID: <{mid}>\nX-Mail-Voting: Approve;Reject\n\nWhere?\n"
             ),
         );
         r.selection.items = vec![got];
@@ -4636,10 +4637,7 @@ pub(crate) mod tests {
         assert_eq!(v["sent"], true);
         assert!(r.composes.is_empty(), "no compose window is left open");
         let raw = outbox_raw(&r);
-        assert!(
-            raw.contains("X-MailCraft-Vote: Approve") && raw.contains("Subject: Approve: Lunch"),
-            "{raw}"
-        );
+        assert!(raw.contains("X-Mail-Vote: Approve") && raw.contains("Subject: Approve: Lunch"), "{raw}");
         assert!(raw.contains(&format!("In-Reply-To: <{mid}>")));
         let t = tracking(&r, got).unwrap();
         assert_eq!(t.my_vote.as_ref().map(|v| v.0.as_str()), Some("Approve"));
@@ -4693,7 +4691,7 @@ pub(crate) mod tests {
         assert!(raw.contains("Disposition: manual-action/MDN-sent-manually; displayed"));
         assert!(raw.contains("Final-Recipient: rfc822;me@example.com"));
         assert!(raw.contains("Subject: Read: Report"));
-        let msg = mailcraft_mime::parse(raw.as_bytes()).unwrap();
+        let msg = iridium_mail_mime::parse(raw.as_bytes()).unwrap();
         assert!(msg.text_body().unwrap().contains("was read on"));
         assert!(tracking(&s, got).unwrap().read_receipt_sent);
         assert_eq!(s.run("compose.sendReadReceipt", &json!({"id": got.0})).unwrap()["alreadySent"], true);
@@ -4820,7 +4818,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         for b in &c.body.blocks {
             if let Block::Heading { inlines, .. } | Block::Paragraph { inlines, .. } = b {
                 for i in inlines {
-                    if let mailcraft_model::Inline::Text { style, .. } = i {
+                    if let iridium_mail_model::Inline::Text { style, .. } = i {
                         colors.push(style.color);
                         fonts.push(style.font_family.clone());
                     }
@@ -4921,7 +4919,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         }
         let package = std::fs::read(&thmx).unwrap();
         assert!(package.starts_with(b"PK"), "a .thmx is a ZIP package");
-        let read = mailcraft_formats::theme::read_theme(&package).unwrap();
+        let read = iridium_mail_formats::theme::read_theme(&package).unwrap();
         assert_eq!((read.name.as_str(), read.heading_font.as_str()), ("Team", "Georgia"));
         assert!(std::fs::read_to_string(&xml).unwrap().contains("<a:theme"));
         // Browse for Themes opens both kinds.
@@ -4951,7 +4949,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         let pal: Vec<String> = (0..12).map(|i| format!("#00{:02x}00", i * 20)).collect();
         {
             let mut s = session();
-            s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+            s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
             open(&mut s);
             s.run(
                 "compose.theme",
@@ -4970,7 +4968,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         }
         // A new session offers them by name in every message.
         let mut s = session();
-        s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+        s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
         let id = open(&mut s);
         let saved = saved_themes(&s);
         assert_eq!(
@@ -5005,7 +5003,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         let contact = s.mailbox.alloc_id();
         s.mailbox.contacts.insert(
             ItemId(contact),
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id: ItemId(contact),
                 first_name: "Ann".into(),
                 last_name: "Lee".into(),
@@ -5031,7 +5029,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
             .unwrap_or_default();
         s.mailbox.notes.insert(
             ItemId(note),
-            mailcraft_model::Note {
+            iridium_mail_model::Note {
                 id: ItemId(note),
                 folder,
                 text: "Buy milk\nand bread".into(),
@@ -5071,7 +5069,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         let contact = s.mailbox.alloc_id();
         s.mailbox.contacts.insert(
             ItemId(contact),
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id: ItemId(contact),
                 first_name: "Ann".into(),
                 last_name: "Lee".into(),
@@ -5097,7 +5095,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         let cid = s.mailbox.alloc_id();
         s.mailbox.contacts.insert(
             ItemId(cid),
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id: ItemId(cid),
                 first_name: "Ann".into(),
                 last_name: "Lee".into(),
@@ -5263,7 +5261,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
         s.run("compose.setTo", &json!({"value": typed, "typed": true})).unwrap();
         s.run("compose.setCc", &json!({"value": "c@example.org, d@example.org", "typed": true})).unwrap();
         let d = s.run("compose.saveDraft", &json!({})).unwrap()["draft"].as_u64().unwrap();
-        let addrs = |list: &[mailcraft_model::Address]| -> Vec<String> {
+        let addrs = |list: &[iridium_mail_model::Address]| -> Vec<String> {
             list.iter().map(|m| m.addr.clone()).collect()
         };
         let draft = s.mailbox.mail.get(ItemId(d)).unwrap();
@@ -5331,7 +5329,7 @@ Original-Message-ID: <{mid}>\nDisposition: manual-action/MDN-sent-manually; disp
 mod depth_tests {
     use super::tests::{open, session};
     use super::*;
-    use mailcraft_model::{Contact, MailItem};
+    use iridium_mail_model::{Contact, MailItem};
 
     fn add_contact(s: &mut Session, first: &str, last: &str, emails: &[&str]) {
         let id = s.mailbox.alloc_id();
@@ -5363,9 +5361,9 @@ mod depth_tests {
         assert_eq!(s.mailbox.signatures.len(), 2);
         assert!(s.mailbox.signatures[0].default_new);
         // Journaled (as configuration, not the whole mailbox) and undoable.
-        let config = |o: &mailcraft_store::Op| matches!(o, mailcraft_store::Op::PutConfig(c) if c.signatures.is_some());
+        let config = |o: &iridium_mail_store::Op| matches!(o, iridium_mail_store::Op::PutConfig(c) if c.signatures.is_some());
         assert!(s.pending_ops.iter().any(config));
-        assert!(!s.pending_ops.iter().any(|o| matches!(o, mailcraft_store::Op::Replace(_))));
+        assert!(!s.pending_ops.iter().any(|o| matches!(o, iridium_mail_store::Op::Replace(_))));
         assert_eq!(s.undo.undo.last().map(|e| e.label.as_str()), Some("New Signature"));
         let acc = s.mailbox.default_account().map(|a| a.id.0).unwrap();
         let r = s.run("compose.signatureDefaults", &json!({"account": acc, "replies": "Reply"})).unwrap();
@@ -5404,7 +5402,7 @@ mod depth_tests {
         let mid = s.mailbox.add_mail(MailItem {
             folder: inbox,
             subject: "Hello".into(),
-            from: Some(mailcraft_mime::Mailbox::new(Some("Ann"), "ann@example.org")),
+            from: Some(iridium_mail_mime::Mailbox::new(Some("Ann"), "ann@example.org")),
             received: s.now(),
             ..Default::default()
         });
@@ -5489,12 +5487,12 @@ mod depth_tests {
         let item = MailItem {
             folder: inbox,
             subject: "Report".into(),
-            from: Some(mailcraft_mime::Mailbox::new(Some("Ann"), "ann@example.org")),
+            from: Some(iridium_mail_mime::Mailbox::new(Some("Ann"), "ann@example.org")),
             received: s.now(),
             ..Default::default()
         };
-        let body = mailcraft_model::Body { text: Some("Numbers inside.".into()), ..Default::default() };
-        let mid = s.add_message(item, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some("Numbers inside.".into()), ..Default::default() };
+        let mid = s.add_message(item, &iridium_mail_store::Content::body(body)).unwrap();
         s.run("compose.attachItem", &json!({"itemId": mid.0})).unwrap();
         let c = s.composes[&id].clone();
         assert_eq!(c.attachments[1].mime_type, "message/rfc822");
@@ -5649,7 +5647,7 @@ mod review_tests {
 mod options_tests {
     use super::tests::{open, session};
     use super::*;
-    use mailcraft_model::Contact;
+    use iridium_mail_model::Contact;
 
     fn set(s: &mut Session, key: &str, value: Value) {
         s.run("options.set", &json!({"key": key, "value": value})).unwrap();
@@ -5913,7 +5911,7 @@ mod options_tests {
         let styled: Vec<(String, Option<bool>, Option<bool>)> = inlines
             .iter()
             .filter_map(|i| match i {
-                mailcraft_model::Inline::Text { text, style } => {
+                iridium_mail_model::Inline::Text { text, style } => {
                     Some((text.clone(), style.bold, style.italic))
                 }
                 _ => None,
@@ -5951,10 +5949,10 @@ Content-Type: multipart/report; report-type=disposition-notification; boundary=\
 Original-Message-ID: <{mid}>\r\nDisposition: manual-action/MDN-sent-manually; displayed\r\n--c--\r\n"
         )
         .into_bytes();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, s.now());
         item.folder = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
-        s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap();
+        s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap();
         assert!(tracking(&s, sent).unwrap().receipts.is_empty());
         set(&mut s, "mail.tracking.updateSentItem", json!(true));
         assert_eq!(tracking(&s, sent).unwrap().receipts.len(), 1);
@@ -6001,11 +5999,11 @@ Original-Message-ID: <{mid}>\r\nDisposition: manual-action/MDN-sent-manually; di
         let raw = outbox_raw(&s);
         assert!(raw.contains("X-Message-Flag: Reply\r\n"), "{raw}");
         assert!(raw.contains("Reply-By: Thu, 15 Oct 2026"), "{raw}");
-        assert!(raw.contains("X-MailCraft-Flag-Reminder: Thu, 15 Oct 2026 08:00"), "{raw}");
+        assert!(raw.contains("X-Mail-Flag-Reminder: Thu, 15 Oct 2026 08:00"), "{raw}");
         let sent = s.mailbox.mail.get(*in_role(&s, FolderRole::Outbox).iter().max().unwrap()).unwrap();
         assert!(matches!(&sent.flag, FlagState::Flagged { label, .. } if label == "Review"));
         // Received, the message is flagged for follow-up with the due date and reminder.
-        let msg = mailcraft_mime::parse(raw.as_bytes()).unwrap();
+        let msg = iridium_mail_mime::parse(raw.as_bytes()).unwrap();
         let got = MailItem::from_message(&msg, raw.as_bytes(), s.now());
         match got.flag {
             FlagState::Flagged { label, due: Some(d), reminder: Some(r), .. } => {
@@ -6017,9 +6015,9 @@ Original-Message-ID: <{mid}>\r\nDisposition: manual-action/MDN-sent-manually; di
         // A reminder time from before the message arrived would pop a window the moment it lands: dropped,
         // the flag stays.
         let early = "From: x@example.net\r\nTo: ann@example.org\r\nDate: Fri, 09 Oct 2026 12:00:00 +0000\r\n\
-                     X-Message-Flag: Urgent\r\nX-MailCraft-Flag-Reminder: Mon, 05 Oct 2026 08:00:00 +0000\r\n\
+                     X-Message-Flag: Urgent\r\nX-Mail-Flag-Reminder: Mon, 05 Oct 2026 08:00:00 +0000\r\n\
                      Subject: Act now\r\n\r\nHi\r\n";
-        let msg = mailcraft_mime::parse(early.as_bytes()).unwrap();
+        let msg = iridium_mail_mime::parse(early.as_bytes()).unwrap();
         let got = MailItem::from_message(&msg, early.as_bytes(), s.now());
         assert!(matches!(got.flag, FlagState::Flagged { reminder: None, .. }), "{:?}", got.flag);
     }

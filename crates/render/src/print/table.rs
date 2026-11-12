@@ -1,8 +1,8 @@
 //! Table Style: the list as columns. A title line on the first page, a shaded header row repeated on every
 //! page, one single-line row per item (cells ellipsized), light rules between rows.
 
-use mailcraft_fonts::FontDb;
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::FontDb;
+use iridium_mail_layout::DisplayItem;
 
 use super::text::{self, Style};
 use super::{Frame, GRID, MAX_PAGES, SHADE, hrule};
@@ -59,7 +59,7 @@ pub(crate) fn pages(t: &TableData, frame: &Frame, fonts: &FontDb) -> Vec<Vec<Dis
 
     let header_row = |items: &mut Vec<DisplayItem>, top: f32| {
         items.push(DisplayItem::FillRect {
-            rect: mailcraft_geom::Rect::new(body.x, top, body.w, row_h),
+            rect: iridium_mail_geom::Rect::new(body.x, top, body.w, row_h),
             color: SHADE,
         });
         for (i, c) in cols.iter().enumerate() {

@@ -6,8 +6,8 @@ use serde_json::{Value, json};
 
 use super::tests::{role, session};
 use super::*;
-use mailcraft_model::calendar::{Publication, Withdrawal};
-use mailcraft_model::{FolderRole, RemoteRef};
+use iridium_mail_model::calendar::{Publication, Withdrawal};
+use iridium_mail_model::{FolderRole, RemoteRef};
 
 fn cal(s: &Session) -> FolderId {
     role(s, FolderRole::Calendar)
@@ -23,13 +23,13 @@ fn outbox(s: &Session) -> FolderId {
 
 /// A session whose default account can send (its messages wait in the Outbox: nothing connects).
 fn sending_session() -> Session {
-    let mut mb = mailcraft_model::Mailbox::new_local("Local");
-    let acc = mb.add_account(mailcraft_model::Account {
-        kind: mailcraft_model::AccountKind::Imap,
+    let mut mb = iridium_mail_model::Mailbox::new_local("Local");
+    let acc = mb.add_account(iridium_mail_model::Account {
+        kind: iridium_mail_model::AccountKind::Imap,
         display_name: "me@example.com".into(),
         address: "me@example.com".into(),
         sender_name: "Me Example".into(),
-        outgoing: Some(mailcraft_model::ServerSettings {
+        outgoing: Some(iridium_mail_model::ServerSettings {
             host: "smtp.example.com".into(),
             port: 465,
             ..Default::default()
@@ -41,7 +41,7 @@ fn sending_session() -> Session {
         a.is_default = a.id == acc;
     }
     let mut s = Session::new(mb);
-    s.fixed_now = mailcraft_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0);
+    s.fixed_now = iridium_mail_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0);
     s.view.send_immediately = false;
     s.refresh_me();
     s
@@ -201,7 +201,7 @@ fn discarding_the_invitation_removes_the_unsent_meeting() {
     assert_eq!(c.importance, Importance::High);
     assert!(c.attachments.iter().any(|x| x.filename == "agenda.txt"));
     assert!(c.attachments.iter().any(|x| x.filename == "invite.ics"));
-    assert!(mailcraft_html::doc_to_text(&c.body).contains("numbers"));
+    assert!(iridium_mail_html::doc_to_text(&c.body).contains("numbers"));
     let d = run(&mut s, "compose.discard", json!({"compose": cid}));
     assert_eq!(d["meetingRemoved"], id.0);
     assert!(!s.mailbox.appointments.contains_key(&id));
@@ -318,7 +318,7 @@ fn update_folder_on_a_local_calendar_explains_itself() {
 
 fn share_body(s: &Session, r: &Value) -> String {
     let c = &s.composes[&r["compose"].as_u64().unwrap()];
-    mailcraft_html::doc_to_text(&c.body)
+    iridium_mail_html::doc_to_text(&c.body)
 }
 
 #[test]
@@ -398,7 +398,7 @@ fn save_attachment_picks_the_file_by_index_and_asks_for_a_path_in_its_own_window
     assert_eq!((params["name"].as_str(), params["size"].as_u64()), (Some("notes.txt"), Some(6)));
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../target/tmp")
-        .join(format!("mailcraft-save-item-file-{}", std::process::id()));
+        .join(format!("iridium-mail-save-item-file-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("out.txt");
     let at = path.to_string_lossy().to_string();
@@ -442,7 +442,7 @@ fn save_attachment_suggests_a_safe_name_for_hostile_file_names() {
         ATTACH;ENCODING=BASE64;VALUE=BINARY;FILENAME=.config/autostart/run.desktop:Zmlyc3Q=\r\n\
         ATTACH;ENCODING=BASE64;VALUE=BINARY;X-FILENAME=..:Zmlyc3Q=\r\n\
         END:VEVENT\r\nEND:VCALENDAR\r\n";
-    let cal = mailcraft_formats::ics::read_str(ics, Default::default()).unwrap();
+    let cal = iridium_mail_formats::ics::read_str(ics, Default::default()).unwrap();
     let names: Vec<String> =
         cal.events[0].appointment.attachments.iter().map(|f| f.filename.clone()).collect();
     assert_eq!(names, ["x", "run.desktop", "attachment3"]);

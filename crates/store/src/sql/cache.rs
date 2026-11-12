@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use mailcraft_model::{ItemId, MailItem};
+use iridium_mail_model::{ItemId, MailItem};
 
 /// Default byte cap (about 20k items).
 pub const DEFAULT_CACHE_BYTES: usize = 32 << 20;

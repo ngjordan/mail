@@ -8,7 +8,7 @@ use crate::Session;
 use crate::cmd::compose::tests::{open, session};
 use crate::cmd::insert::tests::last_dialog;
 use crate::compose::ComposeState;
-use mailcraft_model::{Block, Inline};
+use iridium_mail_model::{Block, Inline};
 
 fn setup(text: &str) -> (Session, u64) {
     let mut s = session();
@@ -142,7 +142,7 @@ fn bookmarks_travel_as_anchors_and_come_back_from_a_draft() {
     // The compose body itself has no anchors in it (bookmarks are kept beside it).
     assert!(!format!("{:?}", s.composes[&id].body).contains("Anchor"));
     // Opening the message again turns the anchors back into bookmarks.
-    let doc = mailcraft_html::html_to_doc(&html);
+    let doc = iridium_mail_html::html_to_doc(&html);
     let cid = s.open_compose(ComposeState { body: doc, ..Default::default() });
     let c = &s.composes[&cid];
     assert_eq!(c.bookmarks.len(), 1);
@@ -224,7 +224,7 @@ fn replies_leave_quoted_anchors_in_the_body() {
     // Regression: a reply or forward turned every `<a name>`/`<a id>` of the quoted original into one of the
     // user's bookmarks, and dropped the ones past the cap from the message.
     let html = r##"<p><a name="top"></a>Newsletter <a href="#sec2">jump</a></p><p><a id="sec2"></a>Two</p>"##;
-    let doc = mailcraft_html::html_to_doc(html);
+    let doc = iridium_mail_html::html_to_doc(html);
     let mut s = session();
     let cid = s.open_compose(ComposeState {
         kind: crate::compose::ComposeKind::Reply,
@@ -242,7 +242,7 @@ fn replies_leave_quoted_anchors_in_the_body() {
     for k in 0..(crate::compose::MAX_BOOKMARKS + 5) {
         many.push_str(&format!("<p><a name=\"b{k}\"></a>p{k}</p>"));
     }
-    let doc = mailcraft_html::html_to_doc(&many);
+    let doc = iridium_mail_html::html_to_doc(&many);
     let cid = s.open_compose(ComposeState {
         kind: crate::compose::ComposeKind::Draft,
         body: doc,

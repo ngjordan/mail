@@ -8,8 +8,8 @@ use super::table;
 use crate::cmd::calendar::tests::{role, session};
 use crate::queries::{ListRow, list_rows};
 use crate::{CmdError, Selection, Session};
-use mailcraft_model::view::GROUP_SEP;
-use mailcraft_model::{Address, DateTime, FolderId, FolderRole, Importance, ItemId, MailItem};
+use iridium_mail_model::view::GROUP_SEP;
+use iridium_mail_model::{Address, DateTime, FolderId, FolderRole, Importance, ItemId, MailItem};
 
 fn run(s: &mut Session, id: &str, p: Value) -> Value {
     s.run(id, &p).unwrap_or_else(|e| panic!("{id}: {e}"))
@@ -176,7 +176,7 @@ fn other_settings_fonts_grid_lines_and_auto_preview() {
     assert!(table::other(&s, people).auto_preview);
     // Reset View puts the defaults back.
     run(&mut s, "view.resetView", json!({}));
-    assert_eq!(table::other(&s, people), mailcraft_model::view::TableOther::default());
+    assert_eq!(table::other(&s, people), iridium_mail_model::view::TableOther::default());
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn new_task_columns_have_cells() {
     let id = task(&mut s, json!({"subject": "Report", "body": "\n  First line of notes\nsecond"}));
     if let Some(t) = s.mailbox.tasks.get_mut(&ItemId(id)) {
         t.requested_by = Some("Boss <boss@example.com>".into());
-        t.request_state = mailcraft_model::task::TaskRequestState::Accepted;
+        t.request_state = iridium_mail_model::task::TaskRequestState::Accepted;
     }
     let t = s.mailbox.tasks[&ItemId(id)].clone();
     let cell = |c: &str| table::task_cell(&s, table::Item::Task(&t), c);

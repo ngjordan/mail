@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use std::ops::{ControlFlow, Deref};
 use std::sync::Arc;
 
-use mailcraft_model::{
+use iridium_mail_model::{
     ChangeToken, FolderCounts, FolderId, ItemId, MailChanges, MailItem, MailTable, ScanFilter,
 };
 
@@ -83,7 +83,7 @@ pub trait MailRepo {
     /// Ids of the items filed in `folder`, ascending.
     fn ids_in(&self, folder: FolderId) -> Vec<ItemId>;
     /// Ids of the items whose Message-ID has the same normalised key as `msgid`, ascending. The key is
-    /// [`mailcraft_model::message_id_key`]: surrounding space and angle brackets dropped, ASCII lower-case, on
+    /// [`iridium_mail_model::message_id_key`]: surrounding space and angle brackets dropped, ASCII lower-case, on
     /// both the stored value and `msgid`; an empty key matches nothing. A backend indexes that key. A caller
     /// that needs the stored form exactly filters the items returned.
     fn by_message_id(&self, msgid: &str) -> Vec<ItemId>;

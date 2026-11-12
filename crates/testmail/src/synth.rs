@@ -1,4 +1,4 @@
-//! Deterministic synthetic mailboxes for the storage benchmarks (`apps/mailcraft-bench`) and importer tests.
+//! Deterministic synthetic mailboxes for the storage benchmarks (`apps/iridium-mail-bench`) and importer tests.
 //!
 //! [`Generator`] yields [`SynthMessage`]s: complete RFC 5322 sources plus the state a mail client keeps
 //! beside them (folder, read, flag, categories, Focused/Other). The same [`Config`] always gives the same
@@ -1244,7 +1244,7 @@ mod tests {
 
     /// A fresh directory under the system temp dir (`TMPDIR`).
     fn tempdir() -> std::path::PathBuf {
-        let d = std::env::temp_dir().join(format!("mailcraft-synth-{}", std::process::id()));
+        let d = std::env::temp_dir().join(format!("iridium-mail-synth-{}", std::process::id()));
         let _ = fs::remove_dir_all(&d);
         fs::create_dir_all(&d).unwrap();
         d

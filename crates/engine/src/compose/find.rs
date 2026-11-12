@@ -5,8 +5,8 @@
 //! Matches stay inside one paragraph. The wildcard matcher backtracks with a step budget, so a hostile
 //! pattern ends as "not found" instead of running away.
 
-use mailcraft_geom::Color;
-use mailcraft_model::TextStyle;
+use iridium_mail_geom::Color;
+use iridium_mail_model::TextStyle;
 
 use super::{
     Atom, AtomKind, BodySelection, ComposeState, DocPos, Flat, LeafKind, MAX_REPLACEMENTS, RunAttr,
@@ -199,7 +199,7 @@ fn special(c: char) -> Result<Tok, String> {
                 "Paragraph marks (^p) cannot be searched for: a match stays inside one paragraph.".into()
             );
         }
-        other => return Err(format!("^{other} is not a special character MailCraft knows.")),
+        other => return Err(format!("^{other} is not a special character Mail knows.")),
     })
 }
 
@@ -508,7 +508,7 @@ pub fn expand_replacement(with: &str, found: &str) -> Result<String, String> {
                     "Paragraph marks (^p) cannot be put in by Replace; use ^l for a line break.".into()
                 );
             }
-            Some(other) => return Err(format!("^{other} is not a special character MailCraft knows.")),
+            Some(other) => return Err(format!("^{other} is not a special character Mail knows.")),
             None => return Err("A ^ needs a code after it.".into()),
         }
     }
@@ -860,7 +860,7 @@ mod tests {
     }
 
     fn state(lines: &[String]) -> ComposeState {
-        use mailcraft_model::{Block, Doc};
+        use iridium_mail_model::{Block, Doc};
         let mut c = ComposeState {
             body: Doc {
                 blocks: lines.iter().map(|l| Block::text_paragraph(l)).collect(),

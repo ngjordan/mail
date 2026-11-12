@@ -3,8 +3,8 @@
 //! (`format.selectionPane`) on the right, stacked when more than one is open. Each pane is a column beside the body editor with a title and a
 //! close button; on a window too narrow to keep a usable body the panes are left out.
 //!
-//! - Clipboard: the last 24 items copied or cut in MailCraft, copied from the reading pane and (while
-//!   MailCraft runs) copied in other programs, newest first. Click an item to paste it; its menu pastes or
+//! - Clipboard: the last 24 items copied or cut in Mail, copied from the reading pane and (while
+//!   Mail runs) copied in other programs, newest first. Click an item to paste it; its menu pastes or
 //!   deletes it; Paste All / Clear All; Clipboard Options (collect from other programs, collect while the
 //!   pane is closed, open the pane by itself).
 //! - Editor: the Editor score and the issue counts by group (spelling and grammar corrections; clarity,
@@ -22,8 +22,8 @@
 use egui::{Align, Id, Layout, Rect, RichText, Stroke, Ui, UiBuilder, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::format::styles_list;
-use mailcraft_engine::compose::ComposeState;
+use iridium_mail_engine::cmd::format::styles_list;
+use iridium_mail_engine::compose::ComposeState;
 
 use crate::App;
 
@@ -38,7 +38,7 @@ pub const SELECTION_TITLE: &str = "Selection";
 pub const EDITOR_TITLE: &str = "Editor";
 /// Shown when the clipboard history is empty.
 pub const CLIPBOARD_EMPTY: &str =
-    "Nothing copied yet. What you copy or cut in MailCraft, or copy in other programs, collects here.";
+    "Nothing copied yet. What you copy or cut in Mail, or copy in other programs, collects here.";
 /// The Clipboard pane's Options menu.
 pub const CLIPBOARD_OPTIONS: &str = "Clipboard Options";
 /// Options menu entries: (`format.clipboardOptions` parameter, setting, label).
@@ -74,7 +74,7 @@ pub fn widths(c: &ComposeState, width: f32) -> (f32, f32) {
 // Hidden objects (view only)
 
 fn hidden_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-hidden-objects", cid))
+    Id::unique(("iridium-mail-compose-hidden-objects", cid))
 }
 
 /// Picture sources hidden from the editor view by the Selection pane.
@@ -175,7 +175,7 @@ pub fn right_panes(c: &ComposeState) -> Vec<RightPane> {
 fn body(ui: &mut Ui, app: &mut App, cid: u64, h: f32, scroll: bool) {
     if scroll {
         egui::ScrollArea::vertical()
-            .id_salt(("mailcraft-compose-scroll", cid))
+            .id_salt(("iridium-mail-compose-scroll", cid))
             .auto_shrink([false, false])
             .max_height(h)
             .show(ui, |ui| {
@@ -264,7 +264,7 @@ fn clipboard_pane(ui: &mut Ui, app: &mut App, cid: u64) {
                 .iter()
                 .rev()
                 .map(|e| {
-                    let pictures = mailcraft_html::doc_to_html(&e.doc).matches("<img").count();
+                    let pictures = iridium_mail_html::doc_to_html(&e.doc).matches("<img").count();
                     clip_label(&e.text, pictures)
                 })
                 .collect()
@@ -510,7 +510,7 @@ fn apply_styles_window(ctx: &egui::Context, app: &mut App, cid: u64, near: egui:
         .iter()
         .filter_map(|v| v.get("name").and_then(serde_json::Value::as_str).map(str::to_owned))
         .collect();
-    let current = mailcraft_engine::cmd::format::current_style(c);
+    let current = iridium_mail_engine::cmd::format::current_style(c);
     let styles_open = c.editor.styles_pane;
     let state_id = Id::unique(("mc-apply-styles", cid));
     let mut st: ApplyStylesState = ctx.data(|d| d.get_temp(state_id)).unwrap_or_default();
@@ -609,7 +609,7 @@ fn selection_pane(ui: &mut Ui, app: &mut App, cid: u64) {
     let Some(c) = app.s.composes.get(&cid) else {
         return;
     };
-    let objects = mailcraft_engine::cmd::format::pane_objects(c);
+    let objects = iridium_mail_engine::cmd::format::pane_objects(c);
     let sel = c.selection.clone();
     let selected_drawings = c.selected_drawings();
     let sel_drawing = c.selected_drawing;
@@ -782,7 +782,7 @@ pub fn group_label(title: &str, n: u64) -> String {
 }
 
 fn editor_pane(ui: &mut Ui, app: &mut App, cid: u64) {
-    use mailcraft_engine::cmd::review::EDITOR_CATEGORIES;
+    use iridium_mail_engine::cmd::review::EDITOR_CATEGORIES;
     if title_row(ui, app, EDITOR_TITLE) {
         app.run("review.editor", json!({"compose": cid, "show": false}));
         return;

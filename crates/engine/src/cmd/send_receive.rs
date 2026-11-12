@@ -11,7 +11,7 @@ use crate::cmd::rules::{dialog, need_selection};
 use crate::cmd::util::{opt_bool, req_str};
 use crate::sync::{Plan, cmds};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session, always};
-use mailcraft_model::{AccountId, FolderRole};
+use iridium_mail_model::{AccountId, FolderRole};
 
 fn spec(
     id: &'static str,
@@ -325,7 +325,7 @@ fn folder(s: &mut Session, p: &Value) -> CmdResult {
     if let Some(kind) = pim_kind {
         let servers = crate::sync::server_accounts(s);
         let synced = crate::sync::pim::is_synced_folder(&s.mailbox, f) && servers.contains(&account);
-        let mut publishers: Vec<mailcraft_model::AccountId> = Vec::new();
+        let mut publishers: Vec<iridium_mail_model::AccountId> = Vec::new();
         if kind == crate::sync::pim::PimKind::Calendar {
             let p = crate::cmd::calendar::props::read(&s.mailbox, f);
             let accounts =
@@ -407,7 +407,7 @@ fn folder(s: &mut Session, p: &Value) -> CmdResult {
     }))
 }
 
-fn folder_kind(s: &Session, f: mailcraft_model::FolderId) -> Option<mailcraft_model::FolderKind> {
+fn folder_kind(s: &Session, f: iridium_mail_model::FolderId) -> Option<iridium_mail_model::FolderKind> {
     s.mailbox.folder(f).map(|x| x.kind)
 }
 
@@ -442,7 +442,7 @@ fn group(s: &mut Session, p: &Value) -> CmdResult {
     }
     // A folder name ("Inbox"): the current account's folder first.
     let current = s.current_account();
-    let named = |f: &&mailcraft_model::Folder| f.name.eq_ignore_ascii_case(&name);
+    let named = |f: &&iridium_mail_model::Folder| f.name.eq_ignore_ascii_case(&name);
     let found = s
         .mailbox
         .folders
@@ -508,7 +508,7 @@ fn work_offline(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::rules::tests::session;
-    use mailcraft_model::{Account, AccountKind, MailItem, ServerSettings};
+    use iridium_mail_model::{Account, AccountKind, MailItem, ServerSettings};
 
     #[test]
     fn send_all_reports_stuck_outbox() {

@@ -2,19 +2,19 @@
 //! SRV and MX, and the Microsoft 365 tenant against local fixtures), OAuth 2.0 device sign-in with XOAUTH2
 //! IMAP/SMTP and token refresh, JMAP
 //! push over the event source (and polling without it), the "download mail from the past N months" window,
-//! and On Slow Connections Download Only Headers. Against the local test servers only (`mailcraft-testmail`,
+//! and On Slow Connections Download Only Headers. Against the local test servers only (`iridium-mail-testmail`,
 //! 127.0.0.1, synthetic users); every wait has a timeout.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::{Duration, Instant};
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_engine::sync::{PushMode, cmds};
-use mailcraft_net::ConnectOptions;
-use mailcraft_net::discover::{DiscoverOptions, ResolverChoice};
-use mailcraft_testmail::{Config, DateTime, Mx, OAUTH_TEST_CLIENT, Srv, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_engine::sync::{PushMode, cmds};
+use iridium_mail_net::ConnectOptions;
+use iridium_mail_net::discover::{DiscoverOptions, ResolverChoice};
+use iridium_mail_testmail::{Config, DateTime, Mx, OAUTH_TEST_CLIENT, Srv, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -231,7 +231,7 @@ fn microsoft_365_found_by_mx_and_signed_in_with_its_tenant() {
         "{st}"
     );
     assert!(url.contains("client_id=registered-app"));
-    let o = mailcraft_engine::accounts::account_options(&s, a);
+    let o = iridium_mail_engine::accounts::account_options(&s, a);
     assert_eq!(
         o.oauth.unwrap().token_endpoint,
         format!("https://login.microsoftonline.com/{TENANT}/oauth2/v2.0/token")
@@ -325,7 +325,7 @@ fn oauth_device_sign_in_then_mail_over_xoauth2_with_refresh() {
     assert!(s.sync_status().accounts[0].error.is_none(), "{:?}", s.sync_status());
     assert_eq!(srv.oauth_grants(), ["urn:ietf:params:oauth:grant-type:device_code", "refresh_token"]);
     // The renewed token was stored: a new session would sign in with it.
-    let stored = mailcraft_engine::accounts::account_secret(&s, a, false).unwrap();
+    let stored = iridium_mail_engine::accounts::account_secret(&s, a, false).unwrap();
     assert!(stored.starts_with("at-"));
 }
 
@@ -429,7 +429,7 @@ fn include_older_results_searches_the_server() {
     run(&mut s, "search.scope", json!({"scope": "currentFolder"}));
     run(&mut s, "search.query", json!({"text": "budget", "commit": true}));
     let fresh = find(&s, ib, "Fresh budget").unwrap();
-    assert_eq!(mailcraft_engine::search_index::results(&s), [fresh]);
+    assert_eq!(iridium_mail_engine::search_index::results(&s), [fresh]);
 
     let r = run(&mut s, "search.includeOlderResults", json!({"on": true}));
     assert_eq!(r["on"], true);
@@ -438,7 +438,7 @@ fn include_older_results_searches_the_server() {
     let old_id = find(&s, ib, "Old budget").expect("the server match was added");
     assert!(find(&s, ib, "Old lunch").is_none(), "only matches come back");
     assert!(cmds::is_header_only(&s, old_id), "found mail arrives as headers");
-    let results = mailcraft_engine::search_index::results(&s);
+    let results = iridium_mail_engine::search_index::results(&s);
     assert!(results.contains(&fresh) && results.contains(&old_id), "{results:?}");
     let st = run(&mut s, "search.query", json!({"text": "budget"}));
     assert_eq!(st["older"]["hits"], 1, "{st}");
@@ -461,7 +461,7 @@ fn include_older_results_searches_the_server() {
     // Off again; the downloaded message now matches locally on its body text.
     assert_eq!(run(&mut s, "search.includeOlderResults", json!({"on": false}))["on"], false);
     run(&mut s, "search.query", json!({"text": "archived", "commit": true}));
-    assert_eq!(mailcraft_engine::search_index::results(&s), [old_id], "now held locally in full");
+    assert_eq!(iridium_mail_engine::search_index::results(&s), [old_id], "now held locally in full");
 
     // JMAP: Email/query with the same window.
     let mut s = session();
@@ -476,12 +476,12 @@ fn include_older_results_searches_the_server() {
     assert!(find(&s, ib, "Old lunch").is_none());
     s.selection.folder = ib;
     run(&mut s, "search.query", json!({"text": "lunch", "commit": true}));
-    assert!(mailcraft_engine::search_index::results(&s).is_empty());
+    assert!(iridium_mail_engine::search_index::results(&s).is_empty());
     run(&mut s, "search.includeOlderResults", json!({"on": true}));
     assert!(s.wait_for_sync(WAIT), "JMAP search timed out: {:?}", s.sync_status());
     let lunch = find(&s, ib, "Old lunch").expect("JMAP match added");
     assert!(find(&s, ib, "Old budget").is_none());
-    assert_eq!(mailcraft_engine::search_index::results(&s), [lunch]);
+    assert_eq!(iridium_mail_engine::search_index::results(&s), [lunch]);
     assert!(!cmds::is_header_only(&s, lunch), "JMAP matches arrive whole");
 
     // Working offline: unavailable.
@@ -540,7 +540,7 @@ fn slow_connections_download_only_headers() {
     let ib = inbox(&s, a);
     let first = find(&s, ib, "Big").unwrap();
     assert!(!cmds::is_header_only(&s, first), "no rate known yet: downloaded in full");
-    assert!(mailcraft_engine::sync::link_speed(&s, a).is_some(), "the run measured the link");
+    assert!(iridium_mail_engine::sync::link_speed(&s, a).is_some(), "the run measured the link");
     assert!(s.sync_status().accounts[0].slow_connection);
 
     srv.seed_message(ALICE, "INBOX", &message("On a slow link", "Body comes later."), &[]).unwrap();

@@ -5,7 +5,7 @@
 //! it replaces (`#[serde(transparent)]`), so snapshots, journals, data files and browser storage stay
 //! byte-identical.
 //!
-//! Only part of this API is on the `MailRepo` trait (`mailcraft-store`) that a database-backed repository
+//! Only part of this API is on the `MailRepo` trait (`iridium-mail-store`) that a database-backed repository
 //! will implement: the targeted reads ([`MailTable::get`], [`MailTable::counts`], [`MailTable::all_counts`],
 //! [`MailTable::ids_in`], [`MailTable::by_message_id`], [`MailTable::by_remote_id`],
 //! [`MailTable::older_than`]), the streaming [`MailTable::scan`], the item writes

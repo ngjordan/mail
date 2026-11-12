@@ -8,8 +8,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use mailcraft_engine::sample::sample_session;
-use mailcraft_ui_egui::App;
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_ui_egui::App;
 
 /// Text layouts held in the layout cache of the viewport being drawn.
 fn galleys(ctx: &egui::Context) -> usize {

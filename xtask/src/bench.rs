@@ -1,4 +1,4 @@
-//! `cargo xtask bench`: builds `apps/mailcraft-bench` in release mode and runs it on a synthetic profile,
+//! `cargo xtask bench`: builds `apps/iridium-mail-bench` in release mode and runs it on a synthetic profile,
 //! writing the JSON report under `target/scratch/bench/` (storage ADR, section 6.1).
 
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ pub struct Bench {
 }
 
 /// Parses `[--size 10k|50k | --size 100k|1m|2m --small-bodies] [--backend legacy|sqlite] [--out FILE]
-/// [--seed N] [--sync N] [--bulk-move N] [--keep] [--force-large]`. `mailcraft-bench` checks the size
+/// [--seed N] [--sync N] [--bulk-move N] [--keep] [--force-large]`. `iridium-mail-bench` checks the size
 /// against the body kind and the machine before it writes anything.
 pub fn parse(args: &[String]) -> Result<Bench, String> {
     let mut b = Bench { size: "10k".into(), backend: "legacy".into(), ..Default::default() };
@@ -46,7 +46,7 @@ pub fn parse(args: &[String]) -> Result<Bench, String> {
     Ok(b)
 }
 
-/// The `mailcraft-bench run` arguments for `b` in repository `root`.
+/// The `iridium-mail-bench run` arguments for `b` in repository `root`.
 pub fn bench_args(root: &Path, b: &Bench, date: &str) -> Vec<String> {
     let dir = root.join("target").join("scratch").join("bench");
     let small = if b.small_bodies { "-small" } else { "" };
@@ -76,14 +76,14 @@ fn today() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| i64::try_from(d.as_secs()).unwrap_or(0))
         .unwrap_or(0);
-    let (y, m, d) = mailcraft_engine::model::dates::civil_from_days(secs.div_euclid(86_400));
+    let (y, m, d) = iridium_mail_engine::model::dates::civil_from_days(secs.div_euclid(86_400));
     format!("{y:04}-{m:02}-{d:02}")
 }
 
 pub fn run(root: &Path, args: &[String]) -> TaskResult {
     let b = parse(args)?;
     let mut cmd = Command::new(cargo());
-    cmd.current_dir(root).args(["run", "--release", "-p", "mailcraft-bench", "--"]).args(bench_args(
+    cmd.current_dir(root).args(["run", "--release", "-p", "iridium-mail-bench", "--"]).args(bench_args(
         root,
         &b,
         &today(),
@@ -95,7 +95,7 @@ pub fn run(root: &Path, args: &[String]) -> TaskResult {
         if b.small_bodies { ", small bodies" } else { "" }
     );
     let status = cmd.status().map_err(|e| format!("bench: cannot run cargo: {e}"))?;
-    if status.success() { Ok(()) } else { Err(format!("bench: mailcraft-bench failed ({status})")) }
+    if status.success() { Ok(()) } else { Err(format!("bench: iridium-mail-bench failed ({status})")) }
 }
 
 #[cfg(test)]

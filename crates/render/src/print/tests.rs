@@ -1,7 +1,7 @@
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::Color;
-use mailcraft_layout::DisplayItem;
-use mailcraft_model::{Block, Doc};
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::Color;
+use iridium_mail_layout::DisplayItem;
+use iridium_mail_model::{Block, Doc};
 
 use super::*;
 use crate::pdf::{PdfInfo, write_pdf};
@@ -248,7 +248,7 @@ fn cal(style: CalendarStyle, first: i64, last: i64) -> CalendarData {
 fn calendar_styles_page_counts_and_content() {
     let f = fonts();
     // 2026-10-12 is a Monday: day number 20738.
-    let mon = mailcraft_model::dates::days_from_civil(2026, 10, 12).unwrap();
+    let mon = iridium_mail_model::dates::days_from_civil(2026, 10, 12).unwrap();
     let daily = paginate(
         &PrintContent::Calendar(cal(CalendarStyle::Daily, mon, mon + 2)),
         &PageSetup::default(),
@@ -346,7 +346,7 @@ fn pdf_is_structurally_valid_and_has_every_page() {
 #[test]
 fn pdf_of_every_style_and_of_hostile_items() {
     let f = fonts();
-    let mon = mailcraft_model::dates::days_from_civil(2026, 10, 12).unwrap();
+    let mon = iridium_mail_model::dates::days_from_civil(2026, 10, 12).unwrap();
     let contents = vec![
         PrintContent::Calendar(cal(CalendarStyle::Monthly, mon, mon)),
         PrintContent::Contacts { style: ContactStyle::Card, cards: contacts(4) },
@@ -379,7 +379,7 @@ fn pdf_of_every_style_and_of_hostile_items() {
                 DisplayItem::Text {
                     origin: Point::new(10.0, 10.0),
                     text: "x".repeat(50_000),
-                    font: mailcraft_fonts::FontId(9_999),
+                    font: iridium_mail_fonts::FontId(9_999),
                     size_px: 1e9,
                     color: Color::BLACK,
                     underline: true,
@@ -573,7 +573,7 @@ fn pdf_never_embeds_a_restricted_font() {
     let pdf_with = |fs_type: u16| {
         let mut f = fonts();
         let id = f
-            .add_face(mailcraft_fonts::Face {
+            .add_face(iridium_mail_fonts::Face {
                 family: "Zed Restricted",
                 weight: 400,
                 italic: false,

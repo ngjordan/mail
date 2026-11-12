@@ -92,7 +92,7 @@ pub struct Task {
     /// When the last task response or status report about this task was sent or applied.
     #[serde(default)]
     pub last_report: Option<DateTime>,
-    /// When the task was last created or changed in MailCraft (the Modified column).
+    /// When the task was last created or changed in Mail (the Modified column).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modified: Option<DateTime>,
     /// The server copy (CalDAV), when the task is synchronised.

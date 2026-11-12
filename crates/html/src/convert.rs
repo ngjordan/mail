@@ -8,11 +8,11 @@
 use crate::css::{self, CascadeKey, DEFAULT_PT, Length, Props, Stylesheet};
 use crate::dom::{self, Dom, Node, NodeData, NodeId, attr};
 use crate::sanitize;
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{
     Align, Block, Doc, Inline, LineRule, ListKind, ParaStyle, TableCell, TextStyle, UnderlineKind,
 };
-use mailcraft_model::{BorderEdge, ParaBorders, TableBorders};
+use iridium_mail_model::{BorderEdge, ParaBorders, TableBorders};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -901,7 +901,7 @@ impl Conv<'_> {
                 // A named place (bookmark): `<a name>` or `<a id>`.
                 if let Some(name) = attr(attrs, "name")
                     .or_else(|| attr(attrs, "id"))
-                    .and_then(mailcraft_model::rich::clean_anchor_name)
+                    .and_then(iridium_mail_model::rich::clean_anchor_name)
                 {
                     sink.push_inline(Inline::Anchor { name }, &Ctx { link: None, ..c.clone() });
                 }

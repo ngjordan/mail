@@ -6,10 +6,10 @@ use egui::{
     Align, Align2, Color32, CornerRadius, FontId, Id, Layout, Rect, Response, Role, Sense, Stroke,
     StrokeKind, Ui, UiBuilder, Vec2, WidgetInfo, pos2, vec2,
 };
-use mailcraft_engine::cmd::calendar::CalendarViewState;
-use mailcraft_engine::cmd::notes::NotesViewState;
-use mailcraft_engine::cmd::view::modules::{ModuleKind, ModuleView};
-use mailcraft_model::{
+use iridium_mail_engine::cmd::calendar::CalendarViewState;
+use iridium_mail_engine::cmd::notes::NotesViewState;
+use iridium_mail_engine::cmd::view::modules::{ModuleKind, ModuleView};
+use iridium_mail_model::{
     DateTime, FolderId, FolderKind, FolderPaneState, ItemId, NoteColor, ReadingPanePos, dates,
 };
 
@@ -108,12 +108,12 @@ impl CalSlice {
 }
 
 fn state_id() -> Id {
-    Id::unique("mailcraft.modules.state")
+    Id::unique("iridium-mail.modules.state")
 }
 
 /// Where the calendar part of a window other than the main one is kept.
 fn slice_id(viewport: egui::ViewportId) -> Id {
-    Id::unique(("mailcraft.modules.calendar.window", viewport))
+    Id::unique(("iridium-mail.modules.calendar.window", viewport))
 }
 
 /// The module state as the window being drawn sees it: the shared state with that window's calendar part
@@ -357,7 +357,7 @@ pub(crate) fn long_date(day: i64) -> String {
 // Colours (our own palette)
 // ---------------------------------------------------------------------------------------------------------
 
-pub(crate) fn geom_color(c: mailcraft_geom::Color) -> Color32 {
+pub(crate) fn geom_color(c: iridium_mail_geom::Color) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
 }
 
@@ -374,9 +374,9 @@ pub(crate) fn blend(a: Color32, b: Color32, t: f32) -> Color32 {
 /// Colour of the first category (of `names`) that has one.
 pub(crate) fn category_color(app: &App, names: &[String]) -> Option<Color32> {
     names.iter().find_map(|n| {
-        mailcraft_model::Category::find(&app.s.mailbox.categories, n)
+        iridium_mail_model::Category::find(&app.s.mailbox.categories, n)
             .map(|c| c.color)
-            .filter(|c| *c != mailcraft_model::CategoryColor::None)
+            .filter(|c| *c != iridium_mail_model::CategoryColor::None)
             .map(|c| geom_color(c.rgb()))
     })
 }
@@ -531,7 +531,7 @@ pub(crate) fn module_folder_pane(ui: &mut Ui, app: &mut App) -> (Option<Rect>, R
 
 /// Paints a contact's picture in `rect` (rounded to a circle); false when the contact has none or it cannot
 /// be shown (only PNG pictures are decoded; others keep the initials).
-pub(crate) fn paint_contact_picture(ui: &Ui, rect: Rect, c: &mailcraft_model::Contact) -> bool {
+pub(crate) fn paint_contact_picture(ui: &Ui, rect: Rect, c: &iridium_mail_model::Contact) -> bool {
     let Some(pic) = c.picture.as_ref() else { return false };
     let Some(tex) = picture_texture(ui.ctx(), c.id, pic) else { return false };
     let radius =
@@ -543,7 +543,7 @@ pub(crate) fn paint_contact_picture(ui: &Ui, rect: Rect, c: &mailcraft_model::Co
 }
 
 /// Cheap fingerprint of a picture (its size and both ends) to notice a changed picture.
-fn picture_key(pic: &mailcraft_model::contact::ContactPicture) -> u64 {
+fn picture_key(pic: &iridium_mail_model::contact::ContactPicture) -> u64 {
     let d = &pic.data;
     let mut h: u64 = 0xcbf2_9ce4_8422_2325 ^ d.len() as u64;
     let head = d.get(..d.len().min(256)).unwrap_or(&[]);
@@ -556,7 +556,7 @@ fn picture_key(pic: &mailcraft_model::contact::ContactPicture) -> u64 {
 }
 
 /// Decodes a contact picture (PNG, JPEG or GIF, bounded size) into an image.
-pub(crate) fn decode_picture(pic: &mailcraft_model::contact::ContactPicture) -> Option<egui::ColorImage> {
+pub(crate) fn decode_picture(pic: &iridium_mail_model::contact::ContactPicture) -> Option<egui::ColorImage> {
     crate::body::decode_contact_picture(pic)
 }
 
@@ -564,7 +564,7 @@ pub(crate) fn decode_picture(pic: &mailcraft_model::contact::ContactPicture) -> 
 fn picture_texture(
     ctx: &egui::Context,
     id: ItemId,
-    pic: &mailcraft_model::contact::ContactPicture,
+    pic: &iridium_mail_model::contact::ContactPicture,
 ) -> Option<egui::TextureHandle> {
     let key = picture_key(pic);
     let mem = Id::unique(("mc-contact-picture", id.0));
@@ -744,9 +744,9 @@ pub(crate) fn empty_message(ui: &Ui, rect: Rect, app: &App, title: &str, hint: &
 /// The current folder of a module kind (selected folder when it holds that kind, else the default).
 pub(crate) fn current_folder(
     app: &App,
-    kind: mailcraft_engine::cmd::calendar::pim::Kind,
+    kind: iridium_mail_engine::cmd::calendar::pim::Kind,
 ) -> Option<FolderId> {
-    mailcraft_engine::cmd::calendar::pim::current_folder(&app.s, kind)
+    iridium_mail_engine::cmd::calendar::pim::current_folder(&app.s, kind)
 }
 
 /// Selects a folder through the engine (`nav.selectFolder`).
@@ -793,7 +793,7 @@ pub(crate) fn sync_selection(app: &mut App, is_item: impl Fn(&App, ItemId) -> bo
 /// another folder is selected, the module's current folder is selected.
 pub(crate) fn ensure_folder(
     app: &mut App,
-    kind: mailcraft_engine::cmd::calendar::pim::Kind,
+    kind: iridium_mail_engine::cmd::calendar::pim::Kind,
 ) -> Option<FolderId> {
     let folder = current_folder(app, kind)?;
     if app.s.selection.folder != folder {
@@ -805,7 +805,7 @@ pub(crate) fn ensure_folder(
 /// The module view of `folder` (the engine's per-folder view state).
 pub(crate) fn module_view(app: &App, folder: Option<FolderId>, kind: ModuleKind) -> ModuleView {
     folder
-        .map(|f| mailcraft_engine::cmd::view::modules::state(&app.s, f, kind))
+        .map(|f| iridium_mail_engine::cmd::view::modules::state(&app.s, f, kind))
         .unwrap_or_else(|| ModuleView::defaults(kind))
 }
 
@@ -816,7 +816,7 @@ pub(crate) fn change_view(app: &mut App, name: &str) {
 
 /// Row height with View › Use Tighter Spacing applied.
 pub(crate) fn row_height(app: &App, base: f32) -> f32 {
-    let tight = mailcraft_engine::queries::view_settings(&app.s, app.s.selection.folder).tighter_spacing;
+    let tight = iridium_mail_engine::queries::view_settings(&app.s, app.s.selection.folder).tighter_spacing;
     if tight { (base * 0.78).round() } else { base }
 }
 
@@ -826,7 +826,7 @@ pub(crate) fn collapsed_labels(app: &App, folder: FolderId) -> BTreeSet<String> 
         .view
         .collapsed_groups
         .get(&folder)
-        .map(|v| v.iter().filter(|e| mailcraft_engine::cmd::view::is_group_label(e)).cloned().collect())
+        .map(|v| v.iter().filter(|e| iridium_mail_engine::cmd::view::is_group_label(e)).cloned().collect())
         .unwrap_or_default()
 }
 
@@ -886,7 +886,7 @@ pub(crate) fn nested_headers<T>(
     id: impl Fn(&T) -> ItemId,
     collapsed: &BTreeSet<String>,
 ) -> bool {
-    use mailcraft_model::view::GROUP_SEP;
+    use iridium_mail_model::view::GROUP_SEP;
     let Some(row) = rows.get(i) else { return true };
     let mine = levels(row);
     let prev: &[String] = i.checked_sub(1).and_then(|p| rows.get(p)).map_or(&[], &levels);
@@ -908,7 +908,7 @@ pub(crate) fn nested_headers<T>(
 }
 
 /// A module row's text size in points: Other Settings › Row font when set, else the view's own `base`.
-pub(crate) fn row_font(other: &mailcraft_model::view::TableOther, base: f32) -> f32 {
+pub(crate) fn row_font(other: &iridium_mail_model::view::TableOther, base: f32) -> f32 {
     if other.row_font > 0 { f32::from(other.row_font) } else { base }
 }
 
@@ -1034,7 +1034,7 @@ mod tests {
 
     #[test]
     fn each_window_keeps_its_own_calendar_view() {
-        use mailcraft_engine::cmd::calendar::CalendarMode;
+        use iridium_mail_engine::cmd::calendar::CalendarMode;
         let ctx = egui::Context::default();
         let other = egui::ViewportId::from_hash_of("explorer-1");
         let mut main = load_for(&ctx, egui::ViewportId::ROOT);
@@ -1133,7 +1133,7 @@ mod tests {
     }
 
     fn folder_pane_harness(module: &str, mode: &str, width: f32) -> egui_kittest::Harness<'static, App> {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         app.run(module, serde_json::json!({}));
         app.run("view.folderPane", serde_json::json!({ "mode": mode }));
         let view: fn(&mut Ui, &mut App) = match module {

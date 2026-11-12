@@ -6,7 +6,7 @@
 use std::io::{BufRead, BufReader, Cursor, Write};
 use std::net::TcpListener;
 
-use mailcraft_mcp::{
+use iridium_mail_mcp::{
     Backend, BridgedBackend, HeadlessBackend, MAX_REQUEST_BYTES, Server, code, serve, session_query,
 };
 use serde_json::{Value, json};
@@ -59,7 +59,7 @@ fn handshake_and_tool_list() {
     assert_eq!(out.len(), 3, "notifications get no response: {out:?}");
     assert_eq!(out[0]["id"], 1);
     assert_eq!(out[0]["result"]["protocolVersion"], "2025-03-26");
-    assert_eq!(out[0]["result"]["serverInfo"]["name"], "mailcraft");
+    assert_eq!(out[0]["result"]["serverInfo"]["name"], "iridium-mail");
     assert!(out[0]["result"]["capabilities"]["tools"].is_object());
     let tools = out[1]["result"]["tools"].as_array().unwrap();
     let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
@@ -82,7 +82,7 @@ fn handshake_and_tool_list() {
 #[test]
 fn unknown_protocol_version_gets_ours() {
     let out = exchange(&[req(1, "initialize", json!({"protocolVersion": "1999-01-01"}))]);
-    assert_eq!(out[0]["result"]["protocolVersion"], mailcraft_mcp::PROTOCOL_VERSION);
+    assert_eq!(out[0]["result"]["protocolVersion"], iridium_mail_mcp::PROTOCOL_VERSION);
 }
 
 #[test]
@@ -259,7 +259,7 @@ fn junk_arguments_never_break_the_server() {
         json!({"folder": "", "item": u64::MAX, "query": "\u{0}\u{ffff}"}),
         json!({"folder": "\\\\//", "limit": u64::MAX, "offset": u64::MAX}),
     ];
-    let tools = mailcraft_mcp::tools::TOOL_NAMES;
+    let tools = iridium_mail_mcp::tools::TOOL_NAMES;
     let mut lines = Vec::new();
     let mut n = 0;
     for tool in tools {

@@ -1,5 +1,5 @@
 //! Shape geometry for drawing objects (Insert › Shapes, Shape Format › Change Shape): every shape of the
-//! gallery as polygons in its box, drawn for MailCraft from plain geometry (regular polygons, ellipse arcs,
+//! gallery as polygons in its box, drawn for Mail from plain geometry (regular polygons, ellipse arcs,
 //! Bézier curves). Names follow the gallery's observed labels; geometry ids are our own.
 //!
 //! A [`Geometry`] is a filled area (sub-paths filled together with the even-odd rule, so frames and rings
@@ -467,7 +467,7 @@ fn curved_band(cx: f32, cy: f32, rx: f32, ry: f32, t: f32, a0: f32, a1: f32) -> 
 
 /// Geometry of drawing `d` drawn as shape `id`: a freeform, scribble or curve whose points have curve
 /// handles (Edit Points) follows its curved segments; anything else is [`geometry`].
-pub fn drawing_geometry(id: &str, d: &mailcraft_model::rich::Drawing) -> Option<Geometry> {
+pub fn drawing_geometry(id: &str, d: &iridium_mail_model::rich::Drawing) -> Option<Geometry> {
     let freeform = matches!(id, "freeform" | "scribble" | "curve");
     if freeform && d.points.len() >= 2 && d.handles.iter().any(|h| !h.is_plain()) {
         let w = if d.w.is_finite() { d.w.max(1.0) } else { 1.0 };

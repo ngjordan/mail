@@ -8,7 +8,7 @@ use super::{DrawingKind, find, opt_bool, target};
 use crate::cmd::insert::drawing as draw;
 use crate::compose::ResolvedTheme;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::rich::Drawing;
+use iridium_mail_model::rich::Drawing;
 
 /// Longest chain followed.
 const MAX_CHAIN: usize = 64;

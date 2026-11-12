@@ -12,8 +12,8 @@ use crate::cmd::rules::{clean_name, dialog, parse_field};
 use crate::cmd::util::{opt_folder, opt_str};
 use crate::compose::{ComposeKind, ComposeState};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::subject::{forward_subject, reply_subject};
-use mailcraft_model::{Block, FlagState, FolderKind, ItemId, MessageAction, QuickStep, QuickStepAction};
+use iridium_mail_model::subject::{forward_subject, reply_subject};
+use iridium_mail_model::{Block, FlagState, FolderKind, ItemId, MessageAction, QuickStep, QuickStepAction};
 
 /// Most quick steps kept.
 const MAX_STEPS: usize = 200;
@@ -154,7 +154,7 @@ fn check_actions(s: &Session, actions: &[QuickStepAction]) -> Result<(), CmdErro
             return Err(CmdError::Params(format!("unknown flag `{flag}` (use a Follow Up key)")));
         }
         if let QuickStepAction::NewMeeting(to) = a
-            && let Some(why) = mailcraft_model::quickstep::recipients_problem("attendee", to)
+            && let Some(why) = iridium_mail_model::quickstep::recipients_problem("attendee", to)
         {
             return Err(CmdError::Params(why));
         }
@@ -308,7 +308,7 @@ const AUTO_SEND_DELAY_SECS: i64 = 60;
 /// stays open without the delay (the user did not ask for Delay Delivery).
 fn auto_send(s: &mut Session, cid: u64) -> Option<String> {
     let now = s.now();
-    let at = mailcraft_model::DateTime {
+    let at = iridium_mail_model::DateTime {
         unix: now.unix.saturating_add(AUTO_SEND_DELAY_SECS),
         offset_min: now.offset_min,
     };
@@ -686,7 +686,7 @@ pub const FLAG_KEYS: [(&str, &str); 5] = [
 fn flag_of(
     s: &Session,
     key: &str,
-) -> (String, Option<mailcraft_model::DateTime>, Option<mailcraft_model::DateTime>) {
+) -> (String, Option<iridium_mail_model::DateTime>, Option<iridium_mail_model::DateTime>) {
     use crate::cmd::mail::{FlagKind, flag_dates};
     let kind = match key.trim() {
         "today" => Some(FlagKind::Today),
@@ -850,7 +850,7 @@ fn reset(s: &mut Session, _: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::rules::tests::session;
-    use mailcraft_model::Importance;
+    use iridium_mail_model::Importance;
 
     #[test]
     fn first_use_setup_then_run() {
@@ -926,7 +926,7 @@ mod tests {
         assert!(r["errors"].as_array().unwrap().is_empty(), "{r}");
         assert_eq!(s.mailbox.tasks.len(), tasks_before + 1);
         assert!(s.mailbox.tasks.values().any(|t| t.subject == subject));
-        assert_eq!(s.mailbox.mail.get(first).unwrap().focus, mailcraft_model::FocusClass::Other);
+        assert_eq!(s.mailbox.mail.get(first).unwrap().focus, iridium_mail_model::FocusClass::Other);
         // Forward as attachment to a set address.
         s.run(
             "quicksteps.new",
@@ -1027,7 +1027,7 @@ mod tests {
     #[test]
     fn meeting_attendees_and_recipients_are_size_capped() {
         let (mut s, _, _) = session();
-        let long = "x".repeat(mailcraft_model::quickstep::MAX_ACTION_RECIPIENT_CHARS + 1);
+        let long = "x".repeat(iridium_mail_model::quickstep::MAX_ACTION_RECIPIENT_CHARS + 1);
         let r = s.run("quicksteps.new", &json!({"name": "Big", "actions": [{"NewMeeting": [long]}]}));
         assert!(r.is_err(), "{r:?}");
         let fwd = QuickStepAction::Forward(MessageAction::to(vec![long.clone()]));
@@ -1121,12 +1121,13 @@ mod tests {
 
         // With a sending account: no compose stays open; the message waits a minute in the Outbox.
         let mut s = crate::cmd::compose::tests::session();
-        let inbox = s.mailbox.folders.values().find(|f| f.role == Some(mailcraft_model::FolderRole::Inbox));
+        let inbox =
+            s.mailbox.folders.values().find(|f| f.role == Some(iridium_mail_model::FolderRole::Inbox));
         let inbox = inbox.unwrap().id;
-        let first = s.mailbox.add_mail(mailcraft_model::MailItem {
+        let first = s.mailbox.add_mail(iridium_mail_model::MailItem {
             folder: inbox,
             subject: "Badges".into(),
-            from: Some(mailcraft_model::Address::new(None, "ann@example.com")),
+            from: Some(iridium_mail_model::Address::new(None, "ann@example.com")),
             ..Default::default()
         });
         s.run("quicksteps.new", &fwd_now).unwrap();
@@ -1138,7 +1139,7 @@ mod tests {
         assert_eq!(s.composes.len(), open_before);
         assert!(!s.notices.iter().any(|n| matches!(n, crate::Notice::Compose(_))), "no window opens");
         let account = s.current_account().unwrap();
-        let outbox = s.mailbox.role_folder(account, mailcraft_model::FolderRole::Outbox).unwrap();
+        let outbox = s.mailbox.role_folder(account, iridium_mail_model::FolderRole::Outbox).unwrap();
         let queued = s.mailbox.items_in(outbox);
         let sent = queued.iter().find(|m| m.subject == "Passing on").expect("queued in the Outbox");
         assert!(sent.sent.unwrap().unix > s.now().unix, "held for the delay");
@@ -1188,10 +1189,10 @@ mod tests {
     }
 
     /// A session whose mailbox has a "New" signature for new messages and a "Re" one for replies/forwards.
-    fn signed_session() -> (Session, mailcraft_model::FolderId, mailcraft_model::FolderId) {
+    fn signed_session() -> (Session, iridium_mail_model::FolderId, iridium_mail_model::FolderId) {
         let (mut s, inbox, proj) = session();
-        s.mailbox.add_signature("New", mailcraft_model::Doc::from_plain_text("-- New")).unwrap();
-        s.mailbox.add_signature("Re", mailcraft_model::Doc::from_plain_text("-- Re")).unwrap();
+        s.mailbox.add_signature("New", iridium_mail_model::Doc::from_plain_text("-- New")).unwrap();
+        s.mailbox.add_signature("Re", iridium_mail_model::Doc::from_plain_text("-- Re")).unwrap();
         s.mailbox.set_signature_defaults(None, Some(Some("New")), Some(Some("Re"))).unwrap();
         (s, inbox, proj)
     }
@@ -1315,7 +1316,7 @@ mod tests {
     fn forward_and_delete_forwards_every_message_it_deletes() {
         let (mut s, inbox, _) = session();
         for i in 0..25 {
-            s.mailbox.add_mail(mailcraft_model::MailItem {
+            s.mailbox.add_mail(iridium_mail_model::MailItem {
                 folder: inbox,
                 subject: format!("Extra {i}"),
                 ..Default::default()
@@ -1336,7 +1337,7 @@ mod tests {
         assert_eq!(s.mailbox.total_count(inbox), 0);
         // Over the forward cap: refused before anything runs.
         for i in 0..=crate::cmd::respond::MAX_FORWARD_ITEMS {
-            s.mailbox.add_mail(mailcraft_model::MailItem {
+            s.mailbox.add_mail(iridium_mail_model::MailItem {
                 folder: inbox,
                 subject: format!("Many {i}"),
                 ..Default::default()
@@ -1349,7 +1350,7 @@ mod tests {
         assert_eq!(s.mailbox.total_count(inbox), many.len(), "nothing was deleted");
         assert_eq!(s.composes.len(), composes);
         // A forward that cannot be built (too large) stops the step: nothing is deleted.
-        let big = s.mailbox.add_mail(mailcraft_model::MailItem {
+        let big = s.mailbox.add_mail(iridium_mail_model::MailItem {
             folder: inbox,
             subject: "Huge".into(),
             size: 60 * 1024 * 1024,
@@ -1428,7 +1429,7 @@ mod tests {
     #[test]
     fn flag_keys_set_follow_up_dates() {
         let (mut s, inbox, _) = session();
-        s.fixed_now = mailcraft_model::DateTime::from_civil(2026, 10, 7, 9, 0, 0, 0); // a Wednesday
+        s.fixed_now = iridium_mail_model::DateTime::from_civil(2026, 10, 7, 9, 0, 0, 0); // a Wednesday
         s.run("quicksteps.new", &json!({"name": "Tomorrow", "actions": [{"Flag": "tomorrow"}]})).unwrap();
         s.run("quicksteps.new", &json!({"name": "Undated", "actions": [{"Flag": "noDate"}]})).unwrap();
         s.selection.items = s.mailbox.items_in(inbox).iter().map(|m| m.id).take(1).collect();
@@ -1437,7 +1438,7 @@ mod tests {
         match &s.mailbox.mail.get(id).unwrap().flag {
             FlagState::Flagged { label, due: Some(due), .. } => {
                 assert_eq!(label, "Follow up");
-                assert_eq!(mailcraft_model::ListTime::date(*due, 0), "10/8/2026");
+                assert_eq!(iridium_mail_model::ListTime::date(*due, 0), "10/8/2026");
             }
             other => panic!("{other:?}"),
         }

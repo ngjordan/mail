@@ -5,12 +5,12 @@
 .DESCRIPTION
   packaging/windows/package.ps1 [-Target x86_64-pc-windows-msvc] [-OutDir dist] [-NoBuild]
 
-  1. cargo build --release for mailcraft and mailcraft-cli (build details in MAILCRAFT_GIT_HASH /
-     MAILCRAFT_BUILD_DATE, like packaging/env.sh does on Unix).
+  1. cargo build --release for iridium-mail and iridium-mail-cli (build details in IRIDIUM_MAIL_GIT_HASH /
+     IRIDIUM_MAIL_BUILD_DATE, like packaging/env.sh does on Unix).
   2. Signs both .exe files when WINDOWS_CERT_PFX (base64 of a code-signing .pfx) and WINDOWS_CERT_PASSWORD
      are set; WINDOWS_TIMESTAMP_URL overrides the RFC 3161 timestamp server.
-  3. wix build mailcraft.wxs -> mailcraft-VERSION-windows-ARCH.msi (signed the same way).
-  4. mailcraft-VERSION-windows-ARCH.zip: both .exe files plus the licences.
+  3. wix build iridium-mail.wxs -> iridium-mail-VERSION-windows-ARCH.msi (signed the same way).
+  4. iridium-mail-VERSION-windows-ARCH.zip: both .exe files plus the licences.
 
   Needs: Rust (MSVC toolchain), git, the .NET SDK for `dotnet tool install wix` (when wix is not on PATH),
   signtool from the Windows SDK only when signing. For -Target aarch64-pc-windows-msvc, the MSVC ARM64
@@ -55,25 +55,25 @@ $Arch = switch -Wildcard ($Target) {
 }
 $WixArch = if ($Arch -eq "aarch64") { "arm64" } else { "x64" }
 
-if (-not $env:MAILCRAFT_GIT_HASH) {
-    $env:MAILCRAFT_GIT_HASH = (& git -C $Root rev-parse --short=10 HEAD 2>$null)
-    if (-not $env:MAILCRAFT_GIT_HASH) { $env:MAILCRAFT_GIT_HASH = "unknown" }
+if (-not $env:IRIDIUM_MAIL_GIT_HASH) {
+    $env:IRIDIUM_MAIL_GIT_HASH = (& git -C $Root rev-parse --short=10 HEAD 2>$null)
+    if (-not $env:IRIDIUM_MAIL_GIT_HASH) { $env:IRIDIUM_MAIL_GIT_HASH = "unknown" }
 }
-if (-not $env:MAILCRAFT_BUILD_DATE) {
-    $env:MAILCRAFT_BUILD_DATE = (& git -C $Root log -1 --format=%cs 2>$null)
-    if (-not $env:MAILCRAFT_BUILD_DATE) { $env:MAILCRAFT_BUILD_DATE = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd") }
+if (-not $env:IRIDIUM_MAIL_BUILD_DATE) {
+    $env:IRIDIUM_MAIL_BUILD_DATE = (& git -C $Root log -1 --format=%cs 2>$null)
+    if (-not $env:IRIDIUM_MAIL_BUILD_DATE) { $env:IRIDIUM_MAIL_BUILD_DATE = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd") }
 }
-Write-Host "MailCraft $Version ($AppId) for $Target, git $($env:MAILCRAFT_GIT_HASH), $($env:MAILCRAFT_BUILD_DATE)"
+Write-Host "Mail $Version ($AppId) for $Target, git $($env:IRIDIUM_MAIL_GIT_HASH), $($env:IRIDIUM_MAIL_BUILD_DATE)"
 
 if (-not $NoBuild) {
     # Release builds must carry the icon resource (taskbar, Start menu, Explorer); build.rs fails without it.
-    $env:MAILCRAFT_REQUIRE_ICON = "1"
+    $env:IRIDIUM_MAIL_REQUIRE_ICON = "1"
     Invoke-Checked "rustup" @("target", "add", $Target)
-    Invoke-Checked "cargo" @("build", "--locked", "--release", "--target", $Target, "-p", "mailcraft", "-p", "mailcraft-cli")
+    Invoke-Checked "cargo" @("build", "--locked", "--release", "--target", $Target, "-p", "iridium-mail", "-p", "iridium-mail-cli")
 }
 $TargetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $Root "target" }
 $BinDir = Join-Path $TargetDir "$Target\release"
-foreach ($exe in @("mailcraft.exe", "mailcraft-cli.exe")) {
+foreach ($exe in @("iridium-mail.exe", "iridium-mail-cli.exe")) {
     if (-not (Test-Path (Join-Path $BinDir $exe))) { throw "missing $BinDir\$exe" }
 }
 
@@ -83,7 +83,7 @@ New-Item -ItemType Directory -Force -Path $Work | Out-Null
 # Sign copies, never the files in target/.
 $SignedBin = Join-Path $Work "bin"
 New-Item -ItemType Directory -Force -Path $SignedBin | Out-Null
-Copy-Item (Join-Path $BinDir "mailcraft.exe"), (Join-Path $BinDir "mailcraft-cli.exe") $SignedBin
+Copy-Item (Join-Path $BinDir "iridium-mail.exe"), (Join-Path $BinDir "iridium-mail-cli.exe") $SignedBin
 
 $Signing = [bool]($env:WINDOWS_CERT_PFX -and $env:WINDOWS_CERT_PASSWORD)
 $Pfx = Join-Path $Work "cert.pfx"
@@ -102,7 +102,7 @@ function Invoke-Sign([string[]]$Files) {
     $tool = Find-SignTool
     foreach ($f in $Files) {
         Invoke-Checked $tool @("sign", "/f", $Pfx, "/p", $env:WINDOWS_CERT_PASSWORD, "/fd", "SHA256",
-            "/tr", $ts, "/td", "SHA256", "/d", "MailCraft", $f)
+            "/tr", $ts, "/td", "SHA256", "/d", "Mail", $f)
     }
 }
 
@@ -112,7 +112,7 @@ try {
     } else {
         Write-Host "No WINDOWS_CERT_PFX/WINDOWS_CERT_PASSWORD: packages are not signed."
     }
-    Invoke-Sign @((Join-Path $SignedBin "mailcraft.exe"), (Join-Path $SignedBin "mailcraft-cli.exe"))
+    Invoke-Sign @((Join-Path $SignedBin "iridium-mail.exe"), (Join-Path $SignedBin "iridium-mail-cli.exe"))
 
     # WiX v4 as a .NET global tool, pinned (v5+ adds licence terms for some uses; v4 is MS-RL, build-time only).
     $wix = Get-Command wix -ErrorAction SilentlyContinue
@@ -121,12 +121,12 @@ try {
         Invoke-Checked "dotnet" @("tool", "install", "--global", "wix", "--version", $wixVersion)
         $env:PATH = "$env:PATH;$(Join-Path $env:USERPROFILE '.dotnet\tools')"
     }
-    $Msi = Join-Path $OutDir "mailcraft-$Version-windows-$Arch.msi"
+    $Msi = Join-Path $OutDir "iridium-mail-$Version-windows-$Arch.msi"
     Invoke-Checked "wix" @("build", "-arch", $WixArch, "-d", "Version=$MsiVersion", "-d", "BinDir=$SignedBin",
-        "-d", "RepoDir=$Root", "-o", $Msi, (Join-Path $PSScriptRoot "mailcraft.wxs"))
+        "-d", "RepoDir=$Root", "-o", $Msi, (Join-Path $PSScriptRoot "iridium-mail.wxs"))
     Invoke-Sign @($Msi)
 
-    $ZipName = "mailcraft-$Version-windows-$Arch"
+    $ZipName = "iridium-mail-$Version-windows-$Arch"
     $ZipDir = Join-Path $Work $ZipName
     New-Item -ItemType Directory -Force -Path (Join-Path $ZipDir "licences") | Out-Null
     Copy-Item (Join-Path $SignedBin "*.exe") $ZipDir

@@ -4,11 +4,11 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{
     Account, AccountId, AccountKind, FolderRole, ItemId, MailItem, ServerSettings,
 };
-use mailcraft_store::StoreKind;
+use iridium_mail_store::StoreKind;
 use serde_json::{Value, json};
 
 fn run(s: &mut Session, id: &str, p: Value) -> Value {
@@ -205,8 +205,8 @@ fn configuration_changes_journal_only_the_part_that_changed() {
 }
 
 /// These tests measure the legacy journal and snapshot: their profiles use legacy storage whatever
-/// `MAILCRAFT_STORE` says.
-fn open_legacy(dir: &std::path::Path) -> Result<Session, mailcraft_engine::CmdError> {
+/// `IRIDIUM_MAIL_STORE` says.
+fn open_legacy(dir: &std::path::Path) -> Result<Session, iridium_mail_engine::CmdError> {
     Session::open_with(dir, StoreKind::Legacy)
 }
 
@@ -266,7 +266,7 @@ fn categorize_archive_and_private_survive_a_restart() {
 }
 
 fn categorize_archive_and_private(kind: StoreKind) {
-    use mailcraft_engine::sample::{sample_mailbox, sample_now};
+    use iridium_mail_engine::sample::{sample_mailbox, sample_now};
     let dir = tempfile::tempdir().unwrap();
     let mut s = Session::open_with(dir.path(), kind).unwrap();
     assert_eq!(s.store.as_ref().unwrap().kind(), kind);

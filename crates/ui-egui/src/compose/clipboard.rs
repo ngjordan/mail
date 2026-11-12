@@ -3,7 +3,7 @@
 //! egui only hands the editor plain text (`Event::Paste`). Where the platform offers HTML (native builds),
 //! the app installs [`ClipboardHooks`] with [`set_clipboard_hooks`] (the desktop app uses the `arboard`
 //! crate: `Clipboard::get().html()` / `set_html`), and the editor pastes the HTML through
-//! `mailcraft_html::html_to_doc` (`format.paste {"html": …}`) instead of the text. Copy and Cut put the
+//! `iridium_mail_html::html_to_doc` (`format.paste {"html": …}`) instead of the text. Copy and Cut put the
 //! selection on the clipboard as HTML with a plain-text alternative. Without hooks (web, tests) everything
 //! stays plain text, as before.
 //!
@@ -108,7 +108,7 @@ pub fn copy_html(html: &str, text: &str) -> bool {
     clipboard_hooks().write_html.is_some_and(|w| w(html, text))
 }
 
-/// How often the system clipboard is looked at while MailCraft runs (seconds).
+/// How often the system clipboard is looked at while Mail runs (seconds).
 pub const WATCH_SECS: f64 = 1.5;
 
 /// What the clipboard watch saw last.
@@ -159,14 +159,14 @@ pub fn watching(app: &crate::App) -> bool {
         && (pane_open || app.s.settings.bool("state.clipboard.collectHidden"))
 }
 
-/// The Clipboard pane collects what is copied in other programs while MailCraft runs: every
+/// The Clipboard pane collects what is copied in other programs while Mail runs: every
 /// [`WATCH_SECS`] the system clipboard's text is compared with what was there before, and a new copy that
-/// MailCraft did not make itself goes to `format.clipboardCollect`. What was on the clipboard when the watch
+/// Mail did not make itself goes to `format.clipboardCollect`. What was on the clipboard when the watch
 /// started is not collected, and neither is anything that [`looks_secret`]. The clipboard is read only while
 /// [`watching`]. When the other program clears the clipboard, the copy it had put there leaves the history
 /// again.
 pub fn clipboard_watch(ctx: &egui::Context, app: &mut crate::App) {
-    let id = egui::Id::unique("mailcraft-clipboard-watch");
+    let id = egui::Id::unique("iridium-mail-clipboard-watch");
     if !watching(app) {
         // Start afresh next time: what was copied meanwhile is not collected when the pane opens.
         ctx.data_mut(|d| d.remove_temp::<Watch>(id));
@@ -190,7 +190,7 @@ pub fn clipboard_watch(ctx: &egui::Context, app: &mut crate::App) {
     if changed && !text.trim().is_empty() {
         w.collected = None;
     }
-    // MailCraft's own copies (Copy in a message, the reading pane) are in the history already.
+    // Mail's own copies (Copy in a message, the reading pane) are in the history already.
     let own = app.s.clipboard_text.as_deref().is_some_and(|t| t.trim() == text.trim());
     let collect = !(first || !changed || own || text.trim().is_empty() || looks_secret(&text));
     if collect {
@@ -225,7 +225,7 @@ fn letters(s: &str) -> String {
 /// text (so a stale or unrelated HTML flavour is never pasted), else `None`.
 pub fn html_for_paste(text: &str) -> Option<String> {
     let html = clipboard_html()?;
-    let (a, b) = (letters(&mailcraft_html::html_to_text(&html)), letters(text));
+    let (a, b) = (letters(&iridium_mail_html::html_to_text(&html)), letters(text));
     let same = b.is_empty()
         || a == b
         || (!a.is_empty()

@@ -18,7 +18,7 @@ use crate::dialogs::common::{
     self, Dlg, Out, btn, btn_en, child, folder_path, footer, muted, primary, take_replies, window, with_state,
 };
 use crate::dialogs::folders::last_error;
-use mailcraft_model::{FolderId, Importance, MessageAction, QuickStep, QuickStepAction};
+use iridium_mail_model::{FolderId, Importance, MessageAction, QuickStep, QuickStepAction};
 
 pub(super) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -746,7 +746,7 @@ fn editor_rows_keep_message_options() {
 #[test]
 fn show_options_edits_a_forward_step() {
     use egui_kittest::kittest::Queryable;
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let id = app.s.mailbox.quick_steps.iter().find(|q| q.name == "To Manager").map(|q| q.id).unwrap();
     app.run("quicksteps.edit", json!({"id": id}));
     let mut h = crate::test_harness()

@@ -1,6 +1,6 @@
 #!/bin/sh
 # deb/rpm post-install and post-remove hook (nfpm): refresh the desktop-file MIME cache and the hicolor icon
-# cache so menus pick up MailCraft. Both tools are optional; a missing one is not an error.
+# cache so menus pick up Mail. Both tools are optional; a missing one is not an error.
 set -e
 if command -v update-desktop-database >/dev/null 2>&1; then
 	update-desktop-database -q /usr/share/applications || true

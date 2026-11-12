@@ -1,5 +1,5 @@
-use mailcraft_model::Contact;
-use mailcraft_model::contact::PostalAddress;
+use iridium_mail_model::Contact;
+use iridium_mail_model::contact::PostalAddress;
 use proptest::prelude::*;
 
 use crate::csv;

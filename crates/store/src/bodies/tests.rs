@@ -2,7 +2,7 @@
 //! content out and back in, and hostile keys and files.
 
 use super::*;
-use mailcraft_model::BodyFormat;
+use iridium_mail_model::BodyFormat;
 
 const RAW: &[u8] =
     b"From: ann@example.org\r\nSubject: Hello\r\nContent-Type: text/plain\r\n\r\nHello there.\r\n";

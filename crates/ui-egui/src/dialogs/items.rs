@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use super::common::{self, Dlg, Out, btn, footer, muted, window, with_state};
 use super::compose_dlg::{Form, Kind, cmd, combo, f, run_form};
 use crate::App;
-use mailcraft_model::{ItemId, NoteColor};
+use iridium_mail_model::{ItemId, NoteColor};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -55,7 +55,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
                     ),
                 ],
             )
-            .init("zone", json!(mailcraft_engine::cmd::calendar::views::time_zones(&app.s).zone))
+            .init("zone", json!(iridium_mail_engine::cmd::calendar::views::time_zones(&app.s).zone))
             .init(
                 "offset",
                 json!(d.get("offsetMin").and_then(Value::as_i64).unwrap_or(i64::from(app.s.tz_offset_min))),
@@ -73,7 +73,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
         "addCalendar" => {
             // Other people's calendars open on a Microsoft 365 account.
             let graph_accounts: Vec<(u64, String)> =
-                mailcraft_engine::cmd::calendar::graph_calendar_accounts(&app.s)
+                iridium_mail_engine::cmd::calendar::graph_calendar_accounts(&app.s)
                     .into_iter()
                     .filter_map(|a| app.s.mailbox.account(a).map(|x| (u64::from(a.0), x.address.clone())))
                     .collect();
@@ -141,7 +141,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
                 },
             )
         }
-        mailcraft_engine::cmd::calendar::SERVICE_NOTE_DIALOG => service_meeting_note(ctx, app, d),
+        iridium_mail_engine::cmd::calendar::SERVICE_NOTE_DIALOG => service_meeting_note(ctx, app, d),
         "contactCard" => contact_card(ctx, app, d),
         "chooseContact" => choose_contact(ctx, app, d),
         "forwardContact" => forward_contact(ctx, app, d),
@@ -195,7 +195,7 @@ fn service_meeting_note(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     })
 }
 
-/// The Add Calendar source offered first: the requested one when MailCraft supports it (a person's calendar
+/// The Add Calendar source offered first: the requested one when Mail supports it (a person's calendar
 /// with a Microsoft 365 account, `graph`), else Internet.
 fn add_calendar_source(requested: &str, graph: bool) -> &'static str {
     match requested {
@@ -684,7 +684,7 @@ mod tests {
     use egui::accesskit::Role;
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
     use serde_json::json;
 
     fn harness(app: App) -> Harness<'static, App> {
@@ -776,7 +776,7 @@ mod tests {
 mod choose_form_tests {
     use super::{FormsState, list_personal, list_templates};
     use crate::App;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn scratch(name: &str) -> std::path::PathBuf {
         let base = std::env::current_exe()
@@ -820,7 +820,7 @@ mod choose_form_tests {
         list_personal(&mut app, &mut st);
         assert!(st.templates.is_empty() && st.error.contains("saved profile"), "{}", st.error);
         let dir = scratch("profile");
-        let mut app = App::new(mailcraft_engine::Session::open(&dir).unwrap());
+        let mut app = App::new(iridium_mail_engine::Session::open(&dir).unwrap());
         let forms = dir.join("templates");
         std::fs::create_dir_all(&forms).unwrap();
         std::fs::write(forms.join("Status.eml"), "Subject: Status\r\n\r\nBody\r\n").unwrap();

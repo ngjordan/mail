@@ -3,7 +3,7 @@
 //! - `digitalIds`: the user's digital IDs (import a .pfx / .p12 file or a PEM key and certificate, export,
 //!   set the default, remove), other people's certificates (import, remove) and the certificates the user
 //!   trusts (trust a file, stop trusting). Every button runs an `options.*` command; the lists are read from
-//!   the engine each frame ([`mailcraft_engine::smime::summary`]).
+//!   the engine each frame ([`iridium_mail_engine::smime::summary`]).
 //! - `messageSecurity`: what a message's signature and encryption say (`mail.signatureDetails`): the signer,
 //!   the status and why, the signing time, the certificate chain; Trust lets a self-signed or private
 //!   authority's signature count as valid.
@@ -135,7 +135,7 @@ fn digital_ids(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         |_| IdsState::default(),
         |st, app| {
             window(ctx, app, d, "Digital IDs", 700.0, |ui, app| {
-                let sum = mailcraft_engine::smime::summary(&app.s);
+                let sum = iridium_mail_engine::smime::summary(&app.s);
                 let arr = |k: &str| sum.get(k).and_then(Value::as_array).cloned().unwrap_or_default();
 
                 heading(ui, app, "My digital IDs");
@@ -436,7 +436,7 @@ fn message_security(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     window(ctx, app, d, "Message Security", 620.0, |ui, app| {
         // Fresh facts each frame (trusting a certificate changes them); the opening params as a fallback.
         let live = id
-            .and_then(|i| mailcraft_engine::smime::security(&app.s, mailcraft_engine::model::ItemId(i)))
+            .and_then(|i| iridium_mail_engine::smime::security(&app.s, iridium_mail_engine::model::ItemId(i)))
             .and_then(|sec| serde_json::to_value(&sec).ok());
         let v = live.unwrap_or(p);
         let b = |k: &str| v.get(k).and_then(Value::as_bool).unwrap_or(false);
@@ -559,8 +559,8 @@ fn encryption_problem(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 mod tests {
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
-    use mailcraft_smime::testkit;
+    use iridium_mail_engine::sample::sample_session;
+    use iridium_mail_smime::testkit;
     use serde_json::json;
 
     use crate::App;
@@ -577,12 +577,12 @@ mod tests {
         h
     }
 
-    fn app_with_id() -> (App, mailcraft_smime::Identity) {
+    fn app_with_id() -> (App, iridium_mail_smime::Identity) {
         let mut s = sample_session();
         let me = s.mailbox.default_account().unwrap().address.clone();
         let id = testkit::identity("Sample Me", &me);
-        let pfx = mailcraft_smime::pkcs12::build(&id, "pw", "").unwrap();
-        let data = mailcraft_mime::transfer::encode_base64_flat(&pfx);
+        let pfx = iridium_mail_smime::pkcs12::build(&id, "pw", "").unwrap();
+        let data = iridium_mail_mime::transfer::encode_base64_flat(&pfx);
         s.run("options.importDigitalId", &json!({"data": data, "password": "pw", "trustIssuer": true}))
             .unwrap();
         s.notices.clear();
@@ -604,7 +604,7 @@ mod tests {
         h.run_steps(2);
         assert!(h.query_by_label("Digital ID removed.").is_some());
         let app = h.into_state();
-        assert!(mailcraft_engine::smime::identities(&app.s).iter().all(|i| i.cert != id.cert));
+        assert!(iridium_mail_engine::smime::identities(&app.s).iter().all(|i| i.cert != id.cert));
         // Import opens the form with a password field.
         let mut app = app;
         app.run("options.digitalIds", json!({}));
@@ -616,7 +616,7 @@ mod tests {
 
     #[test]
     fn encryption_problem_sends_unencrypted() {
-        use mailcraft_model::{Account, AccountKind, ServerSettings};
+        use iridium_mail_model::{Account, AccountKind, ServerSettings};
         let mut s = sample_session();
         let acc = s.mailbox.add_account(Account {
             kind: AccountKind::Imap,
@@ -637,8 +637,8 @@ mod tests {
         s.view.work_offline = true;
         s.refresh_me();
         let me = testkit::identity("Me Example", "me@example.com");
-        let pfx = mailcraft_smime::pkcs12::build(&me, "pw", "").unwrap();
-        let data = mailcraft_mime::transfer::encode_base64_flat(&pfx);
+        let pfx = iridium_mail_smime::pkcs12::build(&me, "pw", "").unwrap();
+        let data = iridium_mail_mime::transfer::encode_base64_flat(&pfx);
         s.run("options.importDigitalId", &json!({"data": data, "password": "pw"})).unwrap();
         let mut app = App::new(s);
         let c = app.run("mail.newEmail", json!({})).unwrap()["compose"].as_u64().unwrap();
@@ -662,17 +662,17 @@ mod tests {
         let ann = testkit::identity("Ann Lee", "ann@example.org");
         let msg = "From: Ann Lee <ann@example.org>\r\nTo: me@example.com\r\nSubject: Signed\r\nMIME-Version: 1.0\r\n\
                    Content-Type: text/plain\r\n\r\nHello.\r\n";
-        let p = mailcraft_smime::mime::Protect {
+        let p = iridium_mail_smime::mime::Protect {
             sign: Some(&ann),
             encrypt_to: &[],
             clear_signed: true,
             now: testkit::NOW,
         };
-        let raw = mailcraft_smime::mime::protect(msg.as_bytes(), &p).unwrap();
-        let parsed = mailcraft_mime::parse(&raw).unwrap();
-        let mut item = mailcraft_model::MailItem::from_message(&parsed, &raw, s.now());
+        let raw = iridium_mail_smime::mime::protect(msg.as_bytes(), &p).unwrap();
+        let parsed = iridium_mail_mime::parse(&raw).unwrap();
+        let mut item = iridium_mail_model::MailItem::from_message(&parsed, &raw, s.now());
         item.folder = s.selection.folder;
-        let id = s.add_message(item, &mailcraft_engine::Content::source(raw.clone())).unwrap();
+        let id = s.add_message(item, &iridium_mail_engine::Content::source(raw.clone())).unwrap();
         let mut app = App::new(s);
         app.run("mail.signatureDetails", json!({"id": id.0}));
         let mut h = harness(app);

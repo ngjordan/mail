@@ -17,7 +17,7 @@
 //! them), so they are marked verified. Each provider names the OAuth provider of `data/oauth-providers.json`
 //! it signs in with and whether passwords still work.
 
-use mailcraft_model::Security;
+use iridium_mail_model::Security;
 
 use crate::autoconfig::{Protocol, ServerConfig};
 use crate::discover::in_domain;

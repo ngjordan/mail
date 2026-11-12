@@ -1,9 +1,9 @@
 //! Small text helpers for the hand-drawn print styles (table, calendar, cards): resolve a face, emit a text
-//! item, measure, ellipsize and greedily wrap. Body text goes through `mailcraft-layout` instead.
+//! item, measure, ellipsize and greedily wrap. Body text goes through `iridium-mail-layout` instead.
 
-use mailcraft_fonts::{FontDb, FontId};
-use mailcraft_geom::{Color, Point, pt_to_px};
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::{FontDb, FontId};
+use iridium_mail_geom::{Color, Point, pt_to_px};
+use iridium_mail_layout::DisplayItem;
 
 /// Family used for print chrome (headers, labels, grids). Resolves to a bundled sans.
 pub(crate) const PRINT_FAMILY: &str = "Aptos";

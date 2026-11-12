@@ -10,7 +10,7 @@
 use egui::{Align2, CornerRadius, Id, Order, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::compose::BodySelection;
+use iridium_mail_engine::compose::BodySelection;
 
 use super::editor::EditorHost;
 
@@ -45,7 +45,7 @@ struct Bar {
 }
 
 fn id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-minibar", cid))
+    Id::unique(("iridium-mail-compose-minibar", cid))
 }
 
 fn load(ctx: &egui::Context, cid: u64) -> Bar {

@@ -6,9 +6,9 @@
 //! values. Types: clustered and stacked column and bar, line, area, pie, doughnut, scatter (categories as x
 //! values when they are numbers) and radar.
 
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_layout::{DisplayItem, DisplayList};
-use mailcraft_model::TextStyle;
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_layout::{DisplayItem, DisplayList};
+use iridium_mail_model::TextStyle;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -263,7 +263,7 @@ fn ticks(lo: f64, hi: f64) -> Vec<f64> {
 
 struct Painter<'a> {
     list: DisplayList,
-    fonts: &'a mailcraft_fonts::FontDb,
+    fonts: &'a iridium_mail_fonts::FontDb,
     font: String,
 }
 
@@ -348,7 +348,7 @@ fn arc_pts(cx: f32, cy: f32, r: f32, a0: f32, a1: f32) -> Vec<(f32, f32)> {
 
 /// The chart drawn as PNG in `theme`'s colours and body font, at the recipe's size.
 pub fn png(spec: &ChartSpec, theme: &ResolvedTheme) -> Option<Vec<u8>> {
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let (w, h) = (
         if spec.width.is_finite() { spec.width.clamp(240.0, 1000.0) } else { DEFAULT_SIZE.0 },
         if spec.height.is_finite() { spec.height.clamp(160.0, 800.0) } else { DEFAULT_SIZE.1 },
@@ -639,9 +639,9 @@ pub fn png(spec: &ChartSpec, theme: &ResolvedTheme) -> Option<Vec<u8>> {
     render(&p.list, &fonts, w, h)
 }
 
-fn render(list: &DisplayList, fonts: &mailcraft_fonts::FontDb, w: f32, h: f32) -> Option<Vec<u8>> {
+fn render(list: &DisplayList, fonts: &iridium_mail_fonts::FontDb, w: f32, h: f32) -> Option<Vec<u8>> {
     let (dw, dh) = (u32::try_from(dev(w)).ok()?, u32::try_from(dev(h)).ok()?);
-    let canvas = mailcraft_render::render(list, fonts, dw, dh, RASTER_SCALE, Color::WHITE, &|_| None);
+    let canvas = iridium_mail_render::render(list, fonts, dw, dh, RASTER_SCALE, Color::WHITE, &|_| None);
     let png = canvas.to_png();
     (!png.is_empty()).then_some(png)
 }

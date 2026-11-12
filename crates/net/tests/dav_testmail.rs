@@ -5,12 +5,12 @@
 
 use std::time::Duration;
 
-use mailcraft_model::FolderRole;
-use mailcraft_net::dav::{DavAuth, DavClient, Precondition, Service};
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::sync::{FolderState, ImapAccount, ImapSettings, ListScope, SharedKind};
-use mailcraft_net::{ConnectOptions, Credentials, NetError, Security};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_model::FolderRole;
+use iridium_mail_net::dav::{DavAuth, DavClient, Precondition, Service};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::sync::{FolderState, ImapAccount, ImapSettings, ListScope, SharedKind};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError, Security};
+use iridium_mail_testmail::{Config, TestServers};
 
 const USER: &str = "alice@example.com";
 const PASS: &str = "correct horse";
@@ -155,8 +155,8 @@ fn imap_other_users_and_shared_mailboxes() {
     let c = acc.client().unwrap();
     c.select("Shared/Support/INBOX").unwrap();
     c.uid_store(
-        &mailcraft_net::imap::SeqSet::from_ids(&[uid]),
-        mailcraft_net::imap::StoreMode::Add,
+        &iridium_mail_net::imap::SeqSet::from_ids(&[uid]),
+        iridium_mail_net::imap::StoreMode::Add,
         &["\\Seen"],
         None,
     )

@@ -11,10 +11,10 @@ use crate::compose::{ComposeKind, ComposeState, SaveSentTo};
 use crate::settings::{self, Settings, SettingsFile};
 use crate::undo::{UndoEntry, UndoStack};
 use crate::{CmdError, CmdResult, Registry};
-use mailcraft_model::{
+use iridium_mail_model::{
     DateTime, FolderId, FolderKind, FolderPaneState, FolderRole, ItemId, Mailbox, ReadingPanePos,
 };
-use mailcraft_store::{Op, StoreError};
+use iridium_mail_store::{Op, StoreError};
 
 /// Navigation modules (module rail order: Mail, Calendar, People, Tasks (To Do), Notes, Folders, Shortcuts).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -216,13 +216,13 @@ pub struct Session {
     /// Local UTC offset in minutes used for display.
     pub tz_offset_min: i32,
     /// Persistent store (None = in-memory session).
-    pub store: Option<mailcraft_store::Store>,
+    pub store: Option<iridium_mail_store::Store>,
     /// Message bodies and sources (storage stage S5): on disk in the profile folder, in memory without one.
     /// Items refer to their content by key; read it with [`Session::body`] and [`Session::source`]
     /// (`content.rs`).
-    pub bodies: mailcraft_store::BodyStore,
+    pub bodies: iridium_mail_store::BodyStore,
     /// Ops not yet written to the store.
-    pub pending_ops: Vec<mailcraft_store::Op>,
+    pub pending_ops: Vec<iridium_mail_store::Op>,
     /// The user's own addresses (lower-case) for "me" rules and Reply All.
     pub me: Vec<String>,
     pub next_compose: u64,
@@ -231,7 +231,7 @@ pub struct Session {
     /// Text copied from the reading pane.
     pub clipboard_text: Option<String>,
     /// The Clipboard pane's history (newest last): copies made in messages, the reading pane and, while
-    /// MailCraft runs, other programs. Every open message's pane shows it.
+    /// Mail runs, other programs. Every open message's pane shows it.
     pub clip_history: Vec<crate::compose::ClipEntry>,
     /// Last folder shown in each module (restored when switching back).
     pub module_folders: Vec<(Module, FolderId)>,
@@ -283,7 +283,7 @@ pub struct Session {
     pub(crate) purge_blobs_after: bool,
     /// What was last read from or written to each standalone data file's file (`datafile::Seen`), so a file
     /// something else wrote meanwhile is not overwritten and an unchanged one is not rewritten on exit.
-    pub(crate) linked_seen: BTreeMap<mailcraft_model::AccountId, crate::datafile::Seen>,
+    pub(crate) linked_seen: BTreeMap<iridium_mail_model::AccountId, crate::datafile::Seen>,
     /// Quick Print may go straight to the system's default printer. The desktop app turns it on; tests and
     /// tools leave it off, so nothing reaches a real printer by accident.
     pub direct_print: bool,
@@ -301,7 +301,7 @@ pub struct Session {
     pub translate_tried: std::collections::BTreeSet<ItemId>,
     /// Connection settings for the translation server (`None` = its defaults; tests trust a local server).
     #[cfg(not(target_arch = "wasm32"))]
-    pub translator_options: Option<mailcraft_net::ConnectOptions>,
+    pub translator_options: Option<iridium_mail_net::ConnectOptions>,
     /// Translations (and the Options translation test) run on a worker thread and are applied when
     /// [`Session::poll_sync`] sees them finish, so a slow server never holds up the caller. The desktop app
     /// turns it on; tools and tests leave it off and get the result from the command itself.
@@ -343,14 +343,14 @@ pub const EXIT_SYNC_SECS: u64 = 30;
 const MAX_PENDING_OPS: usize = 2_000;
 
 /// Told once when the store refuses a snapshot because the mailbox has grown past what it can read back.
-pub const SNAPSHOT_TOO_LARGE: &str = "Your mailbox has grown too large for MailCraft to save it as one file \
+pub const SNAPSHOT_TOO_LARGE: &str = "Your mailbox has grown too large for Mail to save it as one file \
     (the limit is 1 GB). Your changes are still being saved as a list of changes, but that list has a limit \
     too: delete or archive mail you no longer need, and empty Deleted Items, to make room.";
 
 /// Told once when the store can take neither the latest changes nor a snapshot holding them.
 pub const UNSAVED_TOO_LARGE: &str = "Your latest changes could not be saved: your mailbox has grown past the \
-    largest size MailCraft can store (1 GB). Delete or archive mail you no longer need, and empty Deleted \
-    Items; MailCraft saves the changes as soon as there is room.";
+    largest size Mail can store (1 GB). Delete or archive mail you no longer need, and empty Deleted \
+    Items; Mail saves the changes as soon as there is room.";
 
 /// Bookkeeping for the store's guard rails (issue #25).
 #[derive(Debug, Default)]
@@ -408,7 +408,7 @@ impl Session {
             fixed_now: None,
             tz_offset_min: 0,
             store: None,
-            bodies: mailcraft_store::BodyStore::in_memory(),
+            bodies: iridium_mail_store::BodyStore::in_memory(),
             pending_ops: Vec::new(),
             me: Vec::new(),
             next_compose: 0,
@@ -416,7 +416,7 @@ impl Session {
             clipboard_text: None,
             clip_history: Vec::new(),
             module_folders: Vec::new(),
-            checkpoint_bytes: mailcraft_store::Autosave::DEFAULT_CHECKPOINT_BYTES,
+            checkpoint_bytes: iridium_mail_store::Autosave::DEFAULT_CHECKPOINT_BYTES,
             journal_calls: 0,
             revision: 0,
             counts: crate::counts::CountsMemo::default(),
@@ -459,10 +459,10 @@ impl Session {
     }
 
     /// Opens (or creates) a persistent session in `dir`. A new data folder gets a local mailbox ("Local
-    /// Folders") written as its first snapshot, in the storage `MAILCRAFT_STORE` names (legacy unless it says
+    /// Folders") written as its first snapshot, in the storage `IRIDIUM_MAIL_STORE` names (legacy unless it says
     /// `sqlite`; see [`Session::open_with`]).
     pub fn open(dir: &std::path::Path) -> Result<Session, CmdError> {
-        Session::open_with(dir, mailcraft_store::StoreKind::from_env())
+        Session::open_with(dir, iridium_mail_store::StoreKind::from_env())
     }
 
     /// [`Session::open`] with the storage a new profile gets. An existing profile keeps the storage it has;
@@ -470,9 +470,9 @@ impl Session {
     /// stage S9).
     pub fn open_with(
         dir: &std::path::Path,
-        new_kind: mailcraft_store::StoreKind,
+        new_kind: iridium_mail_store::StoreKind,
     ) -> Result<Session, CmdError> {
-        let mut store = mailcraft_store::Store::open_with(dir, new_kind)
+        let mut store = iridium_mail_store::Store::open_with(dir, new_kind)
             .map_err(|e| CmdError::Failed(format!("cannot open the data folder {}: {e}", dir.display())))?;
         let (mut mailbox, report) = store
             .load_report()
@@ -490,7 +490,7 @@ impl Session {
         mailbox.rename_legacy_local_account();
         mailbox.drop_legacy_create_new_step();
         if mailbox.accounts.is_empty() && mailbox.folders.is_empty() {
-            mailbox = Mailbox::new_local(mailcraft_model::mailbox::LOCAL_ACCOUNT_FALLBACK_NAME);
+            mailbox = Mailbox::new_local(iridium_mail_model::mailbox::LOCAL_ACCOUNT_FALLBACK_NAME);
             store.checkpoint(&mailbox).map_err(|e| {
                 CmdError::Failed(format!("cannot write the data folder {}: {e}", dir.display()))
             })?;
@@ -500,7 +500,8 @@ impl Session {
         s.bodies = store.body_store();
         s.store = Some(store);
         log::info!("profile {}: {} storage", dir.display(), kind.name());
-        if kind == mailcraft_store::StoreKind::Legacy && new_kind == mailcraft_store::StoreKind::Sqlite {
+        if kind == iridium_mail_store::StoreKind::Legacy && new_kind == iridium_mail_store::StoreKind::Sqlite
+        {
             s.notify(Notice::Info(
                 "This profile keeps its current storage: SQLite storage is only used for new profiles so far."
                     .into(),
@@ -570,7 +571,7 @@ impl Session {
                     log::error!("the translation server's API key could not be removed: {e}");
                 }
                 self.notify(Notice::Error(format!(
-                    "Your settings could not be read ({e}); MailCraft started with the default settings."
+                    "Your settings could not be read ({e}); Mail started with the default settings."
                 )));
             }
         }
@@ -587,7 +588,7 @@ impl Session {
         }
     }
 
-    /// Moves what MailCraft 0.1 kept in the view state onto the items: note icon positions
+    /// Moves what Mail 0.1 kept in the view state onto the items: note icon positions
     /// (`Note::x` / `Note::y`) and pinned messages (`MailItem::pinned`). The mailbox change is journaled
     /// (no undo step). Returns whether the old entries are gone from the view state, i.e. it had some and the
     /// change reached the store. When the store write fails the entries stay (in memory, so settings.json
@@ -710,7 +711,7 @@ impl Session {
         }
     }
 
-    /// Opens Options › Advanced › "Start MailCraft in this folder" (a folder path, or a folder name), else
+    /// Opens Options › Advanced › "Start Mail in this folder" (a folder path, or a folder name), else
     /// keeps the default Inbox.
     pub fn select_start_folder(&mut self) {
         let want = self.settings.text("advanced.startFolder");
@@ -785,23 +786,23 @@ impl Session {
                 }
             }
             ComposeKind::New if c.source.is_none() && c.draft.is_none() => {
-                if c.format == mailcraft_model::BodyFormat::Html && !c.format_explicit {
+                if c.format == iridium_mail_model::BodyFormat::Html && !c.format_explicit {
                     c.format = st.compose_format();
                 }
                 // Personal Stationery: a new HTML message without a template or stationery of its own.
                 let unstyled =
                     c.theme == crate::compose::ThemeState::default() && c.body.background.is_none();
-                if c.format == mailcraft_model::BodyFormat::Html
+                if c.format == iridium_mail_model::BodyFormat::Html
                     && unstyled
                     && !c.dirty
                     && let Some(stationery) = crate::compose::stationery(&st.text("mail.compose.stationery"))
                 {
                     c.apply_stationery(stationery);
                 }
-                if c.importance == mailcraft_model::Importance::Normal {
+                if c.importance == iridium_mail_model::Importance::Normal {
                     c.importance = st.default_importance();
                 }
-                if c.sensitivity == mailcraft_model::Sensitivity::Normal {
+                if c.sensitivity == iridium_mail_model::Sensitivity::Normal {
                     c.sensitivity = st.default_sensitivity();
                 }
                 let family = st.text("mail.compose.fontFamily");
@@ -1530,7 +1531,7 @@ impl Session {
     }
 
     /// Account of the selected folder (or the default account).
-    pub fn current_account(&self) -> Option<mailcraft_model::AccountId> {
+    pub fn current_account(&self) -> Option<iridium_mail_model::AccountId> {
         self.mailbox
             .folder_account(self.selection.folder)
             .or_else(|| self.mailbox.default_account().map(|a| a.id))
@@ -1653,7 +1654,7 @@ pub(crate) mod test_hooks {
 
     /// Panics when asked to, after opening a change record it never closes and changing an item under it
     /// (as code that panics half-way would).
-    pub(crate) fn maybe_panic_in_restore(mail: &mut mailcraft_model::MailTable) {
+    pub(crate) fn maybe_panic_in_restore(mail: &mut iridium_mail_model::MailTable) {
         if PANIC_IN_RESTORE.with(|c| c.replace(false)) {
             let _ = mail.begin();
             if let Some(id) = mail.ids().next() {
@@ -1720,12 +1721,12 @@ pub(crate) fn small_ops(before: &Mailbox, after: &Mailbox) -> Option<Vec<Op>> {
         return None;
     }
     let mut ops = Vec::new();
-    if let Some(state) = mailcraft_store::SmallState::changed(before, after) {
+    if let Some(state) = iridium_mail_store::SmallState::changed(before, after) {
         ops.push(Op::PutConfig(Box::new(state)));
     }
-    let was: BTreeMap<mailcraft_model::AccountId, &mailcraft_model::account::AccountSync> =
+    let was: BTreeMap<iridium_mail_model::AccountId, &iridium_mail_model::account::AccountSync> =
         before.accounts.iter().map(|a| (a.id, &a.sync)).collect();
-    let none = mailcraft_model::account::AccountSync::default();
+    let none = iridium_mail_model::account::AccountSync::default();
     for a in &after.accounts {
         // An account new to the list starts with no sync state (`SmallState::apply`).
         if **was.get(&a.id).unwrap_or(&&none) != a.sync {
@@ -1736,7 +1737,7 @@ pub(crate) fn small_ops(before: &Mailbox, after: &Mailbox) -> Option<Vec<Op>> {
 }
 
 /// Whether no account id appears twice.
-fn unique_accounts(accounts: &[mailcraft_model::Account]) -> bool {
+fn unique_accounts(accounts: &[iridium_mail_model::Account]) -> bool {
     let mut seen = std::collections::BTreeSet::new();
     accounts.iter().all(|a| seen.insert(a.id))
 }
@@ -1786,7 +1787,7 @@ mod tests {
     fn diff_journals_signatures_and_auto_complete() {
         let mb = Mailbox::new_local("Local");
         let mut after = mb.clone();
-        after.custom_dictionary.push("mailcraft".into());
+        after.custom_dictionary.push("iridium-mail".into());
         assert!(matches!(diff_ops(&mb, &after).as_slice(), [Op::PutConfig(_)]));
         let mut after = mb.clone();
         after.recent_recipients.push(Default::default());
@@ -1824,7 +1825,7 @@ mod tests {
         let (msg, note) = {
             let mut s = Session::open(dir.path()).unwrap();
             let inbox = s.selection.folder;
-            let msg = s.mailbox.add_mail(mailcraft_model::MailItem {
+            let msg = s.mailbox.add_mail(iridium_mail_model::MailItem {
                 folder: inbox,
                 subject: "keep".into(),
                 ..Default::default()
@@ -1835,7 +1836,7 @@ mod tests {
                     .as_u64()
                     .unwrap();
             s.journal(vec![Op::Replace(Box::new(s.mailbox.clone()))]);
-            // What MailCraft 0.1 left in the view state.
+            // What Mail 0.1 left in the view state.
             s.view.collapsed_groups.insert(inbox, vec![format!("\u{1}mail.pinned=[{}]", msg.0)]);
             s.view.collapsed_groups.insert(notes, vec![format!("\u{1}notes.pos={{\"{note}\":[12.0,34.0]}}")]);
             s.save_settings().unwrap();
@@ -1867,7 +1868,8 @@ mod tests {
         let msg = {
             let mut s = Session::open(dir.path()).unwrap();
             let inbox = s.selection.folder;
-            let msg = s.mailbox.add_mail(mailcraft_model::MailItem { folder: inbox, ..Default::default() });
+            let msg =
+                s.mailbox.add_mail(iridium_mail_model::MailItem { folder: inbox, ..Default::default() });
             s.journal(vec![Op::Replace(Box::new(s.mailbox.clone()))]);
             s.view.collapsed_groups.insert(inbox, vec![format!("\u{1}mail.pinned=[{}]", msg.0)]);
             s.save_settings().unwrap();

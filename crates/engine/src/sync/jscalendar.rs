@@ -3,7 +3,7 @@
 //! resource is in CalDAV.
 //!
 //! Mapping: `title`, `description`, the first `locations` entry's name, `start` + `timeZone` (an IANA zone
-//! MailCraft knows; `null` is floating time, read in the user's zone) + `duration`, `showWithoutTime` (all
+//! Mail knows; `null` is floating time, read in the user's zone) + `duration`, `showWithoutTime` (all
 //! day), `freeBusyStatus` (free / busy), `privacy` (private, secret → private), `priority` (1–4 high, 6–9
 //! low), `keywords` → categories, the first `alerts` entry with an offset before the start → reminder,
 //! `participants` (owner → organizer, attendee → attendees, with their answers), `recurrenceRule`
@@ -14,14 +14,14 @@
 //! An appointment without a time zone of its own is written in UTC. Server data is untrusted: lists are
 //! capped, times bounded, and nothing panics on odd input.
 
-use mailcraft_formats::ics::tz::{TimeZone, builtin, builtin_name};
-use mailcraft_formats::ics::value::{civil, format_duration, local_secs, parse_duration};
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{AttendeeRole, ResponseStatus};
-use mailcraft_model::{Appointment, Attendee, BusyStatus, DateTime, Importance, Recurrence};
+use iridium_mail_formats::ics::tz::{TimeZone, builtin, builtin_name};
+use iridium_mail_formats::ics::value::{civil, format_duration, local_secs, parse_duration};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{AttendeeRole, ResponseStatus};
+use iridium_mail_model::{Appointment, Attendee, BusyStatus, DateTime, Importance, Recurrence};
 use serde_json::{Map, Value, json};
 
-/// The event properties MailCraft writes (an update sets those the edit changed, `null` when the series has
+/// The event properties Mail writes (an update sets those the edit changed, `null` when the series has
 /// none any more; see `jmap_pim.rs`).
 pub(super) const MAPPED: [&str; 15] = [
     "title",
@@ -64,9 +64,9 @@ fn text(v: Option<&Value>) -> String {
 
 /// Where an event's local times are.
 enum Zone {
-    /// A zone MailCraft knows (its IANA name, as MailCraft spells it).
+    /// A zone Mail knows (its IANA name, as Mail spells it).
     Named(TimeZone, String),
-    /// UTC, a fixed offset, or a zone MailCraft does not know (read as UTC).
+    /// UTC, a fixed offset, or a zone Mail does not know (read as UTC).
     Fixed(i32),
     /// Floating time: the user's zone.
     Floating,

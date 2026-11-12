@@ -2,7 +2,7 @@ mod more;
 
 use super::super::compose::tests::{open, session};
 use super::*;
-use mailcraft_model::rich::WrapStyle;
+use iridium_mail_model::rich::WrapStyle;
 
 fn drawings(s: &Session, cid: u64) -> Vec<Drawing> {
     s.composes[&cid].body.drawings.clone()

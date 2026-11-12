@@ -17,9 +17,9 @@ use serde_json::{Value, json};
 
 use crate::App;
 use crate::compose::{EditorHost, body_editor_in};
-use mailcraft_engine::Session;
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_model::{BodyFormat, Doc, ItemId, Mailbox};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_model::{BodyFormat, Doc, ItemId, Mailbox};
 
 /// The bar above a message being edited.
 pub const EDITING_NOTE: &str = "You are editing this message. Save keeps your changes in your mailbox.";
@@ -29,7 +29,7 @@ pub const SAVE_PROMPT: &str = "Do you want to save the changes to this message?"
 pub const GONE_NOTE: &str = "The message you were editing was deleted, so its changes could not be kept.";
 /// Hover text of a read window's ribbon while its message has unsaved edits.
 pub const RIBBON_WAITS_NOTE: &str = "Save or discard your changes to the message first.";
-/// Said when MailCraft is asked to close while a message has unsaved edits.
+/// Said when Mail is asked to close while a message has unsaved edits.
 pub const EXIT_WAITS_NOTE: &str =
     "A message you are editing has unsaved changes. Save or discard them first.";
 /// Label of the subject box.
@@ -57,7 +57,7 @@ impl MsgEditor {
         let m = app.s.mailbox.mail.get(ItemId(item))?;
         let stored = app.s.body_or_empty(m);
         let plain = stored.format == BodyFormat::PlainText || stored.html.is_none();
-        let body: Doc = mailcraft_engine::cmd::mail::body_doc(&stored);
+        let body: Doc = iridium_mail_engine::cmd::mail::body_doc(&stored);
         let mut session = Session::new(Mailbox::new_local("Edit Message"));
         session.next_compose = EDITOR_ID_BASE.saturating_add(item.min(EDITOR_ID_BASE - 1));
         let c = ComposeState {
@@ -111,7 +111,7 @@ impl MsgEditor {
             if self.plain {
                 p.insert("text".into(), json!(c.body.to_plain_text()));
             } else {
-                p.insert("html".into(), json!(mailcraft_html::doc_to_html(&c.body)));
+                p.insert("html".into(), json!(iridium_mail_html::doc_to_html(&c.body)));
             }
         }
         (p.len() > 1).then_some(Value::Object(p))
@@ -135,7 +135,7 @@ impl EditorHost for MsgEditor {
 type Shared = Arc<Mutex<MsgEditor>>;
 
 fn state_id(item: u64) -> Id {
-    Id::unique(("mailcraft.edit-message", item))
+    Id::unique(("iridium-mail.edit-message", item))
 }
 
 fn shared(ctx: &egui::Context, item: u64) -> Option<Shared> {
@@ -212,9 +212,9 @@ pub(crate) fn append_to_subject(ctx: &egui::Context, item: u64, more: &str) {
     }
 }
 
-/// MailCraft is asked to close (File › Exit, the main window's close button): true when it may close now.
+/// Mail is asked to close (File › Exit, the main window's close button): true when it may close now.
 /// Otherwise every message with unsaved edits shows the save question in its window, which is brought to
-/// the front, and a note says why MailCraft stayed open. Editors with nothing unsaved just stop.
+/// the front, and a note says why Mail stayed open. Editors with nothing unsaved just stop.
 pub fn may_exit(ctx: &egui::Context, app: &mut App) -> bool {
     let mut waiting = false;
     for item in app.ui.editing_messages.clone() {
@@ -335,11 +335,11 @@ pub(crate) fn format_bar(ui: &mut Ui, app: &mut App, ed: &mut dyn EditorHostBar)
             c.selection_all(|s, _| s.italic == Some(true)),
             c.selection_all(|s, _| s.underline == Some(true)),
             c.para_at_caret().align,
-            matches!(c.list_at_caret(), Some((_, mailcraft_model::rich::ListKind::Bullet))),
+            matches!(c.list_at_caret(), Some((_, iridium_mail_model::rich::ListKind::Bullet))),
         ),
         None => return,
     };
-    use mailcraft_model::rich::Align;
+    use iridium_mail_model::rich::Align;
     let mut run: Option<(&str, Value)> = None;
     let side = 26.0;
     if crate::widgets::icon_toggle(ui, app, "bold", "Bold", bold, side).clicked() {
@@ -398,7 +398,7 @@ impl EditorHostBar for MsgEditor {
 mod tests {
     use super::*;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn html_item(app: &App) -> u64 {
         app.s
@@ -424,7 +424,7 @@ mod tests {
         app.run("mail.editMessage", json!({"ids": [id]})).unwrap();
         // The notice lands in the dialogs module, which opens the window in edit mode.
         for n in std::mem::take(&mut app.s.notices) {
-            if let mailcraft_engine::Notice::OpenDialog(name, p) = n {
+            if let iridium_mail_engine::Notice::OpenDialog(name, p) = n {
                 crate::dialogs::open(&mut app, &name, p);
             }
         }

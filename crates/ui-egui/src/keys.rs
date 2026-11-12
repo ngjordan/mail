@@ -50,7 +50,7 @@ use std::collections::BTreeMap;
 use egui::{Event, Key};
 use serde_json::{Value, json};
 
-use mailcraft_engine::{Module, Registry, Session};
+use iridium_mail_engine::{Module, Registry, Session};
 
 use crate::{App, Surface};
 
@@ -1134,7 +1134,7 @@ fn follow_focus(ctx: &egui::Context) {
 }
 
 fn mem_id() -> egui::Id {
-    egui::Id::unique("mailcraft.keys")
+    egui::Id::unique("iridium-mail.keys")
 }
 
 fn with_mem<R>(ctx: &egui::Context, f: impl FnOnce(&mut KeyMemory) -> R) -> R {
@@ -1164,7 +1164,7 @@ pub fn apply(ctx: &egui::Context, app: &mut App, surface: Surface, action: Actio
                 } else {
                     format!("The {} selected items will be permanently deleted.", ids.len())
                 };
-                crate::dialogs::confirm(app, "MailCraft", &text, &id, json!({"ids": ids}));
+                crate::dialogs::confirm(app, "Mail", &text, &id, json!({"ids": ids}));
                 return json!({"action": "confirm", "command": id, "ok": true});
             }
             let r = run_cmd(ctx, app, surface, &id, params);
@@ -1308,7 +1308,7 @@ fn compose_step(app: &mut App, surface: Surface, next: bool) -> Value {
     if inline {
         return fail("inline response");
     }
-    let order = mailcraft_engine::queries::visible_item_ids(&app.s);
+    let order = iridium_mail_engine::queries::visible_item_ids(&app.s);
     let pos = [draft, source, app.s.selection.focus]
         .into_iter()
         .flatten()
@@ -1337,7 +1337,7 @@ fn run_cmd(ctx: &egui::Context, app: &mut App, surface: Surface, id: &str, param
     if let Surface::Read(item) = surface
         && id.starts_with("mail.")
         && app.s.enabled(id).is_some()
-        && app.s.mailbox.mail.contains(mailcraft_model::ItemId(item))
+        && app.s.mailbox.mail.contains(iridium_mail_model::ItemId(item))
         && !app.s.selection.items.iter().any(|i| i.0 == item)
     {
         let _ = app.run("nav.selectItem", json!({"id": item}));
@@ -1906,7 +1906,7 @@ pub fn display_chord(c: &Chord) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn chord(text: &str) -> Chord {
         Chord::parse(text).unwrap()
@@ -2021,7 +2021,7 @@ mod tests {
     fn compose_step_opens_the_neighbour_and_closes_the_window() {
         let ctx = egui::Context::default();
         let mut app = App::new(sample_session());
-        let order = mailcraft_engine::queries::visible_item_ids(&app.s);
+        let order = iridium_mail_engine::queries::visible_item_ids(&app.s);
         let (first, second) = (order[0], order[1]);
         app.run("nav.selectItem", json!({"id": first.0}));
         let cid = app.run("mail.newEmail", json!({})).unwrap()["compose"].as_u64().unwrap();
@@ -2052,7 +2052,7 @@ mod tests {
 
     fn shell(w: f32, h: f32) -> egui_kittest::Harness<'static, App> {
         let mut app = App::new(sample_session());
-        let first = mailcraft_engine::queries::visible_item_ids(&app.s)[0];
+        let first = iridium_mail_engine::queries::visible_item_ids(&app.s)[0];
         app.run("nav.selectItem", json!({"id": first.0}));
         let mut h = crate::test_harness()
             .with_size(egui::vec2(w, h))

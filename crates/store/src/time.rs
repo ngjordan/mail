@@ -6,7 +6,7 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use mailcraft_model::DateTime;
+use iridium_mail_model::DateTime;
 
 /// 0001-01-01T00:00:00Z.
 pub(crate) const MIN_UNIX: i64 = -62_135_596_800;

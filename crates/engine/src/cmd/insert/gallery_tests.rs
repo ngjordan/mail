@@ -7,9 +7,9 @@ use crate::Session;
 use crate::cmd::compose::tests::{open, session};
 use crate::cmd::insert::tests::last_dialog;
 use crate::compose::{BuildingBlock, MAX_BLOCK_DRAWINGS};
-use mailcraft_geom::Color;
-use mailcraft_model::Doc;
-use mailcraft_model::rich::{Drawing, DrawingKind, WrapStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::Doc;
+use iridium_mail_model::rich::{Drawing, DrawingKind, WrapStyle};
 
 fn setup() -> (Session, u64) {
     let mut s = session();

@@ -334,7 +334,7 @@ pub fn handle(conn: &mut Conn, ctx: &Ctx, req: &Request) -> io::Result<()> {
         return respond(
             conn,
             "401 Unauthorized",
-            &[("WWW-Authenticate", "Basic realm=\"MailCraft test DAV\""), ("Content-Type", "text/plain")],
+            &[("WWW-Authenticate", "Basic realm=\"Mail test DAV\""), ("Content-Type", "text/plain")],
             b"sign in",
         );
     };

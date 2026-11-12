@@ -1,6 +1,6 @@
 //! Batched journaling with periodic checkpoints.
 
-use mailcraft_model::Mailbox;
+use iridium_mail_model::Mailbox;
 
 use crate::{Op, Result, Store};
 

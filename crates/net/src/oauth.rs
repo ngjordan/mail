@@ -475,7 +475,7 @@ impl LoopbackRedirect {
                         );
                         continue;
                     }
-                    let page = "<!doctype html><meta charset=utf-8><title>MailCraft</title><p>Sign-in finished. You can close this tab and return to MailCraft.</p>";
+                    let page = "<!doctype html><meta charset=utf-8><title>Mail</title><p>Sign-in finished. You can close this tab and return to Mail.</p>";
                     let _ = s.write_all(
                         format!("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{page}", page.len())
                             .as_bytes(),

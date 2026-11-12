@@ -13,8 +13,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use mailcraft_model::calendar::{CalendarProps, CalendarSource, CalendarViewState, Subscription};
-use mailcraft_model::{FolderId, FolderKind, Mailbox};
+use iridium_mail_model::calendar::{CalendarProps, CalendarSource, CalendarViewState, Subscription};
+use iridium_mail_model::{FolderId, FolderKind, Mailbox};
 
 /// Key of the saved named views inside the stored JSON.
 pub const NAMED_VIEWS: &str = "namedViews";
@@ -35,7 +35,7 @@ pub struct NamedView {
 }
 
 /// Marks a `remote_name` holding calendar properties.
-pub const PREFIX: &str = "mailcraft-calendar:";
+pub const PREFIX: &str = "iridium-mail-calendar:";
 /// Largest stored properties text accepted when reading.
 const MAX_BYTES: usize = 64 * 1024;
 /// Refresh interval of a new subscription when the publisher names none (minutes).
@@ -215,7 +215,7 @@ mod tests {
         assert!(legacy.read_only);
         assert_eq!(legacy.subscription.unwrap().url, "http://example.org/cal.ics");
         // Damaged or foreign text reads as defaults.
-        assert_eq!(decode(Some("mailcraft-calendar:{nope")), CalendarProps::default());
+        assert_eq!(decode(Some("iridium-mail-calendar:{nope")), CalendarProps::default());
         assert_eq!(decode(Some("INBOX")), CalendarProps::default());
         let huge = format!("{PREFIX}{}", "x".repeat(MAX_BYTES + 1));
         assert_eq!(decode(Some(&huge)), CalendarProps::default());
@@ -225,7 +225,7 @@ mod tests {
     fn named_views_survive_property_writes() {
         let mut mb = Mailbox::new_local("T");
         let acc = mb.default_account().unwrap().id;
-        let cal = mb.role_folder(acc, mailcraft_model::FolderRole::Calendar).unwrap();
+        let cal = mb.role_folder(acc, iridium_mail_model::FolderRole::Calendar).unwrap();
         assert!(named_views(&mb, cal).is_empty());
         let v = NamedView { name: "Weekly".into(), view: CalendarViewState::default(), own: false };
         assert!(set_named_views(&mut mb, cal, std::slice::from_ref(&v)));
@@ -237,7 +237,7 @@ mod tests {
         assert!(update(&mut mb, cal, |p| p.color = None));
         assert_eq!(mb.folder(cal).unwrap().remote_name, None);
         // Damaged entries are skipped; a mail folder never takes views.
-        let inbox = mb.role_folder(acc, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = mb.role_folder(acc, iridium_mail_model::FolderRole::Inbox).unwrap();
         assert!(!set_named_views(&mut mb, inbox, &[]));
         mb.folders.get_mut(&cal).unwrap().remote_name =
             Some(format!("{PREFIX}{{\"namedViews\":[1,{{\"name\":\"\"}},null]}}"));

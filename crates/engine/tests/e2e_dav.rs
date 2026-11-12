@@ -1,4 +1,4 @@
-//! End to end against the local test servers (`mailcraft-testmail`, 127.0.0.1 only, synthetic users):
+//! End to end against the local test servers (`iridium-mail-testmail`, 127.0.0.1 only, synthetic users):
 //! contacts and tasks synchronised with a CardDAV / CalDAV server, a calendar published to a WebDAV server,
 //! and other users' / shared IMAP mailboxes opened as stores. Every wait has a timeout.
 
@@ -6,11 +6,11 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{
     AccountId, Appointment, Contact, DateTime, FolderId, FolderRole, ItemId, Mailbox, Task, TaskStatus,
 };
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -123,7 +123,7 @@ fn contacts_folder_synchronises_with_carddav() {
 
     // Changed here: uploaded. Changed there: downloaded (the follow-up flag, which only lives here, stays).
     s.mailbox.contacts.get_mut(&id).unwrap().job_title = "Engineer".into();
-    s.mailbox.contacts.get_mut(&pat.id).unwrap().flag = mailcraft_engine::model::FlagState::Flagged {
+    s.mailbox.contacts.get_mut(&pat.id).unwrap().flag = iridium_mail_engine::model::FlagState::Flagged {
         label: "Follow up".into(),
         start: None,
         due: None,
@@ -136,7 +136,7 @@ fn contacts_folder_synchronises_with_carddav() {
     assert!(items.iter().any(|(n, d)| *n == robin_name && d.contains("Engineer")), "{items:?}");
     let pat_now = &s.mailbox.contacts[&pat.id];
     assert_eq!(pat_now.emails, ["pat@example.com"]);
-    assert!(matches!(pat_now.flag, mailcraft_engine::model::FlagState::Flagged { .. }));
+    assert!(matches!(pat_now.flag, iridium_mail_engine::model::FlagState::Flagged { .. }));
 
     // Deleted here: deleted there. Deleted there: deleted here.
     s.mailbox.contacts.remove(&id);
@@ -161,7 +161,7 @@ fn contacts_folder_without_a_server_stays_local() {
 fn view_ids(s: &mut Session, folder: FolderId, view: &str) -> Vec<ItemId> {
     s.selection.folder = folder;
     run(s, "view.changeView", json!({"name": view}));
-    mailcraft_engine::cmd::tasks::view_rows(s, folder).iter().map(|r| r.id).collect()
+    iridium_mail_engine::cmd::tasks::view_rows(s, folder).iter().map(|r| r.id).collect()
 }
 
 const TODO: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example//EN\r\nBEGIN:VTODO\r\nUID:todo-1\r\nSUMMARY:Order toner\r\nSTATUS:NEEDS-ACTION\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
@@ -245,7 +245,7 @@ fn published_calendar_follows_changes_and_can_be_withdrawn() {
     assert_eq!(items.len(), 1, "{items:?}");
     assert!(items[0].1.contains("SUMMARY:Team review"));
     assert!(items[0].1.contains("REFRESH-INTERVAL"), "{}", items[0].1);
-    // A subscriber's MailCraft reads the published file as an internet calendar.
+    // A subscriber's Mail reads the published file as an internet calendar.
     let mut other = session();
     let sub =
         run(&mut other, "calendar.addCalendar", json!({"source": "internet", "url": url, "fetch": false}));
@@ -300,10 +300,10 @@ fn shared_mailboxes_open_as_stores_and_join_locations_to_search() {
     let msg = s.mailbox.mail.items().find(|m| m.folder == inbox).expect("the shared inbox downloaded").id;
     assert_eq!(s.mailbox.mail.get(msg).unwrap().subject, "Printer jams");
     // Locations to Search lists the store beside the user's own mailbox.
-    let locations = mailcraft_engine::cmd::search::locations(&s);
+    let locations = iridium_mail_engine::cmd::search::locations(&s);
     assert!(locations.iter().any(|(_, label, on)| label == "Support" && *on), "{locations:?}");
     run(&mut s, "search.scope", json!({"store": "Support", "on": false}));
-    assert!(mailcraft_engine::cmd::search::locations(&s).iter().any(|(_, l, on)| l == "Support" && !on));
+    assert!(iridium_mail_engine::cmd::search::locations(&s).iter().any(|(_, l, on)| l == "Support" && !on));
     // Reading it here marks it read in the shared mailbox.
     s.selection.folder = inbox;
     s.selection.items = vec![msg];
@@ -794,13 +794,13 @@ fn publishing_never_replaces_or_removes_a_file_it_did_not_write() {
     let file = |n: &str| srv.dav_items(ALICE, "public").into_iter().find(|(x, _)| x == n).map(|(_, d)| d);
     assert_eq!(file("taken.ics").as_deref(), Some("someone else's file"));
     assert!(account_error(&s).contains("did not publish"), "{}", account_error(&s));
-    // Stopped: nothing of MailCraft's to remove, so the file stays.
+    // Stopped: nothing of Mail's to remove, so the file stays.
     run(&mut s, "calendar.publish", json!({"folder": cal.0, "stop": true}));
     settle(&mut s);
     assert_eq!(file("taken.ics").as_deref(), Some("someone else's file"));
     assert!(srv.dav_requests().iter().all(|r| !r.starts_with("DELETE")), "{:?}", srv.dav_requests());
 
-    // A file of its own: replaced only while it is still the one MailCraft wrote.
+    // A file of its own: replaced only while it is still the one Mail wrote.
     run(&mut s, "calendar.publish", json!({"folder": cal.0, "url": format!("{public}mine.ics")}));
     settle(&mut s);
     assert!(file("mine.ics").is_some_and(|d| d.contains("BEGIN:VCALENDAR")));
@@ -827,14 +827,14 @@ fn publishing_never_replaces_or_removes_a_file_it_did_not_write() {
     assert_eq!(file("mine.ics").as_deref(), Some("replaced by hand"), "not removed");
     let e = account_error(&s);
     assert!(e.contains("still published") && e.contains("mine.ics"), "{e}");
-    let p = mailcraft_engine::cmd::calendar::props::read(&s.mailbox, cal).publication.expect("kept");
+    let p = iridium_mail_engine::cmd::calendar::props::read(&s.mailbox, cal).publication.expect("kept");
     assert!(p.withdraw && p.last_error.is_some(), "{p:?}");
     assert_eq!(srv.dav_items(ALICE, "contacts").len(), 1, "the address book was never touched");
     // Removed by hand: the next run sees it gone and the publication ends.
     srv.delete_dav_item(ALICE, "public", "mine.ics");
     run(&mut s, "sendReceive.all", json!({}));
     settle(&mut s);
-    assert!(mailcraft_engine::cmd::calendar::props::read(&s.mailbox, cal).publication.is_none());
+    assert!(iridium_mail_engine::cmd::calendar::props::read(&s.mailbox, cal).publication.is_none());
 }
 
 #[test]
@@ -923,7 +923,7 @@ const LEE: &str =
 /// Alice's account signed in with OAuth (device flow against the test authorization server), its DAV server
 /// set up with `dav`.
 fn oauth_alice(srv: &TestServers, s: &mut Session, mut dav: Value) -> AccountId {
-    s.sync.oauth_http = Some(mailcraft_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()));
+    s.sync.oauth_http = Some(iridium_mail_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()));
     if let Some(o) = dav.as_object_mut() {
         o.insert("url".into(), json!(srv.dav_url()));
         o.insert("extraRootPem".into(), json!(srv.cert_pem));
@@ -943,7 +943,7 @@ fn oauth_alice(srv: &TestServers, s: &mut Session, mut dav: Value) -> AccountId 
     run(
         s,
         "accounts.oauthSignIn",
-        json!({"account": alice.0, "provider": "custom", "clientId": mailcraft_testmail::OAUTH_TEST_CLIENT,
+        json!({"account": alice.0, "provider": "custom", "clientId": iridium_mail_testmail::OAUTH_TEST_CLIENT,
                "flow": "device", "tokenEndpoint": token, "deviceAuthorizationEndpoint": device, "scopes": ["mail"]}),
     );
     let mut code = String::new();
@@ -1070,7 +1070,7 @@ fn links_stored_by_an_earlier_version_still_match_after_the_upgrade() {
         s.mailbox.contacts.values().filter(|c| c.folder == contacts).map(|c| c.id).collect();
     assert_eq!(ids.len(), 2);
     let pat = contact_named(&s, contacts, "Pat").unwrap().id;
-    s.mailbox.contacts.get_mut(&pat).unwrap().flag = mailcraft_engine::model::FlagState::Flagged {
+    s.mailbox.contacts.get_mut(&pat).unwrap().flag = iridium_mail_engine::model::FlagState::Flagged {
         label: "Follow up".into(),
         start: None,
         due: None,
@@ -1093,7 +1093,10 @@ fn links_stored_by_an_earlier_version_still_match_after_the_upgrade() {
         let now: Vec<ItemId> =
             s.mailbox.contacts.values().filter(|c| c.folder == contacts).map(|c| c.id).collect();
         assert_eq!(now, ids, "the same contacts, none removed or imported again (full run: {full})");
-        assert!(matches!(s.mailbox.contacts[&pat].flag, mailcraft_engine::model::FlagState::Flagged { .. }));
+        assert!(matches!(
+            s.mailbox.contacts[&pat].flag,
+            iridium_mail_engine::model::FlagState::Flagged { .. }
+        ));
         let sent: Vec<String> = srv.dav_requests()[before..].to_vec();
         assert!(sent.iter().all(|r| !r.starts_with("PUT") && !r.starts_with("DELETE")), "{sent:?}");
         // The links take the server's form again.
@@ -1218,8 +1221,8 @@ fn an_item_whose_address_another_item_took_goes_up_under_another_name() {
 fn a_withdrawal_saved_by_an_earlier_version_removes_its_file() {
     // Regression: a pending removal saved by an earlier version (no ETag) was dropped without removing the
     // file, and one outside the publishing location was dropped silently while the file stayed public.
-    use mailcraft_engine::cmd::calendar::props;
-    use mailcraft_engine::model::calendar::Withdrawal;
+    use iridium_mail_engine::cmd::calendar::props;
+    use iridium_mail_engine::model::calendar::Withdrawal;
     let srv = servers();
     let mut s = session();
     let public = srv.dav_collection_url(ALICE, "public");
@@ -1260,7 +1263,7 @@ fn the_mail_token_goes_only_to_the_providers_dav_server_and_is_renewed_for_it() 
     // DAV request then failed to sign in), and the token went to any DAV server, the provider's or not.
     let srv = servers();
     let mut s = session();
-    s.sync.oauth_http = Some(mailcraft_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()));
+    s.sync.oauth_http = Some(iridium_mail_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()));
     let r = run(
         &mut s,
         "accounts.add",
@@ -1276,7 +1279,7 @@ fn the_mail_token_goes_only_to_the_providers_dav_server_and_is_renewed_for_it() 
     run(
         &mut s,
         "accounts.oauthSignIn",
-        json!({"account": alice.0, "provider": "custom", "clientId": mailcraft_testmail::OAUTH_TEST_CLIENT,
+        json!({"account": alice.0, "provider": "custom", "clientId": iridium_mail_testmail::OAUTH_TEST_CLIENT,
                "flow": "device", "tokenEndpoint": token, "deviceAuthorizationEndpoint": device, "scopes": ["mail"]}),
     );
     let mut code = String::new();
@@ -1325,7 +1328,7 @@ fn the_mail_token_goes_only_to_the_providers_dav_server_and_is_renewed_for_it() 
     assert!(contact_named(&s, contacts, "Lee").is_some());
 }
 
-/// A card from another client, with more than MailCraft models.
+/// A card from another client, with more than Mail models.
 const KIM: &str = "BEGIN:VCARD\r\nVERSION:3.0\r\nUID:urn:uuid:kim-1\r\nFN:Kim Example\r\nN:Example;Kim;;;\r\n\
 EMAIL;TYPE=work:kim@example.com\r\nEMAIL;TYPE=home:kim@example.net\r\nEMAIL:kim.two@example.org\r\n\
 EMAIL:kim.three@example.org\r\nitem1.URL:https://example.com/kim\r\nitem1.X-ABLABEL:Blog\r\n\
@@ -1346,7 +1349,7 @@ fn folded(line: &str) -> String {
 
 #[test]
 fn edits_keep_what_the_server_copy_holds_beyond_the_mapping() {
-    // Regression: contacts and events went up as MailCraft rebuilt them, so a fourth e-mail address, other
+    // Regression: contacts and events went up as Mail rebuilt them, so a fourth e-mail address, other
     // clients' properties, a second alarm and attachments by URI were deleted on the server at the first edit
     // here; and an inline file over 768 KiB was cut while reading, then uploaded cut.
     let srv = servers();
@@ -1357,7 +1360,7 @@ fn edits_keep_what_the_server_copy_holds_beyond_the_mapping() {
     srv.put_dav_item(ALICE, "contacts", "kim-1.vcf", KIM).unwrap();
     let file: Vec<u8> =
         (0..2 * 1024 * 1024u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8).collect();
-    let b64 = mailcraft_mime::transfer::encode_base64_flat(&file);
+    let b64 = iridium_mail_mime::transfer::encode_base64_flat(&file);
     let event = format!(
         "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example//EN\r\nBEGIN:VEVENT\r\nUID:trip-1\r\n\
          DTSTAMP:20261001T000000Z\r\nDTSTART:20261102T090000Z\r\nDTEND:20261102T100000Z\r\nSUMMARY:Trip\r\n\
@@ -1402,7 +1405,7 @@ fn edits_keep_what_the_server_copy_holds_beyond_the_mapping() {
         assert!(unfolded.contains(kept), "{kept} in the uploaded event");
     }
     assert_eq!(unfolded.matches("BEGIN:VALARM").count(), 2, "both alarms are kept");
-    let back = mailcraft_formats::ics::read_str(&data, Default::default()).unwrap();
+    let back = iridium_mail_formats::ics::read_str(&data, Default::default()).unwrap();
     let files = &back.events[0].appointment.attachments;
     assert_eq!(files.len(), 1);
     assert!(files[0].data[..] == file[..], "the server's file is still whole");

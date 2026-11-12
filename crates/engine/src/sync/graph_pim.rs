@@ -9,9 +9,9 @@
 //! calendar opened by address, `contacts/~/` the default contacts folder), an object's address is the
 //! collection's plus the object's id (an item made here is uploaded under a name made from its UID and moves
 //! to its id's address once the service names it), and its tag is made from the object's `changeKey`. Objects
-//! are read as MailCraft's own vCard / iCalendar text (`graph_items.rs`); an update sends only the mapped
+//! are read as Mail's own vCard / iCalendar text (`graph_items.rs`); an update sends only the mapped
 //! properties whose value differs from the service's copy read the same way, so what the edit did not touch
-//! (and what MailCraft does not model) stays as it is. Conditional writes are checked against the tag of the
+//! (and what Mail does not model) stays as it is. Conditional writes are checked against the tag of the
 //! object just before the write.
 //!
 //! **Delta.** Every collection keeps a delta link (`DavFolderState::delta`): a run reads only what changed
@@ -20,13 +20,13 @@
 //! range of dates around today, so a calendar is also listed whole every week; a changed instance (an
 //! occurrence or exception) re-reads its series, a series with its exceptions (`instances`) is one resource,
 //! and occurrences missing from the instances are the series' exception dates (only for a series in a zone
-//! MailCraft knows). A removal the run cannot place re-reads the known series whose master changed (one
+//! Mail knows). A removal the run cannot place re-reads the known series whose master changed (one
 //! small read each). The delta link advances only when the run applied everything it listed.
 //!
 //! **Scheduling.** Graph does the scheduling: an event with attendees made or changed here is an invitation
 //! or update the service sends, and a meeting removed here is cancelled by it (with the user's note, through
 //! the event's `cancel` action); answers to invitations go through the event's `accept` /
-//! `tentativelyAccept` / `decline` actions ([`respond_all`]). No iTIP mail goes from MailCraft for a Graph
+//! `tentativelyAccept` / `decline` actions ([`respond_all`]). No iTIP mail goes from Mail for a Graph
 //! calendar, except an answer for a meeting the service does not have. A meeting someone else organized is
 //! never made on the service from here ([`Store::keeps_local`]): the service would invite its attendees in
 //! the user's name.
@@ -34,13 +34,13 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
-use mailcraft_model::account::{GraphCancel, GraphResponse, SharedCalendarRef};
-use mailcraft_model::{Appointment, DateTime};
-use mailcraft_net::NetError;
-use mailcraft_net::dav::{Fetched, Listing, Precondition, Resource};
-use mailcraft_net::graph::pim::{self as gpim, Response};
-use mailcraft_net::graph::{GraphClient, seg};
-use mailcraft_net::http::{percent_decode, percent_encode};
+use iridium_mail_model::account::{GraphCancel, GraphResponse, SharedCalendarRef};
+use iridium_mail_model::{Appointment, DateTime};
+use iridium_mail_net::NetError;
+use iridium_mail_net::dav::{Fetched, Listing, Precondition, Resource};
+use iridium_mail_net::graph::pim::{self as gpim, Response};
+use iridium_mail_net::graph::{GraphClient, seg};
+use iridium_mail_net::http::{percent_decode, percent_encode};
 use serde_json::{Map, Value, json};
 
 use super::graph_items::{self as items, format_local};
@@ -823,7 +823,7 @@ impl<'a> Store<'a> {
         Ok((group_tag(&g), g))
     }
 
-    /// MailCraft's own vCard / iCalendar text of a cached object or event group.
+    /// Mail's own vCard / iCalendar text of a cached object or event group.
     fn text_of(&self, v: &Value) -> Option<String> {
         match self.kind {
             PimKind::Contacts => {
@@ -1235,7 +1235,7 @@ impl<'a> Store<'a> {
 
 /// The original starts (Unix) of the occurrences of `series` (made in zone `zone`, the master's
 /// `originalStartTimeZone`) missing from `instances`, all the service lists in `window`: they are cancelled.
-/// Nothing is inferred without instances, or for a series in a zone MailCraft does not know (it would be
+/// Nothing is inferred without instances, or for a series in a zone Mail does not know (it would be
 /// expanded in UTC, so after a daylight saving change every occurrence's start would differ from the
 /// service's and read as cancelled).
 fn missing_occurrences(
@@ -1322,7 +1322,7 @@ pub(super) fn respond_all(c: &GraphClient, list: &[GraphResponse]) -> Vec<(Strin
     out
 }
 
-/// The mailbox's time zone as an IANA zone MailCraft knows (`None`: not set, unknown, or not allowed).
+/// The mailbox's time zone as an IANA zone Mail knows (`None`: not set, unknown, or not allowed).
 pub(super) fn mailbox_zone(c: &GraphClient) -> Option<String> {
     match gpim::mailbox_time_zone(c) {
         Ok(Some(z)) => match items::zone_named(&z) {
@@ -1411,7 +1411,7 @@ mod tests {
             start: DateTime::from_unix(start, if zone.is_some() { -300 } else { 0 }),
             end: DateTime::from_unix(start + 3600, if zone.is_some() { -300 } else { 0 }),
             tz: zone.map(str::to_owned),
-            recurrence: Some(mailcraft_model::Recurrence {
+            recurrence: Some(iridium_mail_model::Recurrence {
                 rrule: "FREQ=WEEKLY;BYDAY=MO;COUNT=4".into(),
                 exdates: Vec::new(),
             }),
@@ -1434,7 +1434,7 @@ mod tests {
             items::parse_instant("2027-04-30T00:00:00Z").unwrap(),
         );
         let all = instances(&["01T14:00:00", "08T14:00:00", "15T13:00:00", "22T13:00:00"]);
-        // An organizer's own zone the service names but MailCraft does not know: the series is expanded in
+        // An organizer's own zone the service names but Mail does not know: the series is expanded in
         // UTC here, so after the change every start would differ; nothing is taken as cancelled.
         for zone in ["tzone://Microsoft/Custom", "Customized Time Zone", "Pacific SA Standard Time", ""] {
             assert_eq!(

@@ -197,7 +197,7 @@ impl Session<'_> {
     }
 
     fn run(&mut self) -> io::Result<()> {
-        let greet = format!("* OK [CAPABILITY {}] MailCraft test IMAP server ready\r\n", self.capabilities());
+        let greet = format!("* OK [CAPABILITY {}] Mail test IMAP server ready\r\n", self.capabilities());
         self.conn.write_all(greet.as_bytes())?;
         loop {
             let cmd = match self.read_command()? {
@@ -314,14 +314,12 @@ impl Session<'_> {
             }
             (false, "LOGOUT") => {
                 p.end()?;
-                out.extend_from_slice(b"* BYE MailCraft test server logging out\r\n");
+                out.extend_from_slice(b"* BYE Mail test server logging out\r\n");
                 out.extend_from_slice(format!("{tag} OK LOGOUT completed\r\n").as_bytes());
                 return Err(Fail::Bye);
             }
             (false, "ID") => {
-                out.extend_from_slice(
-                    b"* ID (\"name\" \"MailCraft test server\" \"vendor\" \"MailCraft\")\r\n",
-                );
+                out.extend_from_slice(b"* ID (\"name\" \"Mail test server\" \"vendor\" \"Mail\")\r\n");
                 Ok("ID completed".to_owned())
             }
             (false, "STARTTLS") => self.starttls(tag, p),

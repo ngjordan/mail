@@ -1,5 +1,5 @@
-use mailcraft_mime::Mailbox;
-use mailcraft_model::{DateTime, FolderId, MailItem};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::{DateTime, FolderId, MailItem};
 
 use crate::{eml, mbox};
 
@@ -24,12 +24,12 @@ fn eml_rebuilds_without_source() {
         sent: Some(DateTime::from_unix(1_791_000_000, 0)),
         ..Default::default()
     };
-    let body = mailcraft_model::Body { text: Some("Body text".into()), ..Default::default() };
+    let body = iridium_mail_model::Body { text: Some("Body text".into()), ..Default::default() };
     let bytes = eml::write(&item, None, Some(&body));
     let back = eml::read(&bytes, FolderId(1), DateTime::default()).unwrap();
     assert_eq!(back.subject, "Rebuilt");
     assert_eq!(back.to, item.to);
-    let back_body = mailcraft_model::Body::from_source(&bytes).unwrap();
+    let back_body = iridium_mail_model::Body::from_source(&bytes).unwrap();
     assert_eq!(back_body.text.as_deref().map(str::trim), Some("Body text"));
 }
 
@@ -48,7 +48,7 @@ fn eml_file_round_trip() {
 #[test]
 fn mbox_round_trip_quotes_from_lines() {
     let a = eml::read(MSG, FolderId(1), DateTime::from_unix(5, 0)).unwrap();
-    let b = MailItem { id: mailcraft_model::ItemId(2), ..a.clone() };
+    let b = MailItem { id: iridium_mail_model::ItemId(2), ..a.clone() };
     let second: &[u8] = b"Subject: second\r\n\r\nFrom here on\r\n>From quoted\r\n";
     let bytes = mbox::write_bytes(&[&a, &b], |m| if m.id == b.id { second.to_vec() } else { MSG.to_vec() });
     let text = String::from_utf8_lossy(&bytes);

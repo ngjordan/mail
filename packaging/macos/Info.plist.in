@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- MailCraft.app/Contents/Info.plist; packaging/macos/package.sh fills @APP_ID@, @VERSION@, @BUILD@. -->
+<!-- Mail.app/Contents/Info.plist; packaging/macos/package.sh fills @APP_ID@, @VERSION@, @BUILD@. -->
 <plist version="1.0">
 <dict>
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>MailCraft</string>
+  <string>Mail</string>
   <key>CFBundleName</key>
-  <string>MailCraft</string>
+  <string>Mail</string>
   <key>CFBundleExecutable</key>
-  <string>mailcraft</string>
+  <string>iridium-mail</string>
   <key>CFBundleIdentifier</key>
   <string>@APP_ID@</string>
   <key>CFBundleIconFile</key>
-  <string>mailcraft.icns</string>
+  <string>iridium-mail.icns</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundlePackageType</key>
@@ -32,6 +32,6 @@
   <key>NSSupportsAutomaticGraphicsSwitching</key>
   <true/>
   <key>NSHumanReadableCopyright</key>
-  <string>MailCraft contributors. MIT or Apache-2.0.</string>
+  <string>Mail contributors. MIT or Apache-2.0.</string>
 </dict>
 </plist>

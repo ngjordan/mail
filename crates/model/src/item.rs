@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{DateTime, FolderId, ItemId};
-use mailcraft_mime::Mailbox;
+use iridium_mail_mime::Mailbox;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Importance {
@@ -39,8 +39,8 @@ pub enum FlagState {
     },
 }
 
-/// Header carrying the reminder time of a flag set for the recipients (RFC 5322 date; MailCraft's own).
-pub const RECIPIENT_REMINDER_HEADER: &str = "X-MailCraft-Flag-Reminder";
+/// Header carrying the reminder time of a flag set for the recipients (RFC 5322 date; Mail's own).
+pub const RECIPIENT_REMINDER_HEADER: &str = "X-Mail-Flag-Reminder";
 
 /// Longest flag label kept from a received message.
 pub const MAX_FLAG_LABEL_CHARS: usize = 255;
@@ -88,13 +88,13 @@ impl BodyFormat {
 pub struct Body {
     pub format: BodyFormat,
     pub text: Option<String>,
-    /// Sanitising happens at display time (`mailcraft-html`); the stored HTML is the original.
+    /// Sanitising happens at display time (`iridium-mail-html`); the stored HTML is the original.
     pub html: Option<String>,
 }
 
 impl Body {
     /// The body of a parsed message: its text and HTML parts (HTML format when it has an HTML part).
-    pub fn from_message(msg: &mailcraft_mime::Message) -> Body {
+    pub fn from_message(msg: &iridium_mail_mime::Message) -> Body {
         let text = msg.text_body();
         let html = msg.html_body();
         let format = if html.is_some() { BodyFormat::Html } else { BodyFormat::PlainText };
@@ -102,7 +102,7 @@ impl Body {
     }
     /// The body a message source gives (see [`Body::from_message`]); `None` when the source does not parse.
     pub fn from_source(raw: &[u8]) -> Option<Body> {
-        mailcraft_mime::parse(raw).ok().map(|m| Body::from_message(&m))
+        iridium_mail_mime::parse(raw).ok().map(|m| Body::from_message(&m))
     }
     /// Neither a text nor an HTML part.
     pub fn is_empty(&self) -> bool {
@@ -203,7 +203,7 @@ pub struct MailItem {
     pub ignored: bool,
     /// IMAP UID / JMAP id when synced.
     pub remote_id: Option<String>,
-    /// Key of the RFC 5322 source in the store's body store (`mailcraft-store`), when stored. The source is
+    /// Key of the RFC 5322 source in the store's body store (`iridium-mail-store`), when stored. The source is
     /// read on demand (View Source, Forward as Attachment, export); the decoded body comes from it unless
     /// [`MailItem::body_key`] is set.
     pub blob: Option<String>,
@@ -290,9 +290,9 @@ impl MailItem {
     /// preview, ids, expiry) whose source is `raw` (its size). The body is [`Body::from_message`]; neither it
     /// nor the source is kept on the item (the caller stores them). `received` falls back to the Date header,
     /// then to `now`.
-    pub fn from_message(msg: &mailcraft_mime::Message, raw: &[u8], now: DateTime) -> MailItem {
-        let flatten = |list: Vec<mailcraft_mime::Address>| -> Vec<Mailbox> {
-            list.iter().flat_map(mailcraft_mime::Address::mailboxes).collect()
+    pub fn from_message(msg: &iridium_mail_mime::Message, raw: &[u8], now: DateTime) -> MailItem {
+        let flatten = |list: Vec<iridium_mail_mime::Address>| -> Vec<Mailbox> {
+            list.iter().flat_map(iridium_mail_mime::Address::mailboxes).collect()
         };
         let sent = msg.date();
         let received = received_date(&msg.headers).or(sent).unwrap_or(now);
@@ -326,7 +326,7 @@ impl MailItem {
             })
             .unwrap_or_default();
         // A flag the sender set for its recipients: the label, the RFC 2156 reply-by date as the due date,
-        // and the reminder MailCraft sends with it. A reminder time before the message arrived is the
+        // and the reminder Mail sends with it. A reminder time before the message arrived is the
         // sender's way to pop a window the moment it lands, so it is dropped (the flag stays).
         let date_header = |name: &str| msg.headers.get(name).and_then(|v| DateTime::parse_rfc5322(v).ok());
         let reminder = date_header(RECIPIENT_REMINDER_HEADER).filter(|r| r.unix >= received.unix);
@@ -476,7 +476,7 @@ fn parse_sensitivity(v: &str) -> Sensitivity {
 }
 
 /// Arrival time from the newest (topmost) Received header: the date after its last ';'.
-fn received_date(headers: &mailcraft_mime::Headers) -> Option<DateTime> {
+fn received_date(headers: &iridium_mail_mime::Headers) -> Option<DateTime> {
     let first = headers.get_all("Received").next()?;
     let (_, date) = first.rsplit_once(';')?;
     DateTime::parse_rfc5322(date.trim()).ok()

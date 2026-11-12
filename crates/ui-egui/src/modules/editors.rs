@@ -34,15 +34,15 @@ use egui::{
 };
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::app::CLOSE_ITEM_WINDOWS;
-use mailcraft_engine::cmd::calendar::pim::Kind;
-use mailcraft_engine::cmd::calendar::{CalendarMode, recurrence::pattern_text};
-use mailcraft_engine::cmd::people::{
+use iridium_mail_engine::cmd::app::CLOSE_ITEM_WINDOWS;
+use iridium_mail_engine::cmd::calendar::pim::Kind;
+use iridium_mail_engine::cmd::calendar::{CalendarMode, recurrence::pattern_text};
+use iridium_mail_engine::cmd::people::{
     CONTACT_GROUP_MARKER, business_card_lines, contact_addresses, display_name, is_group,
 };
-use mailcraft_model::calendar::{AttendeeRole, ResponseStatus};
-use mailcraft_model::contact::{ContactPicture, PostalAddress};
-use mailcraft_model::{BusyStatus, Contact, FolderId, ItemId, NoteColor, TaskPriority, TaskStatus};
+use iridium_mail_model::calendar::{AttendeeRole, ResponseStatus};
+use iridium_mail_model::contact::{ContactPicture, PostalAddress};
+use iridium_mail_model::{BusyStatus, Contact, FolderId, ItemId, NoteColor, TaskPriority, TaskStatus};
 
 use super::common::{
     DAY, ModState, clock, current_folder, day_string, day_time_string, load, local_secs, note_fill,
@@ -113,7 +113,7 @@ pub(crate) struct ApptEditor {
     pub tz_start: String,
     pub tz_end: String,
     /// Files attached to the item.
-    pub attachments: Vec<mailcraft_model::calendar::ItemAttachment>,
+    pub attachments: Vec<iridium_mail_model::calendar::ItemAttachment>,
     /// The notes' formatting as they came (HTML), when they have any.
     pub body_html: Option<String>,
     /// The notes editor (made when the window first draws).
@@ -326,7 +326,7 @@ pub(crate) struct OccPrompt {
 // Opening
 // ---------------------------------------------------------------------------------------------------------
 
-fn attendee_list(a: &mailcraft_model::Appointment, role: AttendeeRole) -> String {
+fn attendee_list(a: &iridium_mail_model::Appointment, role: AttendeeRole) -> String {
     a.attendees
         .iter()
         .filter(|x| x.role == role)
@@ -350,9 +350,9 @@ pub(crate) fn open_appointment_at(app: &App, st: &mut ModState, id: ItemId, occu
     let Some(a) = app.s.mailbox.appointments.get(&id) else { return };
     // Times on the calendar's clock (its named zone across daylight-saving changes), as saving reads them;
     // an item in other zones shows its Time Zones with the times in them.
-    use mailcraft_engine::cmd::calendar::tz;
+    use iridium_mail_engine::cmd::calendar::tz;
     let clock = tz::Clock::of(&app.s);
-    let zones_shown = mailcraft_engine::cmd::calendar::zones_differ(&clock, a);
+    let zones_shown = iridium_mail_engine::cmd::calendar::zones_differ(&clock, a);
     let (start, end) = match occurrence {
         Some((s, e)) => (s, e),
         None => (a.start.unix, a.end.unix),
@@ -389,7 +389,7 @@ pub(crate) fn open_appointment_at(app: &App, st: &mut ModState, id: ItemId, occu
         attendees: attendee_list(a, AttendeeRole::Required),
         optional: attendee_list(a, AttendeeRole::Optional),
         resources: attendee_list(a, AttendeeRole::Resource),
-        importance: mailcraft_engine::cmd::calendar::importance_name(a.importance).to_owned(),
+        importance: iridium_mail_engine::cmd::calendar::importance_name(a.importance).to_owned(),
         zones_shown,
         tz_start,
         tz_end,
@@ -418,11 +418,11 @@ pub(crate) fn open_occurrence(app: &App, st: &mut ModState, id: ItemId, occurren
 pub(crate) fn open_one_occurrence(app: &App, st: &mut ModState, id: ItemId, occurrence: i64) {
     let Some(a) = app.s.mailbox.appointments.get(&id) else { return };
     let tz = tz(app);
-    let at = mailcraft_model::DateTime::from_unix(occurrence, tz);
-    let found = mailcraft_engine::cmd::calendar::occurrences(
+    let at = iridium_mail_model::DateTime::from_unix(occurrence, tz);
+    let found = iridium_mail_engine::cmd::calendar::occurrences(
         a,
         at,
-        mailcraft_model::DateTime::from_unix(occurrence + 1, tz),
+        iridium_mail_model::DateTime::from_unix(occurrence + 1, tz),
         // Long events of a frequent series overlap: every occurrence running then is listed.
         usize::MAX,
     )
@@ -449,7 +449,7 @@ pub(crate) fn new_appointment(
     let end = start + dur.max(0);
     let nonce = st.editors.next();
     let zone =
-        mailcraft_engine::cmd::calendar::tz::Clock::of(&app.s).zone_id().unwrap_or_default().to_owned();
+        iridium_mail_engine::cmd::calendar::tz::Clock::of(&app.s).zone_id().unwrap_or_default().to_owned();
     st.editors.appt = Some(ApptEditor {
         folder: folder.map(|f| f.0),
         start_date: day_string(day),
@@ -576,7 +576,7 @@ pub(crate) fn new_contact(app: &App, st: &mut ModState, folder: Option<FolderId>
 pub(crate) fn open_task(app: &App, st: &mut ModState, id: ItemId) {
     let Some(t) = app.s.mailbox.tasks.get(&id) else { return };
     let tz = tz(app);
-    let date = |d: Option<mailcraft_model::DateTime>| {
+    let date = |d: Option<iridium_mail_model::DateTime>| {
         d.map(|d| day_string(local_secs(d, tz).div_euclid(DAY))).unwrap_or_default()
     };
     let (reminder_date, reminder_min) = match t.reminder {
@@ -593,7 +593,7 @@ pub(crate) fn open_task(app: &App, st: &mut ModState, id: ItemId) {
         subject: t.subject.clone(),
         start: date(t.start),
         due: date(t.due),
-        status: mailcraft_engine::cmd::tasks::status_name(t.status).to_owned(),
+        status: iridium_mail_engine::cmd::tasks::status_name(t.status).to_owned(),
         priority: priority_name(t.priority).to_owned(),
         percent: t.percent_complete,
         reminder_on: t.reminder.is_some(),
@@ -608,7 +608,7 @@ pub(crate) fn open_task(app: &App, st: &mut ModState, id: ItemId) {
         private: t.private,
         assigned_to: t.assigned_to.join("; "),
         requested_by: t.requested_by.clone().unwrap_or_default(),
-        request_state: mailcraft_engine::cmd::tasks::request_state_name(t.request_state).to_owned(),
+        request_state: iridium_mail_engine::cmd::tasks::request_state_name(t.request_state).to_owned(),
         error: None,
         nonce,
         focus: false,
@@ -642,7 +642,7 @@ pub(crate) fn open_note(app: &App, st: &mut ModState, id: ItemId) {
         text: n.text.clone(),
         color: n.color,
         categories: n.categories.clone(),
-        modified: mailcraft_model::ListTime::short_date_time(n.modified, tz(app)),
+        modified: iridium_mail_model::ListTime::short_date_time(n.modified, tz(app)),
         error: None,
         nonce,
     });
@@ -993,7 +993,7 @@ fn save_items_prompt(ctx: &egui::Context, app: &mut App, st: &mut ModState) {
         names.push(if e.subject.trim().is_empty() { "Untitled task".into() } else { e.subject.clone() });
     }
     let mut answer: Option<Option<bool>> = None;
-    window("MailCraft".into(), ("mc-save-items", 0)).default_width(380.0).resizable(false).show(ctx, |ui| {
+    window("Mail".into(), ("mc-save-items", 0)).default_width(380.0).resizable(false).show(ctx, |ui| {
         crate::dialogs::form_visuals(ui, &app.theme);
         ui.label("Do you want to save your changes to these items before they close?");
         for n in &names {
@@ -1509,7 +1509,7 @@ pub(crate) const ATTACHMENTS_LABEL: &str = "Attachments";
 
 /// A time zone picker: the calendar's zones list (with `zone` when it is not on it).
 fn zone_combo(ui: &mut Ui, app: &App, id: &str, zone: &mut String) {
-    use mailcraft_engine::cmd::calendar::tz;
+    use iridium_mail_engine::cmd::calendar::tz;
     let now = app.s.now().unix;
     let shown = if zone.trim().is_empty() { "(calendar time)".to_owned() } else { tz::label(zone, now) };
     ComboBox::from_id_salt(id).selected_text(shown).width(230.0).show_ui(ui, |ui| {
@@ -1526,7 +1526,7 @@ fn zone_combo(ui: &mut Ui, app: &App, id: &str, zone: &mut String) {
 
 /// The wall-clock times of the window (date, minute) on `from` read again on `to` (the same instants).
 fn convert_times(ed: &mut ApptEditor, app: &App, from: (&str, &str), to: (&str, &str)) {
-    use mailcraft_engine::cmd::calendar::tz;
+    use iridium_mail_engine::cmd::calendar::tz;
     let fixed = tz(app);
     let clock =
         |z: &str| if z.trim().is_empty() { tz::Clock::of(&app.s) } else { tz::Clock::named(z, fixed) };
@@ -1548,7 +1548,7 @@ fn convert_times(ed: &mut ApptEditor, app: &App, from: (&str, &str), to: (&str, 
 /// the times back on the calendar's clock.
 fn toggle_zones(app: &App, ed: &mut ApptEditor) {
     let calendar =
-        mailcraft_engine::cmd::calendar::tz::Clock::of(&app.s).zone_id().unwrap_or_default().to_owned();
+        iridium_mail_engine::cmd::calendar::tz::Clock::of(&app.s).zone_id().unwrap_or_default().to_owned();
     if ed.zones_shown {
         let (s, e) = (ed.tz_start.clone(), ed.tz_end.clone());
         convert_times(ed, app, (&s, &e), ("", ""));
@@ -1570,8 +1570,8 @@ fn toggle_zones(app: &App, ed: &mut ApptEditor) {
 
 /// Adds the file at `path` to the window's attachments (errors show in the window).
 pub(crate) fn attach_to_window(ed: &mut ApptEditor, path: &str) {
-    use mailcraft_model::calendar::{MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS};
-    match mailcraft_engine::cmd::calendar::attachment_from_path(path) {
+    use iridium_mail_model::calendar::{MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS};
+    match iridium_mail_engine::cmd::calendar::attachment_from_path(path) {
         Ok(f) => {
             let total: usize = ed.attachments.iter().map(|x| x.data.len()).sum();
             if ed.attachments.len() >= MAX_ITEM_ATTACHMENTS
@@ -1597,7 +1597,7 @@ pub(crate) fn save_item_file(app: &mut App, id: u64, index: usize, filename: &st
         app.run("calendar.saveAttachment", p);
         return;
     };
-    let suggested = mailcraft_mime::message::safe_file_name(filename);
+    let suggested = iridium_mail_mime::message::safe_file_name(filename);
     let suggested = if suggested.is_empty() { "attachment".to_owned() } else { suggested };
     if let Some(path) = files.save_file("Save Attachment", &suggested, &[], None) {
         let mut p = p;
@@ -1648,7 +1648,7 @@ fn attachments_row(ui: &mut Ui, app: &mut App, ed: &mut ApptEditor) {
                     .or_else(|| crate::compose::file_hooks().pick_files.map(|pick| pick()));
                 match picked {
                     Some(Some(paths)) => {
-                        for p in paths.into_iter().take(mailcraft_model::calendar::MAX_ITEM_ATTACHMENTS) {
+                        for p in paths.into_iter().take(iridium_mail_model::calendar::MAX_ITEM_ATTACHMENTS) {
                             attach_to_window(ed, &p.to_string_lossy());
                         }
                     }
@@ -1768,7 +1768,7 @@ pub(crate) fn save_appointment_as(app: &mut App, ed: &ApptEditor, send: bool) ->
             json!({
                 "name": f.filename,
                 "mime_type": f.mime_type,
-                "data_base64": mailcraft_mime::transfer::encode_base64_flat(&f.data),
+                "data_base64": iridium_mail_mime::transfer::encode_base64_flat(&f.data),
             })
         })
         .collect();
@@ -1801,7 +1801,7 @@ pub(crate) fn save_appointment_as(app: &mut App, ed: &ApptEditor, send: bool) ->
     } else if !ed.all_day {
         // Hide Time Zones on an item that had zones of its own: the times are on the calendar's clock now,
         // and so are the item's zones (else it would keep its old ones and show them again).
-        use mailcraft_engine::cmd::calendar::{tz, zones_differ};
+        use iridium_mail_engine::cmd::calendar::{tz, zones_differ};
         let clock = tz::Clock::of(&app.s);
         let had_zones = ed
             .id
@@ -2216,7 +2216,7 @@ fn picture_controls(ui: &mut Ui, app: &App, ed: &mut ContactEditor) {
 
 /// Reads a picture file into the editor (checked like the engine does), or sets the window's error.
 pub(crate) fn set_picture_from(ed: &mut ContactEditor, path: &std::path::Path) {
-    let limit = mailcraft_model::contact::MAX_PICTURE_BYTES;
+    let limit = iridium_mail_model::contact::MAX_PICTURE_BYTES;
     let read = std::fs::metadata(path)
         .map_err(|e| e.to_string())
         .and_then(|m| {
@@ -2227,7 +2227,9 @@ pub(crate) fn set_picture_from(ed: &mut ContactEditor, path: &std::path::Path) {
             }
         })
         .and_then(|_| std::fs::read(path).map_err(|e| e.to_string()))
-        .and_then(|data| mailcraft_engine::cmd::people::picture_from_bytes(&data).map_err(|e| e.to_string()));
+        .and_then(|data| {
+            iridium_mail_engine::cmd::people::picture_from_bytes(&data).map_err(|e| e.to_string())
+        });
     match read {
         Ok(p) => {
             ed.picture = Some(p);
@@ -2299,7 +2301,7 @@ fn edited_contact(ed: &ContactEditor) -> Contact {
 
 /// The All Fields page: every field that has a value.
 fn all_fields_page(ui: &mut Ui, app: &App, ed: &ContactEditor) {
-    let fields = mailcraft_engine::cmd::people::all_fields(&edited_contact(ed));
+    let fields = iridium_mail_engine::cmd::people::all_fields(&edited_contact(ed));
     ScrollArea::vertical().id_salt(("mc-contact-all", ed.nonce)).max_height(520.0).show(ui, |ui| {
         egui::Grid::new(("mc-contact-all-grid", ed.nonce))
             .num_columns(2)
@@ -2387,7 +2389,7 @@ fn group_page(ui: &mut Ui, app: &App, ed: &mut ContactEditor) {
                         ui.label("");
                         ui.end_row();
                         for (i, m) in members.iter().enumerate() {
-                            let parsed = mailcraft_mime::parse_address_list(m)
+                            let parsed = iridium_mail_mime::parse_address_list(m)
                                 .first()
                                 .and_then(|a| a.mailboxes().into_iter().next());
                             let (name, addr) = match &parsed {
@@ -2425,7 +2427,7 @@ fn group_page(ui: &mut Ui, app: &App, ed: &mut ContactEditor) {
 /// Adds a member string unless its address is already in the group.
 fn add_member(ed: &mut ContactEditor, entry: &str) {
     let addr_of = |s: &str| {
-        mailcraft_mime::parse_address_list(s)
+        iridium_mail_mime::parse_address_list(s)
             .first()
             .and_then(|a| a.mailboxes().into_iter().next())
             .map(|m| m.addr.to_ascii_lowercase())
@@ -2682,7 +2684,7 @@ pub(crate) fn priority_name(p: TaskPriority) -> &'static str {
 }
 
 pub(crate) fn status_key(s: TaskStatus) -> &'static str {
-    mailcraft_engine::cmd::tasks::status_name(s)
+    iridium_mail_engine::cmd::tasks::status_name(s)
 }
 
 fn task_window(ctx: &egui::Context, app: &mut App, st: &mut ModState) {
@@ -3154,7 +3156,7 @@ fn go_to_window(ctx: &egui::Context, app: &mut App, st: &mut ModState) {
                 let params = json!({ "date": day_string(d), "mode": ed.mode });
                 if calendar_view::run_view_cmd(app, st, "calendar.goToDate", params).is_some() {
                     st.nav_month = None;
-                    if app.s.view.module != mailcraft_engine::Module::Calendar {
+                    if app.s.view.module != iridium_mail_engine::Module::Calendar {
                         app.run("nav.calendar", json!({}));
                     }
                     return;
@@ -3172,7 +3174,7 @@ fn go_to_window(ctx: &egui::Context, app: &mut App, st: &mut ModState) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn app() -> App {
         App::new(sample_session())
@@ -3183,16 +3185,16 @@ mod tests {
         let id = a_account(app);
         app.s.view.send_immediately = false;
         if let Some(a) = app.s.mailbox.accounts.iter_mut().find(|a| a.id == id) {
-            a.kind = mailcraft_model::AccountKind::Imap;
+            a.kind = iridium_mail_model::AccountKind::Imap;
             a.address = "me@example.com".into();
-            a.outgoing = Some(mailcraft_model::ServerSettings {
+            a.outgoing = Some(iridium_mail_model::ServerSettings {
                 host: "smtp.example.com".into(),
                 ..Default::default()
             });
         }
     }
 
-    fn a_account(app: &App) -> mailcraft_model::AccountId {
+    fn a_account(app: &App) -> iridium_mail_model::AccountId {
         app.s.mailbox.default_account().map(|a| a.id).unwrap()
     }
 
@@ -3250,7 +3252,8 @@ mod tests {
         assert_eq!(a.attendees.iter().filter(|x| x.role == AttendeeRole::Optional).count(), 1);
         assert_eq!(a.attendees.iter().filter(|x| x.role == AttendeeRole::Resource).count(), 1);
         assert!(app.s.composes.is_empty(), "no compose opens");
-        let outbox = app.s.mailbox.role_folder(a_account(&app), mailcraft_model::FolderRole::Outbox).unwrap();
+        let outbox =
+            app.s.mailbox.role_folder(a_account(&app), iridium_mail_model::FolderRole::Outbox).unwrap();
         assert!(app.s.mailbox.mail.items().any(|m| m.folder == outbox && m.subject == "Review"));
         open_appointment(&app, &mut st, ItemId(id));
         let ed = st.editors.appt.clone().unwrap();
@@ -3266,7 +3269,8 @@ mod tests {
         let mut st = ModState::default();
         // The sample stand-up repeats every weekday at 9:00.
         let standup = app.s.mailbox.appointments.values().find(|a| a.subject == "Team stand-up").unwrap().id;
-        let monday = mailcraft_engine::cmd::calendar::pim::parse_local("2026-10-12T09:00", 0).unwrap().unix;
+        let monday =
+            iridium_mail_engine::cmd::calendar::pim::parse_local("2026-10-12T09:00", 0).unwrap().unix;
         open_occurrence(&app, &mut st, standup, monday);
         assert!(st.editors.occ_prompt.is_some(), "a recurring item asks first");
         open_one_occurrence(&app, &mut st, standup, monday);
@@ -3345,7 +3349,7 @@ mod tests {
     #[test]
     fn member_candidates_search_contacts_and_recent() {
         let mut app = app();
-        app.s.mailbox.recent_recipients.push(mailcraft_model::RecentRecipient {
+        app.s.mailbox.recent_recipients.push(iridium_mail_model::RecentRecipient {
             name: "Zed".into(),
             address: "zed@example.net".into(),
             ..Default::default()
@@ -3462,7 +3466,7 @@ mod tests {
             .unwrap();
         let ann = ItemId(r["id"].as_u64().unwrap());
         let folder = app.s.mailbox.contacts[&ann].folder;
-        app.s.selection = mailcraft_engine::Selection { folder, items: vec![ann], focus: Some(ann) };
+        app.s.selection = iridium_mail_engine::Selection { folder, items: vec![ann], focus: Some(ann) };
         app.s.run("people.newFromSameCompany", &json!({})).unwrap();
         let p = app
             .s
@@ -3470,7 +3474,7 @@ mod tests {
             .iter()
             .rev()
             .find_map(|n| match n {
-                mailcraft_engine::Notice::OpenDialog(d, p) if d == "contact" => Some(p.clone()),
+                iridium_mail_engine::Notice::OpenDialog(d, p) if d == "contact" => Some(p.clone()),
                 _ => None,
             })
             .unwrap();
@@ -3541,7 +3545,7 @@ mod tests {
     /// Moves the session's dialog requests into `app.ui.dialogs` (what the shell does each frame).
     fn forward_dialogs(app: &mut App) {
         for n in std::mem::take(&mut app.s.notices) {
-            if let mailcraft_engine::Notice::OpenDialog(name, p) = n {
+            if let iridium_mail_engine::Notice::OpenDialog(name, p) = n {
                 app.ui.dialogs.push((name, p));
             }
         }
@@ -3576,7 +3580,7 @@ mod tests {
         // A file, and formatted notes typed into the editor.
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../target/tmp")
-            .join(format!("mailcraft-appt-ui-test-{}", std::process::id()));
+            .join(format!("iridium-mail-appt-ui-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("boarding.txt");
         std::fs::write(&file, b"seat 12A").unwrap();
@@ -3591,7 +3595,7 @@ mod tests {
         assert_eq!(a.zone(), Some("America/Toronto"));
         assert_eq!(a.end_tz.as_deref(), Some("Europe/London"));
         assert_eq!(a.end.unix - a.start.unix, 7 * 3600, "18:00 Toronto to 06:00 London");
-        assert_eq!(a.importance, mailcraft_model::Importance::High);
+        assert_eq!(a.importance, iridium_mail_model::Importance::High);
         assert_eq!(a.attachments.len(), 1);
         assert_eq!(&*a.attachments[0].data, b"seat 12A");
         assert!(a.body_html.is_some());
@@ -3617,7 +3621,7 @@ mod tests {
         let c = app.s.mailbox.appointments[&ItemId(id)].clone();
         assert_eq!((c.start.unix, c.end.unix), (a.start.unix, a.end.unix));
         // Regression: hidden zones are gone from the item (they came back when it was opened again).
-        let clock = mailcraft_engine::cmd::calendar::tz::Clock::of(&app.s);
+        let clock = iridium_mail_engine::cmd::calendar::tz::Clock::of(&app.s);
         assert_eq!(c.end_tz, None);
         assert_eq!(c.zone(), clock.zone_id());
         open_appointment(&app, &mut st, ItemId(id));
@@ -3770,7 +3774,7 @@ mod tests {
         assert!(other.error.is_some());
         let _ = std::fs::remove_dir_all(&dir);
         // All Fields lists what the window holds.
-        let fields = mailcraft_engine::cmd::people::all_fields(&edited_contact(&ed));
+        let fields = iridium_mail_engine::cmd::people::all_fields(&edited_contact(&ed));
         assert!(fields.contains(&("Office Location".to_owned(), "B-12".to_owned())), "{fields:?}");
         assert!(fields.contains(&("Anniversary".to_owned(), "2019-05-04".to_owned())));
         let id = save_contact(&mut app, &ed).unwrap().unwrap();
@@ -3789,7 +3793,7 @@ mod tests {
         image::RgbImage::from_pixel(4, 5, image::Rgb([0, 128, 255]))
             .write_to(&mut jpeg, image::ImageFormat::Jpeg)
             .unwrap();
-        let jpeg = mailcraft_model::contact::ContactPicture::sniff(jpeg.get_ref()).unwrap();
+        let jpeg = iridium_mail_model::contact::ContactPicture::sniff(jpeg.get_ref()).unwrap();
         assert_eq!(super::super::common::decode_picture(&jpeg).map(|i| i.size), Some([4, 5]));
         // Reopened: the fields and picture come back; Remove Picture removes it.
         open_contact(&app, &mut st, ItemId(id));
@@ -3822,7 +3826,7 @@ mod tests {
         // A task assigned to me shows who assigned it.
         if let Some(t) = app.s.mailbox.tasks.get_mut(&id) {
             t.requested_by = Some("Boss <boss@example.com>".into());
-            t.request_state = mailcraft_model::task::TaskRequestState::Accepted;
+            t.request_state = iridium_mail_model::task::TaskRequestState::Accepted;
         }
         open_task(&app, &mut st, id);
         let ed = st.editors.task.clone().unwrap();

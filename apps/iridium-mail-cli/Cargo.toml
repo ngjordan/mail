@@ -1,0 +1,24 @@
+[package]
+name = "iridium-mail-cli"
+description = "Mail command-line tool: commands, parity, run, show, import/export, MCP server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+build = "../iridium-mail/build.rs"
+
+[[bin]]
+name = "iridium-mail-cli"
+path = "src/main.rs"
+
+[dependencies]
+iridium-mail-engine.workspace = true
+iridium-mail-mcp.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+iridium-mail-testmail.workspace = true
+
+[lints]
+workspace = true

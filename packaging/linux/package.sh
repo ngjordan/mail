@@ -4,16 +4,16 @@
 #     packaging/linux/package.sh [--build] [--target TRIPLE] [--profile release|debug]
 #                                [--formats tar,deb,rpm] [--out DIR]
 #
-#   --build     run `cargo build` for mailcraft and mailcraft-cli first (with the build details exported)
+#   --build     run `cargo build` for iridium-mail and iridium-mail-cli first (with the build details exported)
 #   --target    Rust target triple, e.g. aarch64-unknown-linux-gnu (default: the host build in target/<profile>)
 #   --profile   cargo profile (default release; `debug` is handy to try the scripts locally)
 #   --formats   comma list of tar, deb, rpm (default all three)
 #   --out       output folder (default dist/)
 #
 # Output (VERSION from Cargo.toml, ARCH x86_64 or aarch64):
-#   mailcraft-VERSION-linux-ARCH.tar.gz   bin/, share/ (desktop file, metainfo, icons, doc/licences)
-#   mailcraft_VERSION-1_amd64.deb / _arm64.deb
-#   mailcraft-VERSION-1.x86_64.rpm / .aarch64.rpm
+#   iridium-mail-VERSION-linux-ARCH.tar.gz   bin/, share/ (desktop file, metainfo, icons, doc/licences)
+#   iridium_mail_VERSION-1_amd64.deb / _arm64.deb
+#   iridium-mail-VERSION-1.x86_64.rpm / .aarch64.rpm
 #
 # nfpm comes from $NFPM or PATH. Without it deb/rpm are skipped with a warning, unless MC_REQUIRE_NFPM=1
 # (set in CI), which makes it an error.
@@ -50,9 +50,9 @@ esac
 if [ "$build" = 1 ]; then
 	cargo_profile="$profile"
 	[ "$profile" = "debug" ] && cargo_profile="dev"
-	args=(build --locked --profile "$cargo_profile" -p mailcraft -p mailcraft-cli)
+	args=(build --locked --profile "$cargo_profile" -p iridium-mail -p iridium-mail-cli)
 	[ -n "$triple" ] && args+=(--target "$triple")
-	mc_log "cargo ${args[*]} (git $MAILCRAFT_GIT_HASH, $MAILCRAFT_BUILD_DATE)"
+	mc_log "cargo ${args[*]} (git $IRIDIUM_MAIL_GIT_HASH, $IRIDIUM_MAIL_BUILD_DATE)"
 	(cd "$MC_ROOT" && cargo "${args[@]}")
 fi
 
@@ -65,16 +65,16 @@ out="$(cd "$out" && pwd)"
 has() { case ",$formats," in *",$1,"*) return 0 ;; *) return 1 ;; esac; }
 
 if has tar; then
-	name="mailcraft-$MC_VERSION-linux-$arch"
+	name="iridium-mail-$MC_VERSION-linux-$arch"
 	"$MC_ROOT/packaging/stage-unix.sh" "$bin_dir" "$work/$name"
-	cat >"$work/$name/share/doc/mailcraft/INSTALL.txt" <<EOF
-MailCraft $MC_VERSION for Linux ($arch)
+	cat >"$work/$name/share/doc/iridium-mail/INSTALL.txt" <<EOF
+Mail $MC_VERSION for Linux ($arch)
 
 Unpack into a prefix, for example your home folder:
 
     tar -xzf $name.tar.gz -C ~/.local --strip-components=1
 
-then run \`mailcraft\` (make sure ~/.local/bin is on PATH). The desktop file and icons under share/ make it
+then run \`iridium-mail\` (make sure ~/.local/bin is on PATH). The desktop file and icons under share/ make it
 appear in the application menu. Remove it again by deleting the files listed by \`tar -tzf $name.tar.gz\`.
 EOF
 	mc_tar_gz "$out/$name.tar.gz" "$work/$name"

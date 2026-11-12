@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 
 use crate::Registry;
 
-/// `Area|Location|Feature|command id` (`-` = not applicable to MailCraft, with the reason in the next field
+/// `Area|Location|Feature|command id` (`-` = not applicable to Mail, with the reason in the next field
 /// after a `#`).
 pub const CATALOG: &str = concat!(
     include_str!("../catalog/mail.txt"),
@@ -41,7 +41,7 @@ pub struct CatalogRow {
     pub location: &'static str,
     /// Feature name as observed.
     pub feature: &'static str,
-    /// Our command id; `None` when the feature is not applicable to MailCraft.
+    /// Our command id; `None` when the feature is not applicable to Mail.
     pub id: Option<&'static str>,
     /// Why the feature is not applicable (empty for mapped rows).
     pub reason: &'static str,

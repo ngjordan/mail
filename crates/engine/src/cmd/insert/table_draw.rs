@@ -4,8 +4,8 @@
 //! with its neighbour to the right (or, failing that, below). Cells are placed on the grid the HTML table
 //! model uses (spans skip taken slots), so splits and merges keep every row and column lined up.
 
-use mailcraft_model::Block;
-use mailcraft_model::rich::TableCell;
+use iridium_mail_model::Block;
+use iridium_mail_model::rich::TableCell;
 
 use crate::compose::{ComposeState, DocPos, table_cell};
 

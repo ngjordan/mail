@@ -1,9 +1,9 @@
 //! Machine translation (Message › Language › Translate) through an opt-in translator.
 //!
-//! MailCraft never sends message text anywhere by itself. A translator is either one an embedding app
+//! Mail never sends message text anywhere by itself. A translator is either one an embedding app
 //! installed on the session ([`Session::translator`]) or the translation server the user entered in Options ›
 //! Language › Translation ([`URL_SETTING`], with an optional API key kept in the secret store under
-//! [`KEY_SECRET`]): a LibreTranslate-compatible server (`mailcraft_net::translate`), for example one running
+//! [`KEY_SECRET`]): a LibreTranslate-compatible server (`iridium_mail_net::translate`), for example one running
 //! on the same computer. Nothing is configured by default; without a translator Translate Message opens the
 //! Translator window, which says that no translator is set up and that nothing was sent.
 //!
@@ -21,7 +21,7 @@
 
 use std::sync::{Arc, mpsc};
 
-use mailcraft_model::ItemId;
+use iridium_mail_model::ItemId;
 use serde_json::Value;
 
 use crate::Session;
@@ -155,8 +155,8 @@ fn configured(s: &Session) -> Option<Arc<dyn Translator>> {
     let options = s
         .translator_options
         .clone()
-        .unwrap_or_else(mailcraft_net::translate::LibreTranslate::default_options);
-    match mailcraft_net::translate::LibreTranslate::new(url, key.as_deref(), options) {
+        .unwrap_or_else(iridium_mail_net::translate::LibreTranslate::default_options);
+    match iridium_mail_net::translate::LibreTranslate::new(url, key.as_deref(), options) {
         Ok(lt) => Some(Arc::new(ServerTranslator(lt))),
         Err(e) => Some(Arc::new(Broken(e.to_string()))),
     }
@@ -169,7 +169,7 @@ fn configured(_s: &Session) -> Option<Arc<dyn Translator>> {
 
 /// A LibreTranslate-compatible server as a [`Translator`].
 #[cfg(not(target_arch = "wasm32"))]
-struct ServerTranslator(mailcraft_net::translate::LibreTranslate);
+struct ServerTranslator(iridium_mail_net::translate::LibreTranslate);
 
 #[cfg(not(target_arch = "wasm32"))]
 impl Translator for ServerTranslator {
@@ -354,7 +354,7 @@ fn prefix(t: &str, max: usize) -> &str {
 /// The start of a message's text, enough for [`detect`]: the subject and the first [`DETECT_CHARS`]
 /// characters of the body. Only a bounded part of the body is read (the offer bar asks every frame), never
 /// the whole text or HTML of a large message.
-fn detect_sample(m: &mailcraft_model::MailItem, body: &mailcraft_model::Body) -> String {
+fn detect_sample(m: &iridium_mail_model::MailItem, body: &iridium_mail_model::Body) -> String {
     let mut out = String::with_capacity(m.subject.len().saturating_add(DETECT_CHARS));
     out.push_str(&m.subject);
     out.push('\n');
@@ -362,7 +362,7 @@ fn detect_sample(m: &mailcraft_model::MailItem, body: &mailcraft_model::Body) ->
     if !text.trim().is_empty() {
         out.push_str(&text);
     } else if let Some(h) = &body.html {
-        let stripped = mailcraft_model::text::strip_html(prefix(h, DETECT_HTML_BYTES));
+        let stripped = iridium_mail_model::text::strip_html(prefix(h, DETECT_HTML_BYTES));
         out.extend(stripped.chars().take(DETECT_CHARS));
     } else {
         out.push_str(&text);
@@ -593,7 +593,7 @@ fn apply(s: &mut Session, job: Job, r: Result<String, String>) {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::indexing_slicing)]
     use super::*;
-    use mailcraft_model::{FolderRole, MailItem, Mailbox};
+    use iridium_mail_model::{FolderRole, MailItem, Mailbox};
     use serde_json::{Value, json};
     use std::io::{BufRead, BufReader, Read, Write};
     use std::net::TcpListener;
@@ -653,8 +653,8 @@ mod tests {
         let mut s = Session::new(Mailbox::new_local("Local Folders"));
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let m = MailItem { folder: inbox, subject: subject.into(), ..Default::default() };
-        let body = mailcraft_model::Body { text: Some(body.into()), ..Default::default() };
-        let id = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some(body.into()), ..Default::default() };
+        let id = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
         s.selection.focus = Some(id);
         (s, id)
     }
@@ -866,7 +866,7 @@ mod tests {
     fn detection_reads_only_the_start_of_a_message() {
         let m = MailItem { subject: "Projet".into(), ..Default::default() };
         let html = Some(format!("<p>{FRENCH}</p>{}", "<div>12345</div>".repeat(200_000)));
-        let mut b = mailcraft_model::Body { html, ..Default::default() };
+        let mut b = iridium_mail_model::Body { html, ..Default::default() };
         let sample = detect_sample(&m, &b);
         assert!(sample.chars().count() <= DETECT_CHARS + 10, "{}", sample.len());
         assert_eq!(detect(&sample), Some("fr"));
@@ -887,8 +887,8 @@ mod tests {
         let (mut s, fr) = session_with("Projet", FRENCH);
         let inbox = s.mailbox.mail.get(fr).unwrap().folder;
         let m = MailItem { folder: inbox, subject: "Report".into(), ..Default::default() };
-        let body = mailcraft_model::Body { text: Some(ENGLISH.into()), ..Default::default() };
-        let en = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some(ENGLISH.into()), ..Default::default() };
+        let en = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
         s.run("options.translator", &json!({"url": url})).unwrap();
         // Ask (the default): an offer for the French message only.
         assert_eq!(offer(&s, fr), Some(("fr", "en".to_owned())));

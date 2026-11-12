@@ -4,7 +4,7 @@
 //! `folder_counts` and the body reference counts in the same transaction ([`super::rows`]). A change record
 //! ([`MailRepo::begin`]) is a savepoint too: [`MailRepo::commit`] releases it (the outermost one commits, one
 //! fsync for the whole command) and [`MailRepo::rollback`] rolls the database back to it, while the
-//! before-images are kept in memory exactly as [`mailcraft_model::MailTable`] keeps them, so both
+//! before-images are kept in memory exactly as [`iridium_mail_model::MailTable`] keeps them, so both
 //! repositories answer the same (`tests/repo_contract.rs` runs one suite against both).
 //!
 //! Ids are `u64` in the model and 64-bit integers in SQLite: the same bits, so ids past `i64::MAX` are
@@ -17,7 +17,7 @@ use std::collections::BTreeMap;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 
-use mailcraft_model::{
+use iridium_mail_model::{
     ChangeToken, FolderCounts, FolderId, ItemId, MailChanges, MailItem, ScanFilter, message_id_key,
 };
 use rusqlite::{Connection, OptionalExtension, params};
@@ -28,7 +28,7 @@ use crate::{Result, StoreError};
 
 /// Rows read per batch while scanning.
 const SCAN_BATCH: usize = 256;
-/// Most records open at once (as [`mailcraft_model::MailTable`]).
+/// Most records open at once (as [`iridium_mail_model::MailTable`]).
 const MAX_OPEN_RECORDS: usize = 64;
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl SqlRepo {
         !self.frames.is_empty()
     }
 
-    /// Closes every open record, keeping what was written (see [`mailcraft_model::MailTable::abandon_all`]).
+    /// Closes every open record, keeping what was written (see [`iridium_mail_model::MailTable::abandon_all`]).
     /// Returns how many there were.
     pub fn abandon_all(&mut self) -> usize {
         let n = self.frames.len();

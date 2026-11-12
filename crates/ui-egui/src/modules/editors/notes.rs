@@ -8,9 +8,9 @@ use serde_json::Value;
 
 use crate::App;
 use crate::compose::{EditorHost, body_editor_in};
-use mailcraft_engine::Session;
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_model::{BodyFormat, Doc, Mailbox};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_model::{BodyFormat, Doc, Mailbox};
 
 /// Compose ids of the notes editors start here (far from the app's own compose ids and the other private
 /// editors), so the body editors' egui state never mixes.
@@ -34,7 +34,7 @@ impl NotesEditor {
         let mut session = Session::new(Mailbox::new_local("Notes"));
         session.next_compose = EDITOR_ID_BASE.saturating_add((nonce % (1 << 30)).saturating_mul(1 << 8));
         let body = match html.filter(|h| !h.trim().is_empty()) {
-            Some(h) => mailcraft_html::html_to_doc(h),
+            Some(h) => iridium_mail_html::html_to_doc(h),
             None => Doc::from_plain_text(text),
         };
         let c = ComposeState {
@@ -69,7 +69,7 @@ impl NotesEditor {
 
     /// The notes as HTML.
     pub(crate) fn html(&self) -> String {
-        self.compose().map(|c| mailcraft_html::doc_to_html(&c.body)).unwrap_or_default()
+        self.compose().map(|c| iridium_mail_html::doc_to_html(&c.body)).unwrap_or_default()
     }
 
     /// Replaces the notes with plain `text` (a test, or the window reset).

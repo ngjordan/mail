@@ -5,7 +5,7 @@
 mod common;
 
 use common::{ALICE, Client, b64, servers, servers_with};
-use mailcraft_testmail::Config;
+use iridium_mail_testmail::Config;
 
 fn ok(c: &mut Client, cmd: &str) -> String {
     c.send_str(&format!("{cmd}\r\n"));

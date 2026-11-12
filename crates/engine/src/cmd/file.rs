@@ -1,5 +1,5 @@
 //! `file.*`: the File backstage — Info (account summary), Account Settings (`accounts.*`, see
-//! `crate::accounts`), Open & Export (import/export through `mailcraft-store` and `mailcraft-formats`: EML,
+//! `crate::accounts`), Open & Export (import/export through `iridium-mail-store` and `iridium-mail-formats`: EML,
 //! MSG, MBOX, Maildir, iCalendar, vCard, CSV), Save As (.eml, .msg, .txt, .html), Save Attachments, data files
 //! (new / close / reveal), Options, Exit.
 
@@ -10,8 +10,10 @@ use serde_json::{Value, json};
 use crate::cmd::rules::{dialog, focused_item, need_selection, write_file};
 use crate::cmd::util::{opt_bool, opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session, always};
-use mailcraft_model::mailbox::LOCAL_ACCOUNT_FALLBACK_NAME;
-use mailcraft_model::{Account, AccountId, AccountKind, FolderId, FolderKind, FolderRole, ItemId, MailItem};
+use iridium_mail_model::mailbox::LOCAL_ACCOUNT_FALLBACK_NAME;
+use iridium_mail_model::{
+    Account, AccountId, AccountKind, FolderId, FolderKind, FolderRole, ItemId, MailItem,
+};
 
 /// Most attachments written by one Save Attachments run.
 const MAX_SAVED_ATTACHMENTS: usize = 10_000;
@@ -252,7 +254,7 @@ fn mail_folder(s: &Session, p: &Value) -> Result<FolderId, CmdError> {
     }
 }
 
-fn store_err(e: mailcraft_store::StoreError) -> CmdError {
+fn store_err(e: iridium_mail_store::StoreError) -> CmdError {
     CmdError::Failed(e.to_string())
 }
 
@@ -272,13 +274,13 @@ fn kind_folder(s: &Session, p: &Value, kind: FolderKind, role: FolderRole) -> Re
         .ok_or_else(|| CmdError::Failed(format!("there is no {} folder", role.default_name())))
 }
 
-fn format_err(e: mailcraft_formats::FormatError) -> CmdError {
+fn format_err(e: iridium_mail_formats::FormatError) -> CmdError {
     CmdError::Failed(e.to_string())
 }
 
 /// Action for `import` from the file's extension, else its first bytes.
 fn detect_import(path: &Path) -> Result<&'static str, CmdError> {
-    use mailcraft_formats::Format;
+    use iridium_mail_formats::Format;
     if path.is_file() && crate::pst::is_pst(path) {
         return Ok("importPst");
     }
@@ -308,7 +310,7 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
     match action {
         "importEml" => {
             let folder = mail_folder(s, p)?;
-            let id = mailcraft_store::import::import_eml(&mut s.mailbox, &mut s.bodies, &path, folder)
+            let id = iridium_mail_store::import::import_eml(&mut s.mailbox, &mut s.bodies, &path, folder)
                 .map_err(store_err)?;
             Ok(json!({"imported": 1, "ids": [id.0], "folder": folder.0}))
         }
@@ -316,17 +318,17 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
             let folder = mail_folder(s, p)?;
             let data = crate::cmd::rules::read_file_capped(&path, MAX_IMPORT_FILE)?;
             let (mut item, content) =
-                mailcraft_formats::msg::read_item(&data, folder, now).map_err(format_err)?;
+                iridium_mail_formats::msg::read_item(&data, folder, now).map_err(format_err)?;
             s.store_content(&mut item, &content)?;
-            let id = mailcraft_store::import::insert_item(&mut s.mailbox, item).map_err(store_err)?;
+            let id = iridium_mail_store::import::insert_item(&mut s.mailbox, item).map_err(store_err)?;
             Ok(json!({"imported": 1, "ids": [id.0], "folder": folder.0}))
         }
         "importMbox" | "importMaildir" => {
             let folder = mail_folder(s, p)?;
             let ids = if action == "importMbox" {
-                mailcraft_store::import_mbox(&mut s.mailbox, &mut s.bodies, &path, folder)
+                iridium_mail_store::import_mbox(&mut s.mailbox, &mut s.bodies, &path, folder)
             } else {
-                mailcraft_store::import_maildir(&mut s.mailbox, &mut s.bodies, &path, folder)
+                iridium_mail_store::import_maildir(&mut s.mailbox, &mut s.bodies, &path, folder)
             }
             .map_err(store_err)?;
             Ok(json!({"imported": ids.len(), "folder": folder.0}))
@@ -334,14 +336,14 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
         "importIcs" => {
             let calendar = kind_folder(s, p, FolderKind::Calendar, FolderRole::Calendar)?;
             let data = crate::cmd::rules::read_file_capped(&path, MAX_IMPORT_FILE)?;
-            let opts = mailcraft_formats::ics::ImportOptions { local_offset_min: s.tz_offset_min };
-            let cal = mailcraft_formats::ics::read(&data, opts).map_err(format_err)?;
+            let opts = iridium_mail_formats::ics::ImportOptions { local_offset_min: s.tz_offset_min };
+            let cal = iridium_mail_formats::ics::read(&data, opts).map_err(format_err)?;
             let account = s.mailbox.folder_account(calendar);
             let tasks_folder = account.and_then(|a| s.mailbox.role_folder(a, FolderRole::Tasks));
             let mb = &mut s.mailbox;
             let mut events = 0usize;
             for mut a in cal.appointments() {
-                let id = mailcraft_model::ItemId(mb.alloc_id());
+                let id = iridium_mail_model::ItemId(mb.alloc_id());
                 a.id = id;
                 a.folder = calendar;
                 mb.appointments.insert(id, a);
@@ -350,7 +352,7 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
             let mut tasks = 0usize;
             if let Some(tf) = tasks_folder {
                 for mut t in cal.tasks {
-                    let id = mailcraft_model::ItemId(mb.alloc_id());
+                    let id = iridium_mail_model::ItemId(mb.alloc_id());
                     t.id = id;
                     t.folder = tf;
                     mb.tasks.insert(id, t);
@@ -365,15 +367,15 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
             let contacts_folder = kind_folder(s, p, FolderKind::Contacts, FolderRole::Contacts)?;
             let data = crate::cmd::rules::read_file_capped(&path, MAX_IMPORT_FILE)?;
             let (list, unmapped) = if action == "importVcf" {
-                (mailcraft_formats::vcf::read(&data).map_err(format_err)?, Vec::new())
+                (iridium_mail_formats::vcf::read(&data).map_err(format_err)?, Vec::new())
             } else {
-                let r = mailcraft_formats::csv::import_contacts(&data).map_err(format_err)?;
+                let r = iridium_mail_formats::csv::import_contacts(&data).map_err(format_err)?;
                 (r.contacts, r.unmapped_columns)
             };
             let mb = &mut s.mailbox;
             let n = list.len();
             for mut c in list {
-                let id = mailcraft_model::ItemId(mb.alloc_id());
+                let id = iridium_mail_model::ItemId(mb.alloc_id());
                 c.id = id;
                 c.folder = contacts_folder;
                 mb.contacts.insert(id, c);
@@ -411,7 +413,7 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
             let mut items: Vec<&MailItem> = s.mailbox.items_in(folder);
             items.sort_by_key(|m| (m.received.unix, m.id));
             let n = items.len();
-            mailcraft_store::export_mbox(&items, &s.bodies, &path).map_err(store_err)?;
+            iridium_mail_store::export_mbox(&items, &s.bodies, &path).map_err(store_err)?;
             Ok(json!({"exported": n, "path": path.display().to_string()}))
         }
         "exportIcs" => {
@@ -419,12 +421,12 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
                 Some(f) if f.kind == FolderKind::Tasks => f.id,
                 _ => kind_folder(s, p, FolderKind::Calendar, FolderRole::Calendar)?,
             };
-            let mut appts: Vec<&mailcraft_model::Appointment> =
+            let mut appts: Vec<&iridium_mail_model::Appointment> =
                 s.mailbox.appointments.values().filter(|a| a.folder == folder).collect();
             appts.sort_by_key(|a| (a.start.unix, a.id));
-            let tasks: Vec<&mailcraft_model::Task> =
+            let tasks: Vec<&iridium_mail_model::Task> =
                 s.mailbox.tasks.values().filter(|t| t.folder == folder).collect();
-            let text = mailcraft_formats::ics::write(&appts, &tasks, None, now);
+            let text = iridium_mail_formats::ics::write(&appts, &tasks, None, now);
             write_file(&path, text.as_bytes())?;
             Ok(
                 json!({"exported": appts.len().saturating_add(tasks.len()), "path": path.display().to_string()}),
@@ -432,13 +434,13 @@ fn open_export(s: &mut Session, p: &Value) -> CmdResult {
         }
         "exportVcf" | "exportCsv" => {
             let folder = kind_folder(s, p, FolderKind::Contacts, FolderRole::Contacts)?;
-            let mut contacts: Vec<mailcraft_model::Contact> =
+            let mut contacts: Vec<iridium_mail_model::Contact> =
                 s.mailbox.contacts.values().filter(|c| c.folder == folder).cloned().collect();
             contacts.sort_by(|a, b| a.file_as.cmp(&b.file_as).then(a.id.cmp(&b.id)));
             let text = if action == "exportVcf" {
-                mailcraft_formats::vcf::write(&contacts, mailcraft_formats::vcf::Version::V4)
+                iridium_mail_formats::vcf::write(&contacts, iridium_mail_formats::vcf::Version::V4)
             } else {
-                mailcraft_formats::csv::export_contacts(&contacts)
+                iridium_mail_formats::csv::export_contacts(&contacts)
             };
             write_file(&path, text.as_bytes())?;
             Ok(json!({"exported": contacts.len(), "path": path.display().to_string()}))
@@ -452,7 +454,7 @@ pub(crate) fn raw_source(s: &Session, m: &MailItem) -> Vec<u8> {
     if let Some(raw) = crate::cmd::compose::stored_raw(s, m) {
         return raw;
     }
-    mailcraft_store::rebuild_message(m, Some(&s.body_or_empty(m)))
+    iridium_mail_store::rebuild_message(m, Some(&s.body_or_empty(m)))
 }
 
 /// Safe file name from a subject ("Untitled" when empty).
@@ -491,7 +493,7 @@ fn escape_html(t: &str) -> String {
 
 /// Header lines shown above the body in text and HTML saves: (label, value).
 fn save_headers(m: &MailItem) -> Vec<(&'static str, String)> {
-    let list = |v: &[mailcraft_model::Address]| {
+    let list = |v: &[iridium_mail_model::Address]| {
         v.iter().map(|a| a.to_display_string()).collect::<Vec<_>>().join("; ")
     };
     let mut h = vec![
@@ -511,7 +513,7 @@ fn save_bytes(s: &Session, m: &MailItem, kind: &str) -> Result<Vec<u8>, CmdError
         "msg" => {
             let raw = raw_source(s, m);
             let body = s.body_or_empty(m);
-            mailcraft_formats::msg::write_item(m, Some(&raw), Some(&body)).map_err(format_err)?
+            iridium_mail_formats::msg::write_item(m, Some(&raw), Some(&body)).map_err(format_err)?
         }
         "txt" => {
             let mut out = String::new();
@@ -525,8 +527,8 @@ fn save_bytes(s: &Session, m: &MailItem, kind: &str) -> Result<Vec<u8>, CmdError
         "html" => {
             let content = s.body_or_empty(m);
             let body = match &content.html {
-                Some(h) => mailcraft_html::doc_to_html(&mailcraft_html::html_to_doc(h)),
-                None => mailcraft_html::text_to_html(&content.plain_text()),
+                Some(h) => iridium_mail_html::doc_to_html(&iridium_mail_html::html_to_doc(h)),
+                None => iridium_mail_html::text_to_html(&content.plain_text()),
             };
             let mut out = format!(
                 "<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><title>{}</title></head><body>\n<table>\n",
@@ -621,7 +623,7 @@ fn save_attachments(s: &mut Session, p: &Value) -> CmdResult {
             continue;
         }
         let raw = crate::smime::open_source(s, m);
-        let Ok(msg) = mailcraft_mime::parse(&raw) else {
+        let Ok(msg) = iridium_mail_mime::parse(&raw) else {
             missing = missing.saturating_add(1);
             continue;
         };
@@ -629,7 +631,7 @@ fn save_attachments(s: &mut Session, p: &Value) -> CmdResult {
             if saved.len() >= MAX_SAVED_ATTACHMENTS {
                 break;
             }
-            let mut name = mailcraft_mime::message::sanitize_filename(&a.filename);
+            let mut name = iridium_mail_mime::message::sanitize_filename(&a.filename);
             if name.is_empty() {
                 name = "attachment.dat".into();
             }
@@ -908,7 +910,7 @@ fn close_data_file(s: &mut Session, p: &Value) -> CmdResult {
     if opt_bool(p, "confirm") != Some(true) {
         let kept = match crate::datafile::closed_dir(s) {
             Some(dir) => format!("It is kept in {} and can be opened again", dir.display()),
-            None => "It is kept until MailCraft closes and can be opened again".to_owned(),
+            None => "It is kept until Mail closes and can be opened again".to_owned(),
         };
         return dialog(
             s,
@@ -1421,7 +1423,7 @@ mod tests {
         let bytes = std::fs::read(&file).unwrap();
         assert!(crate::datafile::unseal(&bytes, "s3cret").is_ok());
         // Damaged protected files are an error, never a panic.
-        let junk = br#"{"format":"mailcraft-data-file-sealed","version":1,"kdf":"pbkdf2-sha256","rounds":5,"salt":"!!","cipher":"aes-256-cbc","iv":"","data":""}"#;
+        let junk = br#"{"format":"iridium-mail-data-file-sealed","version":1,"kdf":"pbkdf2-sha256","rounds":5,"salt":"!!","cipher":"aes-256-cbc","iv":"","data":""}"#;
         assert!(crate::datafile::unseal(junk, "x").is_err());
         assert!(crate::datafile::unseal(b"{", "x").is_err());
     }
@@ -1456,15 +1458,15 @@ mod tests {
     #[test]
     fn closing_a_protected_data_file_takes_its_items_out_of_the_profile_journal() {
         closing_a_protected_data_file_takes_its_items_out_of_the_profile_journal_in(
-            mailcraft_store::StoreKind::Legacy,
+            iridium_mail_store::StoreKind::Legacy,
         );
         closing_a_protected_data_file_takes_its_items_out_of_the_profile_journal_in(
-            mailcraft_store::StoreKind::Sqlite,
+            iridium_mail_store::StoreKind::Sqlite,
         );
     }
 
     fn closing_a_protected_data_file_takes_its_items_out_of_the_profile_journal_in(
-        kind: mailcraft_store::StoreKind,
+        kind: iridium_mail_store::StoreKind,
     ) {
         let profile = tempfile::tempdir().unwrap();
         let dir = tempfile::tempdir().unwrap();
@@ -1479,7 +1481,7 @@ mod tests {
             subject: "Confidential plans".into(),
             ..Default::default()
         });
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         // Everything in the profile: the snapshot and journal, or the database and its log.
         let on_disk = |p: &Path| -> String { all_text_under(p) };
         assert!(on_disk(profile.path()).contains("Confidential"), "open, its items live in the profile");
@@ -1541,15 +1543,15 @@ mod tests {
     #[test]
     fn closing_a_protected_data_file_removes_its_message_sources_from_the_profile() {
         closing_a_protected_data_file_removes_its_message_sources_from_the_profile_in(
-            mailcraft_store::StoreKind::Legacy,
+            iridium_mail_store::StoreKind::Legacy,
         );
         closing_a_protected_data_file_removes_its_message_sources_from_the_profile_in(
-            mailcraft_store::StoreKind::Sqlite,
+            iridium_mail_store::StoreKind::Sqlite,
         );
     }
 
     fn closing_a_protected_data_file_removes_its_message_sources_from_the_profile_in(
-        kind: mailcraft_store::StoreKind,
+        kind: iridium_mail_store::StoreKind,
     ) {
         let profile = tempfile::tempdir().unwrap();
         let dir = tempfile::tempdir().unwrap();
@@ -1565,17 +1567,17 @@ mod tests {
         let shared = b"From: b@example.org\r\nSubject: S\r\n\r\nShared-body-91c2\r\n".to_vec();
         s.add_message(
             MailItem { folder: inbox, ..Default::default() },
-            &mailcraft_store::Content::source(secret),
+            &iridium_mail_store::Content::source(secret),
         )
         .unwrap();
         s.add_message(
             MailItem { folder: inbox, ..Default::default() },
-            &mailcraft_store::Content::source(shared.clone()),
+            &iridium_mail_store::Content::source(shared.clone()),
         )
         .unwrap();
         s.add_message(
             MailItem { folder: other_inbox, ..Default::default() },
-            &mailcraft_store::Content::source(shared),
+            &iridium_mail_store::Content::source(shared),
         )
         .unwrap();
         // A message deleted for good from the protected data file while it was open.
@@ -1587,9 +1589,9 @@ mod tests {
         };
         s.store_source(&mut deleted, b"Subject: D\r\n\r\nDeleted-src-55e1\r\n").unwrap();
         let now = s.now().unix;
-        s.recover.bin.add(mailcraft_model::DeletedItem::Mail(Box::new(deleted)), "Inbox", now);
+        s.recover.bin.add(iridium_mail_model::DeletedItem::Mail(Box::new(deleted)), "Inbox", now);
         s.store.as_mut().unwrap().save_recoverable(&mut s.recover.bin).unwrap();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         let open = all_text_under(profile.path());
         for needle in ["Topsecret-body-7f3a", "Deleted-src-55e1", "Deleted-plan-55e1", "Shared-body-91c2"] {
             assert!(open.contains(needle), "open, {needle} lives in the profile");
@@ -1622,15 +1624,15 @@ mod tests {
     #[test]
     fn closing_a_protected_data_file_removes_items_deleted_with_its_folders() {
         closing_a_protected_data_file_removes_items_deleted_with_its_folders_in(
-            mailcraft_store::StoreKind::Legacy,
+            iridium_mail_store::StoreKind::Legacy,
         );
         closing_a_protected_data_file_removes_items_deleted_with_its_folders_in(
-            mailcraft_store::StoreKind::Sqlite,
+            iridium_mail_store::StoreKind::Sqlite,
         );
     }
 
     fn closing_a_protected_data_file_removes_items_deleted_with_its_folders_in(
-        kind: mailcraft_store::StoreKind,
+        kind: iridium_mail_store::StoreKind,
     ) {
         let profile = tempfile::tempdir().unwrap();
         let dir = tempfile::tempdir().unwrap();
@@ -1644,10 +1646,10 @@ mod tests {
         let item = MailItem { folder: sub, subject: "Gone-plan-6b2d".into(), ..Default::default() };
         s.add_message(
             item,
-            &mailcraft_store::Content::source(b"Subject: G\r\n\r\nGone-src-6b2d\r\n".to_vec()),
+            &iridium_mail_store::Content::source(b"Subject: G\r\n\r\nGone-src-6b2d\r\n".to_vec()),
         )
         .unwrap();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         // The folder goes to Deleted Items, then is deleted for good from there, message and all.
         s.selection.folder = sub;
         let r = s.run("folder.delete", &json!({"folder": sub.0, "confirm": true})).unwrap();
@@ -1702,7 +1704,7 @@ mod tests {
         let (mut s, _, _) = session();
         let file = dir.path().join("odd.mcdata");
         let p = file.to_str().unwrap();
-        let name = "mailcraft-data-file-sealed notes";
+        let name = "iridium-mail-data-file-sealed notes";
         let r = s.run("file.newDataFile", &json!({"path": p, "name": name})).unwrap();
         s.run("file.closeDataFile", &json!({"store": r["account"], "confirm": true})).unwrap();
         let r = s.run("file.openDataFile", &json!({"path": p})).unwrap();
@@ -1712,7 +1714,7 @@ mod tests {
 
     /// A data file with items in missing folders, a message listed twice and a broken folder parent.
     fn damaged_image() -> Vec<u8> {
-        use mailcraft_model::{Folder, Task};
+        use iridium_mail_model::{Folder, Task};
         let a = AccountId(1);
         let image = crate::datafile::DataFileImage {
             format: crate::datafile::FORMAT.to_owned(),
@@ -2014,7 +2016,7 @@ mod tests {
         let inbox = s.mailbox.role_folder(acct, FolderRole::Inbox).unwrap();
         let sub = s.mailbox.create_folder(inbox, "Receipts").unwrap();
         let item = MailItem { folder: sub, subject: "Report: Q3/Q4".into(), ..Default::default() };
-        let item = s.add_message(item, &mailcraft_store::Content::source(EML.to_vec())).unwrap();
+        let item = s.add_message(item, &iridium_mail_store::Content::source(EML.to_vec())).unwrap();
         // The source is in the body store, as it is for downloaded mail.
         assert!(s.mailbox.mail.get(item).unwrap().blob.is_some());
         let r = s.run("file.closeDataFile", &json!({"store": acct.0, "confirm": true})).unwrap();
@@ -2043,11 +2045,11 @@ mod tests {
     #[test]
     fn hostile_closed_data_files_are_refused_or_repaired() {
         use crate::datafile::{DataFileImage, FORMAT, attach, parse};
-        use mailcraft_model::Folder;
+        use iridium_mail_model::Folder;
         let (mut s, _, _) = session();
         assert!(parse(b"not json").is_err());
         assert!(parse(br#"{"format":"other","version":1}"#).is_err());
-        assert!(parse(br#"{"format":"mailcraft-data-file","version":99}"#).is_err());
+        assert!(parse(br#"{"format":"iridium-mail-data-file","version":99}"#).is_err());
         let folder = |id: u64, parent: Option<u64>, name: &str, role: Option<FolderRole>| Folder {
             id: FolderId(id),
             account: AccountId(9),
@@ -2103,8 +2105,8 @@ mod tests {
     /// the next command queued an upload of every folder and message (and replayed stale queued ops).
     #[test]
     fn reopened_server_account_is_a_local_data_file_and_queues_nothing() {
-        use mailcraft_model::account::{AccountSync, PendingOp, RemoteFolderState, RemoteOp};
-        use mailcraft_model::{Security, ServerSettings};
+        use iridium_mail_model::account::{AccountSync, PendingOp, RemoteFolderState, RemoteOp};
+        use iridium_mail_model::{Security, ServerSettings};
         let (mut s, _, _) = session();
         let server = |host: &str| ServerSettings {
             host: host.into(),
@@ -2219,7 +2221,7 @@ mod tests {
     #[test]
     fn opened_data_file_folders_are_capped_in_depth_and_named_validly() {
         use crate::datafile::{DataFileImage, FORMAT, attach};
-        use mailcraft_model::Folder;
+        use iridium_mail_model::Folder;
         let (mut s, _, _) = session();
         let folder = |id: u64, parent: Option<u64>, name: &str| Folder {
             id: FolderId(id),
@@ -2272,8 +2274,8 @@ mod tests {
     #[test]
     fn opened_data_file_links_follow_the_new_ids() {
         use crate::datafile::{DataFileImage, FORMAT, attach};
-        use mailcraft_model::folder::FolderArchive;
-        use mailcraft_model::{Folder, Task, VoteRecord};
+        use iridium_mail_model::folder::FolderArchive;
+        use iridium_mail_model::{Folder, Task, VoteRecord};
         let (mut s, _, _) = session();
         let folder = |id: u64, target: Option<u64>| Folder {
             id: FolderId(id),
@@ -2376,10 +2378,10 @@ mod tests {
         let acct = s.mailbox.accounts[0].id;
         let contacts = s.mailbox.role_folder(acct, FolderRole::Contacts).unwrap();
         let calendar = s.mailbox.role_folder(acct, FolderRole::Calendar).unwrap();
-        let cid = mailcraft_model::ItemId(s.mailbox.alloc_id());
+        let cid = iridium_mail_model::ItemId(s.mailbox.alloc_id());
         s.mailbox.contacts.insert(
             cid,
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id: cid,
                 folder: contacts,
                 first_name: "Ann".into(),
@@ -2389,17 +2391,17 @@ mod tests {
                 ..Default::default()
             },
         );
-        let aid = mailcraft_model::ItemId(s.mailbox.alloc_id());
-        let start = mailcraft_model::DateTime::from_unix(1_791_100_800, 0);
+        let aid = iridium_mail_model::ItemId(s.mailbox.alloc_id());
+        let start = iridium_mail_model::DateTime::from_unix(1_791_100_800, 0);
         s.mailbox.appointments.insert(
             aid,
-            mailcraft_model::Appointment {
+            iridium_mail_model::Appointment {
                 id: aid,
                 folder: calendar,
                 uid: "a1@example.com".into(),
                 subject: "Planning".into(),
                 start,
-                end: mailcraft_model::DateTime::from_unix(start.unix + 3600, 0),
+                end: iridium_mail_model::DateTime::from_unix(start.unix + 3600, 0),
                 ..Default::default()
             },
         );
@@ -2558,10 +2560,10 @@ mod tests {
     fn exit_keeps_pending_ops_when_the_write_fails() {
         let dir = tempfile::tempdir().unwrap();
         let (mut s, inbox, _) = session();
-        s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+        s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
         // A journal capped at one byte refuses the write.
         let item = MailItem { id: ItemId(9_999), folder: inbox, ..Default::default() };
-        s.pending_ops.push(mailcraft_store::Op::PutMail(Box::new(item)));
+        s.pending_ops.push(iridium_mail_store::Op::PutMail(Box::new(item)));
         s.store.as_mut().unwrap().set_journal_cap(1);
         assert!(s.run("file.exit", &json!({})).is_err());
         assert_eq!(s.pending_ops.len(), 1, "unsaved changes must stay queued for the next attempt");
@@ -2571,14 +2573,14 @@ mod tests {
     fn exit_flushes_store() {
         let dir = tempfile::tempdir().unwrap();
         let (mut s, _, _) = session();
-        s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+        s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
         s.run("file.newDataFile", &json!({"name": "Extra"})).unwrap();
         s.run("file.exit", &json!({})).unwrap();
         assert!(s.pending_ops.is_empty());
         let open = s.run("file.openFileLocation", &json!({})).unwrap();
         assert_eq!(open["dialog"], "revealPath");
         s.store = None;
-        let st = mailcraft_store::Store::open(dir.path()).unwrap();
+        let st = iridium_mail_store::Store::open(dir.path()).unwrap();
         let mb = st.load().unwrap();
         assert!(mb.accounts.iter().any(|a| a.display_name == "Extra"));
     }

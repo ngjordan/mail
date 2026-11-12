@@ -8,8 +8,8 @@ use serde_json::{Value, json};
 
 use super::{Draft, Sec};
 use crate::App;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{
     FolderId, Importance, ItemId, QuickStepAction, RuleAction, RuleCondition, Sensitivity,
 };
 
@@ -306,8 +306,8 @@ fn change_rule_menu_adds_quick_actions() {
 #[test]
 fn copy_rule_to_another_account_or_here() {
     let (mut app, id) = app_with_rule(json!(["MarkAsRead"]));
-    let other = app.s.mailbox.add_account(mailcraft_model::Account {
-        kind: mailcraft_model::AccountKind::Imap,
+    let other = app.s.mailbox.add_account(iridium_mail_model::Account {
+        kind: iridium_mail_model::AccountKind::Imap,
         display_name: "Work".into(),
         address: "work@example.com".into(),
         ..Default::default()
@@ -558,7 +558,7 @@ fn manage_quick_steps_duplicate_delete_reset() {
     step(&mut h);
     h.get_by_label("Yes").click();
     step(&mut h);
-    assert_eq!(h.state().s.mailbox.quick_steps, mailcraft_model::QuickStep::defaults());
+    assert_eq!(h.state().s.mailbox.quick_steps, iridium_mail_model::QuickStep::defaults());
     h.get_by_label("Edit").click();
     step(&mut h);
     assert_eq!(names(&h), ["manageQuickSteps", "editQuickStep"]);

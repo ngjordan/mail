@@ -8,8 +8,8 @@ use super::{compose_id, compose_mut, parse_color, requested_theme_color};
 use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::compose::ComposeState;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_geom::Color;
-use mailcraft_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
+use iridium_mail_geom::Color;
+use iridium_mail_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
 
 /// The Borders menu items, as `format.borders` takes them.
 pub const BORDER_KINDS: [&str; 10] =
@@ -417,7 +417,7 @@ mod tests {
     use super::*;
     use crate::cmd::compose::tests::{open, session};
     use crate::cmd::insert::tests::last_dialog;
-    use mailcraft_model::Block;
+    use iridium_mail_model::Block;
 
     /// Runs `id` with `p` and returns the params of the dialog it opened.
     fn opened(s: &mut Session, id: &str, p: Value) -> Value {

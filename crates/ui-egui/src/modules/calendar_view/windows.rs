@@ -15,15 +15,15 @@ use std::sync::{Arc, Mutex};
 use egui::{ComboBox, Id, RichText, TextEdit, Ui};
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::calendar::subscribe::{self, Due, Fetched};
-use mailcraft_engine::cmd::calendar::{
+use iridium_mail_engine::cmd::calendar::subscribe::{self, Due, Fetched};
+use iridium_mail_engine::cmd::calendar::{
     CalendarColumn, CalendarCurrentView, DailyTaskList, Subscription, TIME_SCALES, props, tz, views,
 };
-use mailcraft_model::view::{ItemFilter, ItemRule};
-use mailcraft_model::{FolderId, ReadingPanePos};
+use iridium_mail_model::view::{ItemFilter, ItemRule};
+use iridium_mail_model::{FolderId, ReadingPanePos};
 
-use mailcraft_engine::cmd::calendar::pim::{self, Kind};
-use mailcraft_model::FolderKind;
+use iridium_mail_engine::cmd::calendar::pim::{self, Kind};
+use iridium_mail_model::FolderKind;
 
 use super::super::common::{
     DAY, ModState, clock, current_folder, day_string, local_secs, parse_day, short_date, today,
@@ -986,9 +986,10 @@ fn share_window(ctx: &egui::Context, app: &mut App, cu: &mut CalUi) {
                     ui.end_row();
                 }
             }
-            let published = mailcraft_engine::cmd::calendar::props::read(&app.s.mailbox, FolderId(f.folder))
-                .publication
-                .filter(|x| !x.withdraw);
+            let published =
+                iridium_mail_engine::cmd::calendar::props::read(&app.s.mailbox, FolderId(f.folder))
+                    .publication
+                    .filter(|x| !x.withdraw);
             if let Some(pubn) = published {
                 ui.label("Published:");
                 ui.horizontal(|ui| {
@@ -1311,11 +1312,12 @@ impl Fetches {
         {
             let me = self.clone();
             let ctx = ctx.clone();
-            let spawned = std::thread::Builder::new().name("mailcraft-ics-fetch".into()).spawn(move || {
-                let r = subscribe::fetch(&d);
-                me.finish(folder, r);
-                ctx.request_repaint();
-            });
+            let spawned =
+                std::thread::Builder::new().name("iridium-mail-ics-fetch".into()).spawn(move || {
+                    let r = subscribe::fetch(&d);
+                    me.finish(folder, r);
+                    ctx.request_repaint();
+                });
             if let Err(e) = spawned {
                 self.finish(folder, Err(format!("could not start the download: {e}")));
             }
@@ -1381,7 +1383,7 @@ pub(super) fn refresh_due(ctx: &egui::Context, app: &mut App, cu: &mut CalUi) {
 
 /// "9:41 AM" today, else "10/8/2026 9:41 AM".
 fn stamp(app: &App, unix: i64) -> String {
-    let local = local_secs(mailcraft_model::DateTime::from_unix(unix, 0), app.s.tz_offset_min);
+    let local = local_secs(iridium_mail_model::DateTime::from_unix(unix, 0), app.s.tz_offset_min);
     let day = local.div_euclid(DAY);
     let time = clock(local.rem_euclid(DAY) / 60);
     if day == super::super::common::today(app) { time } else { format!("{} {time}", short_date(day)) }

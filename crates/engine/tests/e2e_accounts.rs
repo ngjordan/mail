@@ -1,16 +1,16 @@
 //! End to end, accounts: IMAP IDLE push, POP3 accounts (receive, leave on server, delete, headers), header-only
 //! download then full download, Send/Receive group membership, and account options kept in the data folder.
-//! Against the local test servers only (`mailcraft-testmail`, 127.0.0.1, synthetic users); every wait has a
+//! Against the local test servers only (`iridium-mail-testmail`, 127.0.0.1, synthetic users); every wait has a
 //! timeout.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::{Duration, Instant};
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_engine::sync::{PushMode, cmds};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_engine::sync::{PushMode, cmds};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -292,7 +292,7 @@ fn send_receive_group_membership() {
     run(&mut s, "sendReceive.group", json!({"name": BOB}));
     assert!(s.wait_for_sync(WAIT));
     assert!(find(&s, inbox(&s, bob), "For Bob").is_some());
-    assert_eq!(mailcraft_engine::sync::group_accounts(&s), vec![alice]);
+    assert_eq!(iridium_mail_engine::sync::group_accounts(&s), vec![alice]);
 }
 
 #[test]
@@ -330,7 +330,7 @@ fn without_idle_the_inbox_is_polled_and_lost_push_connections_retry() {
     })
     .unwrap();
     let mut s = session();
-    let start = mailcraft_engine::model::DateTime::now_utc();
+    let start = iridium_mail_engine::model::DateTime::now_utc();
     s.fixed_now = Some(start);
     let a = add_imap(&mut s, &srv, json!({"pollMinutes": 2}));
     sync(&mut s);
@@ -342,7 +342,7 @@ fn without_idle_the_inbox_is_polled_and_lost_push_connections_retry() {
         std::thread::sleep(Duration::from_millis(20));
     }
     assert!(find(&s, ib, "Polled").is_none(), "not before the poll interval");
-    s.fixed_now = Some(mailcraft_engine::model::DateTime::from_unix(start.unix + 121, 0));
+    s.fixed_now = Some(iridium_mail_engine::model::DateTime::from_unix(start.unix + 121, 0));
     poll_until(&mut s, "the polled message", |s| find(s, ib, "Polled").is_some());
 
     // A push connection that drops is retried (and the Inbox polled meanwhile).

@@ -6,10 +6,10 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::time::Duration;
 
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::imap::{ImapClient, SeqSet};
-use mailcraft_net::smtp::{SmtpClient, SmtpSettings};
-use mailcraft_net::{ConnectOptions, Security};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::imap::{ImapClient, SeqSet};
+use iridium_mail_net::smtp::{SmtpClient, SmtpSettings};
+use iridium_mail_net::{ConnectOptions, Security};
 use proptest::prelude::*;
 
 /// Serves `prefix` then `junk` to one client, draining whatever the client sends, then closes.

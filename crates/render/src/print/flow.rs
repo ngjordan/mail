@@ -1,8 +1,8 @@
 //! A vertical flow of display items (header blocks, laid-out bodies) and its pagination: page breaks fall
 //! between text lines and never through an image, unless one line or image is taller than a whole page.
 
-use mailcraft_geom::{Point, Rect};
-use mailcraft_layout::{DisplayItem, Layout};
+use iridium_mail_geom::{Point, Rect};
+use iridium_mail_layout::{DisplayItem, Layout};
 
 /// Most unbreakable bands scanned backwards from a page limit when looking for a straddling line.
 const MAX_BACKSCAN: usize = 4_096;

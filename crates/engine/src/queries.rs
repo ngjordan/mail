@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use crate::cmd::view::{conversation_state, is_group_label};
 use crate::{Module, Session};
-use mailcraft_model::view::GROUP_SEP;
-use mailcraft_model::{
+use iridium_mail_model::view::GROUP_SEP;
+use iridium_mail_model::{
     ArrangeBy, Category, DateGroup, DateTime, FlagState, FocusClass, FolderId, FolderKind, FolderRole,
     Importance, ItemId, ListFilter, ListTime, MailItem, ResponseState, SortOrder, ViewSettings,
     subject::{conversation_topic, strip_prefixes},
@@ -135,7 +135,7 @@ pub struct RowStyle {
 /// Conversation part of a message-list row (Show as Conversations).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConversationRow {
-    /// Conversation key (`mailcraft_model::thread::Conversation::key`).
+    /// Conversation key (`iridium_mail_model::thread::Conversation::key`).
     pub key: u64,
     /// Header row (true) or child row (false).
     pub header: bool,
@@ -522,7 +522,7 @@ fn mentions_cached(s: &Session, needles: &MentionNeedles, key: u64, item: &MailI
     s.body_test(item, key, |b| mentions_with(needles, b))
 }
 
-fn mentions_with(needles: &MentionNeedles, body: &mailcraft_model::Body) -> bool {
+fn mentions_with(needles: &MentionNeedles, body: &iridium_mail_model::Body) -> bool {
     if let Some(html) = &body.html
         && html_mentions(html, &needles.addresses)
     {
@@ -695,7 +695,7 @@ pub fn size_bucket(size: u64) -> (i64, &'static str) {
     }
 }
 
-fn names(list: &[mailcraft_model::Address]) -> String {
+fn names(list: &[iridium_mail_model::Address]) -> String {
     list.iter().map(|m| m.display().to_owned()).collect::<Vec<_>>().join("; ")
 }
 
@@ -715,7 +715,7 @@ fn group_of(s: &Session, m: &MailItem, arrange: ArrangeBy) -> (Key, String) {
             (Key::Text(label.to_lowercase()), label)
         }
     };
-    let flag_date = |d: Option<mailcraft_model::DateTime>| match d {
+    let flag_date = |d: Option<iridium_mail_model::DateTime>| match d {
         Some(d) => (Key::Num(d.day_number(tz)), ListTime::long_date(d, tz)),
         None => (Key::Num(i64::MIN), NONE_LABEL.to_owned()),
     };
@@ -1148,7 +1148,7 @@ pub fn group_labels(s: &Session) -> Vec<String> {
 /// Status bar "Header Items in View": items of the view whose body was not downloaded yet.
 pub fn header_items_in_view(s: &Session) -> usize {
     // Only server accounts download headers alone; skip the view walk for local profiles.
-    if s.mailbox.accounts.iter().all(|a| a.kind == mailcraft_model::AccountKind::Local) {
+    if s.mailbox.accounts.iter().all(|a| a.kind == iridium_mail_model::AccountKind::Local) {
         return 0;
     }
     view_items(s).1.into_iter().filter(|m| header_only(s, m)).count()
@@ -1165,7 +1165,7 @@ fn header_only(s: &Session, m: &MailItem) -> bool {
         .mailbox
         .folder_account(m.folder)
         .and_then(|a| s.mailbox.account(a))
-        .is_some_and(|a| a.kind != mailcraft_model::AccountKind::Local);
+        .is_some_and(|a| a.kind != iridium_mail_model::AccountKind::Local);
     server && crate::sync::cmds::is_header_only(s, m.id)
 }
 
@@ -1229,8 +1229,8 @@ fn flag_status_text(m: &MailItem) -> &'static str {
 }
 
 /// Short weekday and numeric date as the row's accessible name shows flag dates: "Fri 10/9/2026".
-fn short_day_date(t: mailcraft_model::DateTime, tz: i32) -> String {
-    let lt = mailcraft_model::dates::LocalTime::of(t, tz);
+fn short_day_date(t: iridium_mail_model::DateTime, tz: i32) -> String {
+    let lt = iridium_mail_model::dates::LocalTime::of(t, tz);
     format!("{} {}", lt.weekday.short(), ListTime::date(t, tz))
 }
 
@@ -1648,7 +1648,7 @@ fn build_conversations(s: &Session, vs: &ViewSettings, items: Vec<&MailItem>) ->
     }
     let focus = s.selection.focus;
     let mut out: Vec<ListConversation> = Vec::new();
-    for t in mailcraft_model::thread::thread(&pool) {
+    for t in iridium_mail_model::thread::thread(&pool) {
         let Some(header) = t.items.iter().copied().find(|i| in_view.contains(i)) else { continue };
         let sort_item = if vs.arrange_by == ArrangeBy::Date {
             t.items.first().copied().unwrap_or(header)
@@ -1914,15 +1914,15 @@ pub fn photo_contact(s: &Session, addr: &str) -> Option<ItemId> {
 
 /// Calendar › "Enable an alternate calendar": the date `day` (days since 1970-01-01) falls on in the chosen
 /// alternate calendar (`calendar.alternateCalendarType`), `None` while the option is off.
-pub fn alternate_date(s: &Session, day: i64) -> Option<mailcraft_model::altcal::AltDate> {
+pub fn alternate_date(s: &Session, day: i64) -> Option<iridium_mail_model::altcal::AltDate> {
     if !s.settings.bool("calendar.alternateCalendar") {
         return None;
     }
     let cal = match s.settings.text("calendar.alternateCalendarType").as_str() {
-        "hebrew" => mailcraft_model::altcal::AltCalendar::Hebrew,
-        _ => mailcraft_model::altcal::AltCalendar::Hijri,
+        "hebrew" => iridium_mail_model::altcal::AltCalendar::Hebrew,
+        _ => iridium_mail_model::altcal::AltCalendar::Hijri,
     };
-    Some(mailcraft_model::altcal::to_alt(cal, day))
+    Some(iridium_mail_model::altcal::to_alt(cal, day))
 }
 
 /// Initials for the persona circle: first letters of the first and last words of the name, else the first
@@ -1946,7 +1946,7 @@ pub fn initials(name: Option<&str>, addr: &str) -> String {
 
 /// Persona colour index (0..16), stable per address.
 pub fn persona_color(addr: &str) -> u8 {
-    let h = mailcraft_model::thread::fnv1a(addr.trim().to_lowercase().as_bytes());
+    let h = iridium_mail_model::thread::fnv1a(addr.trim().to_lowercase().as_bytes());
     u8::try_from(h % 16).unwrap_or(0)
 }
 
@@ -1981,10 +1981,10 @@ pub fn info_lines(s: &Session, m: &MailItem) -> Vec<String> {
         Importance::Normal => {}
     }
     match m.sensitivity {
-        mailcraft_model::Sensitivity::Normal => {}
-        mailcraft_model::Sensitivity::Personal => info.push("This message is marked Personal.".to_owned()),
-        mailcraft_model::Sensitivity::Private => info.push("This message is marked Private.".to_owned()),
-        mailcraft_model::Sensitivity::Confidential => {
+        iridium_mail_model::Sensitivity::Normal => {}
+        iridium_mail_model::Sensitivity::Personal => info.push("This message is marked Personal.".to_owned()),
+        iridium_mail_model::Sensitivity::Private => info.push("This message is marked Private.".to_owned()),
+        iridium_mail_model::Sensitivity::Confidential => {
             info.push("This message is marked Confidential.".to_owned());
         }
     }
@@ -2013,7 +2013,7 @@ pub fn inline_pictures(s: &Session, id: ItemId) -> Vec<(String, Vec<u8>)> {
         return Vec::new();
     }
     let raw = crate::smime::open_source(s, &m);
-    let Ok(msg) = mailcraft_mime::parse(&raw) else { return Vec::new() };
+    let Ok(msg) = iridium_mail_mime::parse(&raw) else { return Vec::new() };
     msg.attachments()
         .into_iter()
         .filter(|a| a.mime_type.get(..6).is_some_and(|t| t.eq_ignore_ascii_case("image/")))
@@ -2107,7 +2107,7 @@ impl Suggestion {
     pub fn entry(&self) -> String {
         let name = (!self.display.is_empty() && !self.display.eq_ignore_ascii_case(&self.address))
             .then_some(self.display.as_str());
-        crate::cmd::compose::field_mailbox(&mailcraft_model::Address::new(name, &self.address))
+        crate::cmd::compose::field_mailbox(&iridium_mail_model::Address::new(name, &self.address))
     }
 }
 
@@ -2205,13 +2205,13 @@ pub fn address_suggestions(s: &Session, prefix: &str, limit: usize) -> Vec<Sugge
 #[cfg(test)]
 mod suggestion_tests {
     use super::*;
-    use mailcraft_model::{Contact, ItemId, Mailbox};
+    use iridium_mail_model::{Contact, ItemId, Mailbox};
 
     #[test]
     fn suggestions_from_recent_contacts_and_accounts() {
         let mut mb = Mailbox::new_local("Local");
-        mb.add_account(mailcraft_model::Account {
-            kind: mailcraft_model::AccountKind::Imap,
+        mb.add_account(iridium_mail_model::Account {
+            kind: iridium_mail_model::AccountKind::Imap,
             address: "me@example.com".into(),
             sender_name: "Me Example".into(),
             ..Default::default()
@@ -2228,7 +2228,7 @@ mod suggestion_tests {
                 ..Default::default()
             },
         );
-        let now = mailcraft_model::DateTime::from_civil(2026, 10, 9, 12, 0, 0, 0).unwrap();
+        let now = iridium_mail_model::DateTime::from_civil(2026, 10, 9, 12, 0, 0, 0).unwrap();
         mb.record_recipients(&[("Alan Ng".into(), "alan@example.net".into())], now);
         let s = Session::new(mb);
         let got = address_suggestions(&s, "al", 10);
@@ -2261,7 +2261,7 @@ mod suggestion_tests {
                 ..Default::default()
             },
         );
-        let now = mailcraft_model::DateTime::from_civil(2026, 10, 9, 12, 0, 0, 0).unwrap();
+        let now = iridium_mail_model::DateTime::from_civil(2026, 10, 9, 12, 0, 0, 0).unwrap();
         mb.record_recipients(&[(String::new(), "ALICE@example.com".into())], now);
         let s = Session::new(mb);
         let got = address_suggestions(&s, "riv", 10);
@@ -2316,12 +2316,12 @@ mod tests {
                 read: true,
                 ..Default::default()
             };
-            let body = mailcraft_model::Body {
-                format: mailcraft_model::BodyFormat::PlainText,
+            let body = iridium_mail_model::Body {
+                format: iridium_mail_model::BodyFormat::PlainText,
                 text: Some(text.into()),
                 html: None,
             };
-            let id = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+            let id = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
             if n == 0 {
                 best = id;
             }
@@ -2354,7 +2354,7 @@ mod tests {
         assert_eq!(search_notice(&s), None, "every message has its text");
         // A server account's message downloaded as headers only.
         if let Some(a) = s.mailbox.accounts.first_mut() {
-            a.kind = mailcraft_model::AccountKind::Imap;
+            a.kind = iridium_mail_model::AccountKind::Imap;
         }
         s.set_source(best, None).unwrap();
         let notice = search_notice(&s).unwrap();
@@ -2369,7 +2369,7 @@ mod tests {
     #[test]
     fn alternate_dates_follow_the_calendar_options() {
         let mut s = sample_session();
-        let day = mailcraft_mime::date::days_from_civil(2026, 10, 8);
+        let day = iridium_mail_mime::date::days_from_civil(2026, 10, 8);
         assert_eq!(alternate_date(&s, day), None);
         s.run("options.set", &serde_json::json!({"key": "calendar.alternateCalendar", "value": true}))
             .unwrap();
@@ -2392,7 +2392,7 @@ mod tests {
         let cid = ItemId(s.mailbox.alloc_id());
         let contacts =
             s.mailbox.folders.values().find(|f| f.kind == FolderKind::Contacts).map(|f| f.id).unwrap();
-        let c = mailcraft_model::Contact {
+        let c = iridium_mail_model::Contact {
             id: cid,
             folder: contacts,
             emails: vec![addr.to_uppercase()],
@@ -2401,7 +2401,7 @@ mod tests {
         s.mailbox.contacts.insert(cid, c);
         assert_eq!(reading_header(&s, id).unwrap().photo, None, "a contact without a picture");
         s.mailbox.contacts.get_mut(&cid).unwrap().picture =
-            mailcraft_model::contact::ContactPicture::sniff(&png);
+            iridium_mail_model::contact::ContactPicture::sniff(&png);
         assert_eq!(reading_header(&s, id).unwrap().photo, Some(cid));
         s.run("options.set", &serde_json::json!({"key": "people.photos", "value": false})).unwrap();
         assert_eq!(reading_header(&s, id).unwrap().photo, None);
@@ -2412,19 +2412,19 @@ mod tests {
     fn inline_pictures_come_from_the_message_source() {
         let mut s = sample_session();
         let png = b"\x89PNG\r\n\x1a\nnot really".to_vec();
-        let b = mailcraft_mime::MessageBuilder {
-            from: Some(mailcraft_mime::Mailbox::new(None, "ann@example.com")),
+        let b = iridium_mail_mime::MessageBuilder {
+            from: Some(iridium_mail_mime::Mailbox::new(None, "ann@example.com")),
             subject: "Logo".into(),
             text: Some("Logo".into()),
             html: Some("<p><img src=\"cid:logo@example.com\"></p>".into()),
             attachments: vec![
-                mailcraft_mime::AttachmentSpec {
+                iridium_mail_mime::AttachmentSpec {
                     filename: "logo.png".into(),
                     mime_type: "image/png".into(),
                     data: png.clone(),
                     content_id: Some("logo@example.com".into()),
                 },
-                mailcraft_mime::AttachmentSpec {
+                iridium_mail_mime::AttachmentSpec {
                     filename: "notes.txt".into(),
                     mime_type: "text/plain".into(),
                     data: b"plain".to_vec(),
@@ -2434,10 +2434,10 @@ mod tests {
             ..Default::default()
         };
         let raw = b.build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, s.now());
         item.folder = s.selection.folder;
-        let id = s.add_message(item, &mailcraft_store::Content::source(raw)).unwrap();
+        let id = s.add_message(item, &iridium_mail_store::Content::source(raw)).unwrap();
         assert_eq!(inline_pictures(&s, id), vec![("cid:logo@example.com".to_owned(), png)]);
         // Messages without Content-IDs, and unknown ids, have none.
         let plain = s.mailbox.mail.ids().find(|k| *k != id).unwrap();
@@ -2653,7 +2653,7 @@ mod tests {
     fn mentions_ignore_quoted_history_and_plain_addresses() {
         let s = sample_session();
         let needles = mention_needles(&s);
-        let mail = |text: &str, html: Option<&str>| mailcraft_model::Body {
+        let mail = |text: &str, html: Option<&str>| iridium_mail_model::Body {
             text: Some(text.into()),
             html: html.map(str::to_owned),
             ..Default::default()
@@ -2730,7 +2730,7 @@ mod tests {
     fn mention_scan_is_bounded_on_hostile_bodies() {
         let s = sample_session();
         let needles = mention_needles(&s);
-        let mail = |text: &str, html: Option<String>| mailcraft_model::Body {
+        let mail = |text: &str, html: Option<String>| iridium_mail_model::Body {
             text: Some(text.into()),
             html,
             ..Default::default()
@@ -2757,7 +2757,7 @@ mod tests {
     fn arrange_by_type_tells_item_kinds_apart() {
         let with = |subject: &str, mime: &str| MailItem {
             subject: subject.into(),
-            attachments: vec![mailcraft_model::AttachmentMeta {
+            attachments: vec![iridium_mail_model::AttachmentMeta {
                 filename: "part".into(),
                 mime_type: mime.into(),
                 ..Default::default()
@@ -2850,7 +2850,7 @@ mod tests {
 
     mod conversations {
         use super::*;
-        use mailcraft_model::{Address, Mailbox};
+        use iridium_mail_model::{Address, Mailbox};
         use serde_json::json;
 
         const NOW: i64 = 1_791_000_000; // 04:00 UTC

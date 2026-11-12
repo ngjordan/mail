@@ -1,10 +1,10 @@
-//! Options › Advanced › Other › "Enable troubleshooting logging (requires restarting MailCraft)": the
+//! Options › Advanced › Other › "Enable troubleshooting logging (requires restarting Mail)": the
 //! desktop app calls [`start`] once at start-up; with the option on it installs a [`log`] logger that writes
-//! `logs/mailcraft.log` in the profile folder.
+//! `logs/iridium-mail.log` in the profile folder.
 //!
-//! - One line per record: UTC time, level, target, message. MailCraft's own crates log from Debug up, other
+//! - One line per record: UTC time, level, target, message. Mail's own crates log from Debug up, other
 //!   crates (TLS, windowing) from Info up.
-//! - Size cap: past [`MAX_BYTES`] the file rotates (`mailcraft.log.1` … `.3`, the oldest dropped), so the
+//! - Size cap: past [`MAX_BYTES`] the file rotates (`iridium-mail.log.1` … `.3`, the oldest dropped), so the
 //!   folder never holds more than about 4 × [`MAX_BYTES`].
 //! - No secrets: [`redact`] blanks values after password, token, secret and authorization words and the
 //!   arguments of IMAP `LOGIN` / SMTP `AUTH` lines before anything is written. Account code never logs
@@ -19,10 +19,10 @@ use crate::settings::Settings;
 /// Folder below the profile that holds the log files.
 pub const DIR: &str = "logs";
 /// The current log file's name.
-pub const FILE: &str = "mailcraft.log";
+pub const FILE: &str = "iridium-mail.log";
 /// Size at which the log rotates.
 pub const MAX_BYTES: u64 = 1024 * 1024;
-/// Rotated files kept (`mailcraft.log.1` is the newest).
+/// Rotated files kept (`iridium-mail.log.1` is the newest).
 pub const KEEP: usize = 3;
 /// Longest line written (longer messages are cut).
 const MAX_LINE: usize = 4096;
@@ -35,7 +35,7 @@ pub struct LogFile {
 }
 
 impl LogFile {
-    /// Opens (or creates) `dir/mailcraft.log` for appending, rotating past `max` bytes.
+    /// Opens (or creates) `dir/iridium-mail.log` for appending, rotating past `max` bytes.
     pub fn open(dir: &Path, max: u64) -> std::io::Result<LogFile> {
         std::fs::create_dir_all(dir)?;
         let f = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(FILE))?;
@@ -69,7 +69,7 @@ impl LogFile {
         }
     }
 
-    /// `mailcraft.log.(k)` → `.(k+1)` from the oldest down, then the current file → `.1`.
+    /// `iridium-mail.log.(k)` → `.(k+1)` from the oldest down, then the current file → `.1`.
     fn rotate(&self) {
         let name = |k: usize| self.dir.join(format!("{FILE}.{k}"));
         let _ = std::fs::remove_file(name(KEEP));
@@ -157,7 +157,7 @@ struct FileLogger {
 
 impl log::Log for FileLogger {
     fn enabled(&self, m: &log::Metadata<'_>) -> bool {
-        let ours = m.target().starts_with("mailcraft");
+        let ours = m.target().starts_with("iridium-mail");
         m.level() <= if ours { log::Level::Debug } else { log::Level::Info }
     }
 
@@ -165,7 +165,7 @@ impl log::Log for FileLogger {
         if !self.enabled(r.metadata()) {
             return;
         }
-        let when = mailcraft_model::DateTime::now_utc().to_rfc3339();
+        let when = iridium_mail_model::DateTime::now_utc().to_rfc3339();
         self.file.write_line(&format!("{when} {:<5} {}: {}", r.level(), r.target(), r.args()));
     }
 
@@ -188,7 +188,7 @@ pub fn start(settings: &Settings, profile: &Path) -> Result<Option<PathBuf>, Str
     let logger: &'static FileLogger = Box::leak(Box::new(FileLogger { file }));
     log::set_logger(logger).map_err(|e| format!("cannot install the log: {e}"))?;
     log::set_max_level(log::LevelFilter::Debug);
-    log::info!("troubleshooting log started (MailCraft {})", env!("CARGO_PKG_VERSION"));
+    log::info!("troubleshooting log started (Mail {})", env!("CARGO_PKG_VERSION"));
     Ok(Some(path))
 }
 

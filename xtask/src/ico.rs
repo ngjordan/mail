@@ -1,13 +1,13 @@
-//! `cargo xtask ico`: rasterises `assets/app-icon/mailcraft.svg` (resvg) into the files desktops and
+//! `cargo xtask ico`: rasterises `assets/app-icon/iridium-mail.svg` (resvg) into the files desktops and
 //! installers want: freedesktop hicolor PNGs + scalable SVG, a 1024 px PNG, a Windows ICO and a macOS ICNS.
-//! Both containers are written here (PNG-compressed entries). `MAILCRAFT_ICO_OUT=DIR` writes into DIR instead
+//! Both containers are written here (PNG-compressed entries). `IRIDIUM_MAIL_ICO_OUT=DIR` writes into DIR instead
 //! of `assets/app-icon/`.
 
 use std::path::{Path, PathBuf};
 
 use crate::{TaskResult, rel};
 
-pub const SOURCE: &str = "mailcraft.svg";
+pub const SOURCE: &str = "iridium-mail.svg";
 /// hicolor PNG sizes.
 pub const HICOLOR: [u32; 8] = [16, 24, 32, 48, 64, 128, 256, 512];
 /// ICO entry sizes.
@@ -18,12 +18,14 @@ pub const ICNS: [(&[u8; 4], u32); 4] = [(b"ic07", 128), (b"ic08", 256), (b"ic09"
 /// Every file `ico` writes into `dir`.
 pub fn outputs(dir: &Path) -> Vec<PathBuf> {
     let hicolor = dir.join("hicolor");
-    let mut out: Vec<PathBuf> =
-        HICOLOR.iter().map(|s| hicolor.join(format!("{s}x{s}")).join("apps").join("mailcraft.png")).collect();
-    out.push(hicolor.join("scalable").join("apps").join("mailcraft.svg"));
-    out.push(dir.join("mailcraft-1024.png"));
-    out.push(dir.join("mailcraft.ico"));
-    out.push(dir.join("mailcraft.icns"));
+    let mut out: Vec<PathBuf> = HICOLOR
+        .iter()
+        .map(|s| hicolor.join(format!("{s}x{s}")).join("apps").join("iridium-mail.png"))
+        .collect();
+    out.push(hicolor.join("scalable").join("apps").join("iridium-mail.svg"));
+    out.push(dir.join("iridium-mail-1024.png"));
+    out.push(dir.join("iridium-mail.ico"));
+    out.push(dir.join("iridium-mail.icns"));
     out
 }
 
@@ -104,22 +106,22 @@ pub fn generate(svg: &[u8], dir: &Path) -> Result<Vec<PathBuf>, String> {
     };
     let hicolor = dir.join("hicolor");
     for size in HICOLOR {
-        let path = hicolor.join(format!("{size}x{size}")).join("apps").join("mailcraft.png");
+        let path = hicolor.join(format!("{size}x{size}")).join("apps").join("iridium-mail.png");
         write(&path, &png(size)?)?;
         written.push(path);
     }
-    let scalable = hicolor.join("scalable").join("apps").join("mailcraft.svg");
+    let scalable = hicolor.join("scalable").join("apps").join("iridium-mail.svg");
     write(&scalable, svg)?;
     written.push(scalable);
-    let big = dir.join("mailcraft-1024.png");
+    let big = dir.join("iridium-mail-1024.png");
     write(&big, &png(1024)?)?;
     written.push(big);
     let ico_entries = ICO.iter().map(|s| Ok((*s, png(*s)?))).collect::<Result<Vec<_>, String>>()?;
-    let ico_path = dir.join("mailcraft.ico");
+    let ico_path = dir.join("iridium-mail.ico");
     write(&ico_path, &ico(&ico_entries)?)?;
     written.push(ico_path);
     let icns_entries = ICNS.iter().map(|(k, s)| Ok((*k, png(*s)?))).collect::<Result<Vec<_>, String>>()?;
-    let icns_path = dir.join("mailcraft.icns");
+    let icns_path = dir.join("iridium-mail.icns");
     write(&icns_path, &icns(&icns_entries)?)?;
     written.push(icns_path);
     Ok(written)
@@ -129,7 +131,7 @@ pub fn run(root: &Path) -> TaskResult {
     let icon_dir = root.join("assets").join("app-icon");
     let source = icon_dir.join(SOURCE);
     let svg = std::fs::read(&source).map_err(|e| format!("cannot read {}: {e}", source.display()))?;
-    let out_dir = match std::env::var_os("MAILCRAFT_ICO_OUT") {
+    let out_dir = match std::env::var_os("IRIDIUM_MAIL_ICO_OUT") {
         Some(d) if !d.is_empty() => PathBuf::from(d),
         _ => icon_dir,
     };
@@ -184,7 +186,7 @@ mod tests {
         for w in &written {
             assert!(w.is_file(), "{}", w.display());
         }
-        let icns_data = std::fs::read(dir.path().join("mailcraft.icns")).unwrap();
+        let icns_data = std::fs::read(dir.path().join("iridium-mail.icns")).unwrap();
         let len = u32::from_be_bytes(icns_data[4..8].try_into().unwrap()) as usize;
         assert_eq!(len, icns_data.len());
     }

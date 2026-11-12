@@ -23,12 +23,12 @@ that each file under `assets/` has a row here.
 | assets/fonts/Carlito-Bold.ttf | The Carlito Project Authors | https://github.com/googlefonts/carlito | OFL-1.1 |
 | assets/fonts/Carlito-Italic.ttf | The Carlito Project Authors | https://github.com/googlefonts/carlito | OFL-1.1 |
 | assets/fonts/OFL-Carlito.txt | The Carlito Project Authors | https://github.com/googlefonts/carlito | OFL-1.1 (licence text) |
-| assets/app-icon/mailcraft.svg | MailCraft contributors | original artwork | MIT OR Apache-2.0 |
+| assets/app-icon/iridium-mail.svg | MailCraft contributors | original artwork | MIT OR Apache-2.0 |
 | assets/icons/*.svg | MailCraft contributors | original artwork | MIT OR Apache-2.0 |
-| assets/app-icon/hicolor/** | MailCraft contributors | rendered from assets/app-icon/mailcraft.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
-| assets/app-icon/mailcraft-1024.png | MailCraft contributors | rendered from assets/app-icon/mailcraft.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
-| assets/app-icon/mailcraft.ico | MailCraft contributors | rendered from assets/app-icon/mailcraft.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
-| assets/app-icon/mailcraft.icns | MailCraft contributors | rendered from assets/app-icon/mailcraft.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
+| assets/app-icon/hicolor/** | MailCraft contributors | rendered from assets/app-icon/iridium-mail.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
+| assets/app-icon/iridium-mail-1024.png | MailCraft contributors | rendered from assets/app-icon/iridium-mail.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
+| assets/app-icon/iridium-mail.ico | MailCraft contributors | rendered from assets/app-icon/iridium-mail.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
+| assets/app-icon/iridium-mail.icns | MailCraft contributors | rendered from assets/app-icon/iridium-mail.svg by `cargo xtask ico` | MIT OR Apache-2.0 |
 | assets/icons/README.md | MailCraft contributors | original | MIT OR Apache-2.0 |
 | assets/dictionaries/en-US.txt | Grady Ward (Moby Project); supplement by MailCraft contributors | https://www.gutenberg.org/ebooks/3201 (Moby Words II, filtered and merged by `crates/proof/examples/build_dictionary.rs`) | Public domain (supplement words MIT OR Apache-2.0) |
 | assets/dictionaries/en-US-proper.txt | Grady Ward (Moby Project); supplement by MailCraft contributors | https://www.gutenberg.org/ebooks/3201 (Moby Words II names, places, common) | Public domain (supplement words MIT OR Apache-2.0) |

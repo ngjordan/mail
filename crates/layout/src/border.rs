@@ -1,8 +1,8 @@
 //! Border lines for paragraphs and tables: single, dotted, dashed, double and the 3-D styles, drawn as
 //! [`DisplayItem::Line`]s so every renderer paints them without knowing about borders.
 
-use mailcraft_geom::{Color, Point};
-use mailcraft_model::{BorderEdge, BorderJoin, BorderLine, ParaBorders, TableBorders};
+use iridium_mail_geom::{Color, Point};
+use iridium_mail_model::{BorderEdge, BorderJoin, BorderLine, ParaBorders, TableBorders};
 
 use crate::DisplayItem;
 use crate::block::{Ctx, Out};

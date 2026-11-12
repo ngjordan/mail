@@ -3,7 +3,7 @@
 //!
 //! ```text
 //! # download into an empty folder: https://www.gutenberg.org/files/3202/files/mthesaur.txt
-//! cargo run -p mailcraft-proof --example build_thesaurus -- <folder>/mthesaur.txt assets/dictionaries
+//! cargo run -p iridium-mail-proof --example build_thesaurus -- <folder>/mthesaur.txt assets/dictionaries
 //! ```
 //!
 //! Each Moby line is `root,word,word,…` with the related words in alphabetical order. The builder keeps

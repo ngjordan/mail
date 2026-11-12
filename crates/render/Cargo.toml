@@ -1,16 +1,16 @@
 [package]
-name = "mailcraft-render"
-description = "Offscreen rasteriser, print layout and PDF writer for MailCraft display lists"
+name = "iridium-mail-render"
+description = "Offscreen rasteriser, print layout and PDF writer for Mail display lists"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mailcraft-geom.workspace = true
-mailcraft-fonts.workspace = true
-mailcraft-layout.workspace = true
-mailcraft-model.workspace = true
+iridium-mail-geom.workspace = true
+iridium-mail-fonts.workspace = true
+iridium-mail-layout.workspace = true
+iridium-mail-model.workspace = true
 tiny-skia.workspace = true
 # Rasterising generated SVG pictures to PNG before they are sent (Apache-2.0 OR MIT).
 resvg.workspace = true

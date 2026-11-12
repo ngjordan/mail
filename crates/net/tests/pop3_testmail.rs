@@ -1,12 +1,12 @@
-//! The POP3 client against the in-process POP3 server from `mailcraft-testmail` (127.0.0.1 only).
+//! The POP3 client against the in-process POP3 server from `iridium-mail-testmail` (127.0.0.1 only).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_net::pop3::{Pop3Client, Pop3Settings};
-use mailcraft_net::{ConnectOptions, Credentials, NetError, Security};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_net::pop3::{Pop3Client, Pop3Settings};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError, Security};
+use iridium_mail_testmail::{Config, TestServers};
 
 const USER: &str = "alice@example.com";
 const PASS: &str = "correct horse";

@@ -3,8 +3,8 @@
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{ItemId, TaskStatus};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{ItemId, TaskStatus};
 use serde_json::json;
 
 use crate::App;
@@ -110,7 +110,7 @@ fn calendar_handles_command_dialogs() {
     a.run("calendar.newAppointment", json!({}));
     // The shell forwards notices into `ui.dialogs`; do the same here.
     for n in std::mem::take(&mut a.s.notices) {
-        if let mailcraft_engine::Notice::OpenDialog(name, p) = n {
+        if let iridium_mail_engine::Notice::OpenDialog(name, p) = n {
             a.ui.dialogs.push((name, p));
         }
     }
@@ -210,7 +210,7 @@ fn every_view_survives_dark_narrow_and_empty() {
         let views: [View; 4] = [super::calendar, super::people, super::tasks, super::notes];
         for v in views {
             let mut a =
-                App::new(mailcraft_engine::Session::new(mailcraft_model::Mailbox::new_local("Empty")));
+                App::new(iridium_mail_engine::Session::new(iridium_mail_model::Mailbox::new_local("Empty")));
             if dark {
                 a.theme = crate::theme::Theme::dark();
             }
@@ -225,8 +225,8 @@ fn every_view_survives_dark_narrow_and_empty() {
 // ---------------------------------------------------------------------------------------------------------
 
 fn an_hour_ago(a: &App) -> String {
-    let p = mailcraft_engine::cmd::calendar::pim::add_secs(a.s.now(), -3600);
-    mailcraft_engine::cmd::calendar::pim::datetime_string(p, 0)
+    let p = iridium_mail_engine::cmd::calendar::pim::add_secs(a.s.now(), -3600);
+    iridium_mail_engine::cmd::calendar::pim::datetime_string(p, 0)
 }
 
 #[test]
@@ -258,7 +258,7 @@ fn reminders_window_snoozes_and_opens_items() {
     // The engine asked for the task window (the shell forwards notices; do it here).
     let notices = std::mem::take(&mut h.state_mut().s.notices);
     for n in notices {
-        if let mailcraft_engine::Notice::OpenDialog(name, p) = n {
+        if let iridium_mail_engine::Notice::OpenDialog(name, p) = n {
             h.state_mut().ui.dialogs.push((name, p));
         }
     }
@@ -275,7 +275,7 @@ fn reminders_window_snoozes_and_opens_items() {
 
 /// A meeting request from Alice in the sample Inbox (built like a received message).
 fn invitation(a: &mut App) -> u64 {
-    let mut org = mailcraft_engine::Session::new(mailcraft_model::Mailbox::new_local("Alice"));
+    let mut org = iridium_mail_engine::Session::new(iridium_mail_model::Mailbox::new_local("Alice"));
     org.fixed_now = Some(a.s.now());
     if let Some(acc) = org.mailbox.accounts.first_mut() {
         acc.address = "alice@example.com".into();
@@ -289,15 +289,15 @@ fn invitation(a: &mut App) -> u64 {
         )
         .unwrap();
     let c = &org.composes[&r["compose"].as_u64().unwrap()];
-    let mut b = mailcraft_mime::MessageBuilder::new();
-    b.from = Some(mailcraft_mime::Mailbox::new(Some("Alice Rivera"), "alice@example.com"));
-    b.to = mailcraft_mime::parse_address_list(&c.to);
+    let mut b = iridium_mail_mime::MessageBuilder::new();
+    b.from = Some(iridium_mail_mime::Mailbox::new(Some("Alice Rivera"), "alice@example.com"));
+    b.to = iridium_mail_mime::parse_address_list(&c.to);
     b.subject = c.subject.clone();
     b.text = Some(c.body.to_plain_text());
     b.attachments = c
         .attachments
         .iter()
-        .map(|x| mailcraft_mime::AttachmentSpec {
+        .map(|x| iridium_mail_mime::AttachmentSpec {
             filename: x.filename.clone(),
             mime_type: x.mime_type.clone(),
             data: x.data.clone(),
@@ -305,11 +305,11 @@ fn invitation(a: &mut App) -> u64 {
         })
         .collect();
     let raw = b.build();
-    let msg = mailcraft_mime::parse(&raw).unwrap();
-    let mut item = mailcraft_model::MailItem::from_message(&msg, &raw, a.s.now());
+    let msg = iridium_mail_mime::parse(&raw).unwrap();
+    let mut item = iridium_mail_model::MailItem::from_message(&msg, &raw, a.s.now());
     let acc = a.s.mailbox.default_account().unwrap().id;
-    item.folder = a.s.mailbox.role_folder(acc, mailcraft_model::FolderRole::Inbox).unwrap();
-    a.s.add_message(item, &mailcraft_engine::Content::source(raw.clone())).unwrap().0
+    item.folder = a.s.mailbox.role_folder(acc, iridium_mail_model::FolderRole::Inbox).unwrap();
+    a.s.add_message(item, &iridium_mail_engine::Content::source(raw.clone())).unwrap().0
 }
 
 #[test]
@@ -411,7 +411,7 @@ fn recurring_occurrence_prompt() {
     node.click();
     h.run_ok();
     let id = ItemId(h.state().ui.module_selection.unwrap());
-    let occ = mailcraft_engine::cmd::calendar::pim::parse_local("2026-10-09T09:00", 0).unwrap().unix;
+    let occ = iridium_mail_engine::cmd::calendar::pim::parse_local("2026-10-09T09:00", 0).unwrap().unix;
     let mut st = super::common::load(&h.ctx);
     super::editors::open_occurrence(h.state(), &mut st, id, occ);
     super::common::store(&h.ctx, st);
@@ -501,7 +501,7 @@ fn note_window_colours_and_saves() {
     h.run_ok();
     click(&h, "Save & Close");
     h.run_ok();
-    assert_eq!(h.state().s.mailbox.notes[&id].color, mailcraft_model::NoteColor::Pink);
+    assert_eq!(h.state().s.mailbox.notes[&id].color, iridium_mail_model::NoteColor::Pink);
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -511,7 +511,7 @@ fn note_window_colours_and_saves() {
 /// The shell forwards `Notice::OpenDialog` into `ui.dialogs`; the tests do the same.
 fn forward(app: &mut App) {
     for n in std::mem::take(&mut app.s.notices) {
-        if let mailcraft_engine::Notice::OpenDialog(name, p) = n {
+        if let iridium_mail_engine::Notice::OpenDialog(name, p) = n {
             app.ui.dialogs.push((name, p));
         }
     }
@@ -520,11 +520,11 @@ fn forward(app: &mut App) {
 /// Lets the sample account send (it is a local data file in the sample).
 fn can_send(a: &mut App) {
     for acct in &mut a.s.mailbox.accounts {
-        acct.kind = mailcraft_model::AccountKind::Jmap;
+        acct.kind = iridium_mail_model::AccountKind::Jmap;
     }
 }
 
-fn select_module_folder(a: &mut App, kind: mailcraft_model::FolderKind) -> mailcraft_model::FolderId {
+fn select_module_folder(a: &mut App, kind: iridium_mail_model::FolderKind) -> iridium_mail_model::FolderId {
     let f = a.s.mailbox.folders.values().find(|f| f.kind == kind).map(|f| f.id).unwrap();
     a.run("nav.selectFolder", json!({ "folder": f.0 })).unwrap();
     f
@@ -542,7 +542,7 @@ fn run_cmd(h: &mut Harness<'_, App>, id: &str, p: serde_json::Value) {
 #[test]
 fn people_views_render() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 900.0));
     assert!(has(&h, "Rivera, Alice"));
     run_cmd(&mut h, "view.changeView", json!({"name": "Business Card"}));
@@ -572,7 +572,7 @@ fn people_views_render() {
 #[test]
 fn people_ribbon_actions_reach_contacts() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 900.0));
     click(&h, "Rivera, Alice");
     h.run_ok();
@@ -580,7 +580,7 @@ fn people_ribbon_actions_reach_contacts() {
     // The engine selection follows the view, so ribbon commands without ids act on the contact.
     assert_eq!(h.state().s.selection.focus, Some(id));
     run_cmd(&mut h, "people.flag", json!({"kind": "tomorrow"}));
-    assert!(matches!(h.state().s.mailbox.contacts[&id].flag, mailcraft_model::FlagState::Flagged { .. }));
+    assert!(matches!(h.state().s.mailbox.contacts[&id].flag, iridium_mail_model::FlagState::Flagged { .. }));
     run_cmd(&mut h, "people.private", json!({}));
     assert!(h.state().s.mailbox.contacts[&id].private);
     // Move › Other Folder opens the module's folder picker.
@@ -600,7 +600,7 @@ fn people_ribbon_actions_reach_contacts() {
 fn mail_merge_window_previews_and_sends() {
     let mut a = app();
     can_send(&mut a);
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     run_cmd(&mut h, "people.mailMerge", json!({"contacts": "all", "output": "letters"}));
     assert!(has(&h, "Mail Merge Contacts"));
@@ -630,7 +630,7 @@ fn mail_merge_window_previews_and_sends() {
                 .s
                 .mailbox
                 .folder(m.folder)
-                .is_some_and(|f| f.role == Some(mailcraft_model::FolderRole::Outbox))
+                .is_some_and(|f| f.role == Some(iridium_mail_model::FolderRole::Outbox))
         })
         .map(|m| m.subject.clone())
         .collect();
@@ -641,7 +641,7 @@ fn mail_merge_window_previews_and_sends() {
 #[test]
 fn mail_merge_window_writes_letters_and_the_contact_data_file() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     // Scratch files go under the cargo target dir (`<target>/tmp`, found from the test binary's path).
     let dir = std::env::current_exe()
@@ -688,7 +688,7 @@ fn mail_merge_window_writes_letters_and_the_contact_data_file() {
 #[test]
 fn mail_merge_labels_from_the_window_print_the_address_block() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     let dir = std::env::current_exe()
         .unwrap()
@@ -736,7 +736,7 @@ fn mail_merge_labels_from_the_window_print_the_address_block() {
         .run(
             "people.mailMerge",
             &json!({"contacts": "all", "output": "labels", "action": "preview",
-                    "body": mailcraft_engine::cmd::people::ADDRESS_BLOCK}),
+                    "body": iridium_mail_engine::cmd::people::ADDRESS_BLOCK}),
         )
         .unwrap();
     assert_eq!(r["preview"]["text"], "Bob Chen\nExample Org");
@@ -747,7 +747,7 @@ fn mail_merge_labels_from_the_window_print_the_address_block() {
 fn assign_task_window_sends_a_request() {
     let mut a = app();
     can_send(&mut a);
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     click(&h, "Rivera, Alice");
     h.run_ok();
@@ -770,7 +770,7 @@ fn assign_task_window_sends_a_request() {
 #[test]
 fn task_views_render_and_group() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 900.0));
     // To-Do List: grouped by due date.
     assert!(has_part(&h, "Group Next Week") || has_part(&h, "Group This Week"));
@@ -810,17 +810,18 @@ fn task_views_render_and_group() {
 #[test]
 fn task_ribbon_actions_and_recurrence() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 900.0));
     click(&h, "Submit benefits forms");
     h.run_ok();
     let id = ItemId(h.state().ui.module_selection.unwrap());
     run_cmd(&mut h, "tasks.importance", json!({"level": "high"}));
-    assert_eq!(h.state().s.mailbox.tasks[&id].priority, mailcraft_model::TaskPriority::High);
+    assert_eq!(h.state().s.mailbox.tasks[&id].priority, iridium_mail_model::TaskPriority::High);
     run_cmd(&mut h, "tasks.flag", json!({"kind": "tomorrow"}));
     let tz = h.state().s.tz_offset_min;
-    let due =
-        h.state().s.mailbox.tasks[&id].due.map(|d| mailcraft_engine::cmd::calendar::pim::date_string(d, tz));
+    let due = h.state().s.mailbox.tasks[&id]
+        .due
+        .map(|d| iridium_mail_engine::cmd::calendar::pim::date_string(d, tz));
     assert_eq!(due.as_deref(), Some("2026-10-10"));
     run_cmd(&mut h, "tasks.forward", json!({}));
     assert!(h.state().s.composes.values().any(|c| c.subject == "FW: Submit benefits forms"));
@@ -844,7 +845,7 @@ fn task_ribbon_actions_and_recurrence() {
     let t = &h.state().s.mailbox.tasks[&id];
     assert_eq!(t.status, TaskStatus::NotStarted, "the series moved to its next occurrence");
     assert_eq!(
-        t.due.map(|d| mailcraft_engine::cmd::calendar::pim::date_string(d, tz)).as_deref(),
+        t.due.map(|d| iridium_mail_engine::cmd::calendar::pim::date_string(d, tz)).as_deref(),
         Some("2026-10-17")
     );
     assert!(
@@ -860,7 +861,7 @@ fn task_ribbon_actions_and_recurrence() {
 #[test]
 fn notes_list_is_a_table_sorted_by_its_headers() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Notes);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Notes);
     let mut h = harness(super::notes, a, (1500.0, 900.0));
     assert!(!has(&h, "Sort by Subject"), "the Icon view has no column headers");
     run_cmd(&mut h, "view.changeView", json!({"name": "Notes List"}));
@@ -869,22 +870,22 @@ fn notes_list_is_a_table_sorted_by_its_headers() {
     }
     assert!(!has(&h, "Sort by Modified"), "not a default column");
     let order = |h: &Harness<'_, App>| -> Vec<u64> {
-        mailcraft_engine::cmd::notes::view_rows(&h.state().s, folder).into_iter().map(|r| r.id.0).collect()
+        iridium_mail_engine::cmd::notes::view_rows(&h.state().s, folder).into_iter().map(|r| r.id.0).collect()
     };
     let newest_first = order(&h);
     click(&h, "Sort by Subject");
     h.run_ok();
-    let st = mailcraft_engine::cmd::view::modules::state(
+    let st = iridium_mail_engine::cmd::view::modules::state(
         &h.state().s,
         folder,
-        mailcraft_engine::cmd::view::modules::ModuleKind::Notes,
+        iridium_mail_engine::cmd::view::modules::ModuleKind::Notes,
     );
     assert_eq!(st.sort, "subject");
     let by_subject = order(&h);
     let titles: Vec<String> = by_subject
         .iter()
         .map(|id| {
-            mailcraft_engine::cmd::notes::title(&h.state().s.mailbox.notes[&ItemId(*id)]).to_lowercase()
+            iridium_mail_engine::cmd::notes::title(&h.state().s.mailbox.notes[&ItemId(*id)]).to_lowercase()
         })
         .collect();
     let mut sorted = titles.clone();
@@ -904,7 +905,7 @@ fn notes_list_is_a_table_sorted_by_its_headers() {
 #[test]
 fn notes_views_icons_and_line_up() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Notes);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Notes);
     let mut h = harness(super::notes, a, (1500.0, 900.0));
     assert!(has(&h, "Wi-Fi for guests"));
     run_cmd(&mut h, "view.changeView", json!({"name": "Last 7 Days"}));
@@ -914,10 +915,10 @@ fn notes_views_icons_and_line_up() {
     assert!(has(&h, "Wi-Fi for guests"));
     // The ribbon's Small Icons switches back to the Icon view.
     run_cmd(&mut h, "notes.iconView", json!({"mode": "small"}));
-    let st = mailcraft_engine::cmd::view::modules::state(
+    let st = iridium_mail_engine::cmd::view::modules::state(
         &h.state().s,
         folder,
-        mailcraft_engine::cmd::view::modules::ModuleKind::Notes,
+        iridium_mail_engine::cmd::view::modules::ModuleKind::Notes,
     );
     assert_eq!(st.view, "Icon");
     // Dragging an icon takes it off the grid; Line Up Icons puts it back.
@@ -930,10 +931,10 @@ fn notes_views_icons_and_line_up() {
     h.drop_at(r.center() + egui::vec2(260.0, 160.0));
     h.run_ok();
     assert!(!super::common::load(&h.ctx).note_pos.is_empty(), "dragged off the grid");
-    let st = mailcraft_engine::cmd::view::modules::state(
+    let st = iridium_mail_engine::cmd::view::modules::state(
         &h.state().s,
         folder,
-        mailcraft_engine::cmd::view::modules::ModuleKind::Notes,
+        iridium_mail_engine::cmd::view::modules::ModuleKind::Notes,
     );
     assert!(!st.lined_up);
     run_cmd(&mut h, "notes.lineUpIcons", json!({}));
@@ -962,7 +963,7 @@ fn todo_bar_shows_in_every_module() {
 #[test]
 fn module_view_settings_dialog_applies() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 1000.0));
     run_cmd(&mut h, "view.viewSettings", json!({}));
     assert!(has(&h, "Advanced View Settings: To-Do List"));
@@ -970,7 +971,7 @@ fn module_view_settings_dialog_applies() {
     h.run_ok();
     click(&h, "OK");
     h.run_ok();
-    assert!(mailcraft_engine::cmd::view::modules::reversed(&h.state().s, folder));
+    assert!(iridium_mail_engine::cmd::view::modules::reversed(&h.state().s, folder));
     run_cmd(&mut h, "view.saveViewAs", json!({}));
     assert!(has(&h, "Save Current View As a New View"));
     h.get_by_label("Name of new view:").focus();
@@ -979,7 +980,7 @@ fn module_view_settings_dialog_applies() {
     h.run_ok();
     click(&h, "OK");
     h.run_ok();
-    let saved = mailcraft_engine::cmd::view::modules::saved_views(&h.state().s, folder);
+    let saved = iridium_mail_engine::cmd::view::modules::saved_views(&h.state().s, folder);
     assert_eq!(saved.first().map(|v| v.name.as_str()), Some("Upside down"));
 }
 
@@ -998,23 +999,23 @@ fn task_colour_options_override_the_theme() {
 /// A message from `from` carrying the task part `ics` (as a received message in the sample Inbox).
 fn task_mail(a: &mut App, from: (&str, &str), ics: &str) -> u64 {
     let me = a.s.mailbox.default_account().map(|x| x.address.clone()).unwrap();
-    let mut b = mailcraft_mime::MessageBuilder::new();
-    b.from = Some(mailcraft_mime::Mailbox::new(Some(from.0), from.1));
-    b.to = mailcraft_mime::parse_address_list(&me);
+    let mut b = iridium_mail_mime::MessageBuilder::new();
+    b.from = Some(iridium_mail_mime::Mailbox::new(Some(from.0), from.1));
+    b.to = iridium_mail_mime::parse_address_list(&me);
     b.subject = "Task".into();
     b.text = Some("See the task.".into());
-    b.attachments = vec![mailcraft_mime::AttachmentSpec {
+    b.attachments = vec![iridium_mail_mime::AttachmentSpec {
         filename: "task.ics".into(),
         mime_type: "text/calendar; method=REQUEST".into(),
         data: ics.as_bytes().to_vec(),
         content_id: None,
     }];
     let raw = b.build();
-    let msg = mailcraft_mime::parse(&raw).unwrap();
-    let mut item = mailcraft_model::MailItem::from_message(&msg, &raw, a.s.now());
+    let msg = iridium_mail_mime::parse(&raw).unwrap();
+    let mut item = iridium_mail_model::MailItem::from_message(&msg, &raw, a.s.now());
     let acc = a.s.mailbox.default_account().unwrap().id;
-    item.folder = a.s.mailbox.role_folder(acc, mailcraft_model::FolderRole::Inbox).unwrap();
-    a.s.add_message(item, &mailcraft_engine::Content::source(raw.clone())).unwrap().0
+    item.folder = a.s.mailbox.role_folder(acc, iridium_mail_model::FolderRole::Inbox).unwrap();
+    a.s.add_message(item, &iridium_mail_engine::Content::source(raw.clone())).unwrap().0
 }
 
 fn bar_harness(a: App, mail: u64) -> Harness<'static, App> {
@@ -1101,7 +1102,7 @@ ATTENDEE;CN=\"Ann Lee\";PARTSTAT=IN-PROCESS:mailto:ann@example.com\r\nEND:VTODO\
     h.run_ok();
     let t = &h.state().s.mailbox.tasks[&copy];
     assert_eq!(t.percent_complete, 40);
-    assert_eq!(t.request_state, mailcraft_model::task::TaskRequestState::Accepted);
+    assert_eq!(t.request_state, iridium_mail_model::task::TaskRequestState::Accepted);
 }
 
 /// The shell's order in the Mail module: the modules' item windows, then the dialogs area.
@@ -1114,7 +1115,7 @@ fn mail_window(ui: &mut egui::Ui, app: &mut App) {
 #[test]
 fn mail_new_items_open_the_full_module_windows() {
     let mut a = app();
-    assert_eq!(a.s.view.module, mailcraft_engine::Module::Mail);
+    assert_eq!(a.s.view.module, iridium_mail_engine::Module::Mail);
     // Appointment: the calendar's own window (pages, recurrence, Scheduling Assistant).
     a.run("mail.newItem", json!({"kind": "appointment"})).unwrap();
     let mut h = harness(mail_window, a, (1400.0, 1000.0));
@@ -1163,9 +1164,9 @@ fn reply_with_meeting_opens_the_meeting_window_prefilled() {
 
 #[test]
 fn people_tables_quick_click_flag_and_category_cells() {
-    use mailcraft_model::FlagState;
+    use iridium_mail_model::FlagState;
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 900.0));
     run_cmd(&mut h, "view.changeView", json!({"name": "Phone"}));
     assert!(has(&h, "Flag Status") && has(&h, "Categories") && has(&h, "Mobile Phone"));
@@ -1181,7 +1182,7 @@ fn people_tables_quick_click_flag_and_category_cells() {
     h.run_ok();
     assert!(matches!(h.state().s.mailbox.contacts[&alice].flag, FlagState::None));
     // The category cell applies the Quick Click category to its contact.
-    let quick = mailcraft_engine::cmd::categories::quick_click_category(&h.state().s).unwrap();
+    let quick = iridium_mail_engine::cmd::categories::quick_click_category(&h.state().s).unwrap();
     let tagged = |h: &Harness<'_, App>| {
         h.state().s.mailbox.contacts.values().filter(|c| c.categories.contains(&quick)).count()
     };
@@ -1192,11 +1193,11 @@ fn people_tables_quick_click_flag_and_category_cells() {
     // A header click sorts by the column; a second click reverses it.
     click(&h, "Company");
     h.run_ok();
-    let sort = mailcraft_engine::cmd::view::table::sort(&h.state().s, folder).unwrap();
+    let sort = iridium_mail_engine::cmd::view::table::sort(&h.state().s, folder).unwrap();
     assert_eq!((sort.column.as_str(), sort.descending), ("company", false));
     click(&h, "Company, sorted ascending");
     h.run_ok();
-    assert!(mailcraft_engine::cmd::view::table::sort(&h.state().s, folder).unwrap().descending);
+    assert!(iridium_mail_engine::cmd::view::table::sort(&h.state().s, folder).unwrap().descending);
     // Show Columns: the chosen columns are drawn.
     run_cmd(&mut h, "view.columns", json!({"columns": ["fullName", "nickname", "flagStatus"]}));
     assert!(has(&h, "Nickname"));
@@ -1210,7 +1211,7 @@ fn people_tables_quick_click_flag_and_category_cells() {
 #[test]
 fn task_tables_draw_their_columns_and_take_clicks() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 900.0));
     run_cmd(&mut h, "view.changeView", json!({"name": "Simple List"}));
     assert!(has(&h, "Subject") && has(&h, "Due Date") && has(&h, "Flag Status"));
@@ -1233,7 +1234,7 @@ fn task_tables_draw_their_columns_and_take_clicks() {
     h.run_ok();
     assert_ne!(h.state().s.mailbox.tasks[&id].status, TaskStatus::Completed);
     // The category cell applies the Quick Click category.
-    let quick = mailcraft_engine::cmd::categories::quick_click_category(&h.state().s).unwrap();
+    let quick = iridium_mail_engine::cmd::categories::quick_click_category(&h.state().s).unwrap();
     let before = h.state().s.mailbox.tasks.values().filter(|t| t.categories.contains(&quick)).count();
     click(&h, "No Categories");
     h.run_ok();
@@ -1243,7 +1244,7 @@ fn task_tables_draw_their_columns_and_take_clicks() {
     click(&h, "Subject");
     h.run_ok();
     assert_eq!(
-        mailcraft_engine::cmd::view::table::sort(&h.state().s, folder).map(|f| f.column),
+        iridium_mail_engine::cmd::view::table::sort(&h.state().s, folder).map(|f| f.column),
         Some("subject".to_owned())
     );
     // A filter hides rows.
@@ -1255,7 +1256,7 @@ fn task_tables_draw_their_columns_and_take_clicks() {
 #[test]
 fn module_view_settings_opens_the_table_parts() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 1000.0));
     run_cmd(&mut h, "view.viewSettings", json!({}));
     assert!(has(&h, "Columns...") && has(&h, "Sort...") && has(&h, "Filter..."));
@@ -1267,7 +1268,7 @@ fn module_view_settings_opens_the_table_parts() {
             .s
             .notices
             .iter()
-            .any(|n| matches!(n, mailcraft_engine::Notice::OpenDialog(d, _) if d == "viewFormat"))
+            .any(|n| matches!(n, iridium_mail_engine::Notice::OpenDialog(d, _) if d == "viewFormat"))
     );
     click(&h, "Columns...");
     h.run_ok();
@@ -1276,7 +1277,7 @@ fn module_view_settings_opens_the_table_parts() {
             .s
             .notices
             .iter()
-            .any(|n| matches!(n, mailcraft_engine::Notice::OpenDialog(d, _) if d == "showColumns"))
+            .any(|n| matches!(n, iridium_mail_engine::Notice::OpenDialog(d, _) if d == "showColumns"))
     );
     click(&h, "Sort...");
     h.run_ok();
@@ -1285,7 +1286,7 @@ fn module_view_settings_opens_the_table_parts() {
 
 #[test]
 fn update_folder_fetches_an_internet_calendar_in_the_background_from_any_module() {
-    use mailcraft_engine::cmd::calendar::props;
+    use iridium_mail_engine::cmd::calendar::props;
     let mut a = app();
     let r = a
         .run(
@@ -1293,8 +1294,8 @@ fn update_folder_fetches_an_internet_calendar_in_the_background_from_any_module(
             json!({"source": "internet", "url": "http://127.0.0.1:1/feed.ics", "name": "Feed", "fetch": false}),
         )
         .unwrap();
-    let f = mailcraft_model::FolderId(r["folder"].as_u64().unwrap());
-    a.s.view.module = mailcraft_engine::Module::Mail;
+    let f = iridium_mail_model::FolderId(r["folder"].as_u64().unwrap());
+    a.s.view.module = iridium_mail_engine::Module::Mail;
     a.s.selection.folder = f;
     let r = a.run("sendReceive.folder", json!({})).unwrap();
     assert_eq!(r["status"], "updating", "queued for the UI's fetcher, not fetched on the UI thread");
@@ -1316,7 +1317,7 @@ fn update_folder_fetches_an_internet_calendar_in_the_background_from_any_module(
 #[test]
 fn todo_list_flagged_mail_rows_preview_and_show_their_text() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let linked: Vec<ItemId> = a.s.mailbox.tasks.values().filter_map(|t| t.from_mail).collect();
     let m =
         a.s.mailbox
@@ -1342,7 +1343,7 @@ fn todo_list_flagged_mail_rows_preview_and_show_their_text() {
 #[test]
 fn todo_list_flagged_mail_with_a_huge_body_previews_its_start() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let linked: Vec<ItemId> = a.s.mailbox.tasks.values().filter_map(|t| t.from_mail).collect();
     let id =
         a.s.mailbox.mail.items().find(|m| m.is_flagged() && !linked.contains(&m.id)).map(|m| m.id).unwrap();
@@ -1364,11 +1365,11 @@ fn todo_list_flagged_mail_with_a_huge_body_previews_its_start() {
 #[test]
 fn task_tables_nest_group_by_fields_and_collapse_outer_groups() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Tasks);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Tasks);
     let mut h = harness(super::tasks, a, (1500.0, 900.0));
     run_cmd(&mut h, "view.changeView", json!({"name": "Simple List"}));
     run_cmd(&mut h, "view.viewSettings", json!({"groupBy": ["priority", "status"]}));
-    let rows = mailcraft_engine::cmd::view::modules::rows(&h.state().s, folder);
+    let rows = iridium_mail_engine::cmd::view::modules::rows(&h.state().s, folder);
     let n = rows.iter().filter(|r| r.levels.first().is_some_and(|l| l == "Priority: Normal")).count();
     assert!(n > 0);
     let outer = format!("Group Priority: Normal: {n} items, expanded");
@@ -1403,14 +1404,14 @@ fn task_tables_nest_group_by_fields_and_collapse_outer_groups() {
         head_after > head_before,
         "a larger heading font makes a taller header ({head_before} -> {head_after})"
     );
-    let other = mailcraft_engine::cmd::view::table::other(&h.state().s, folder);
+    let other = iridium_mail_engine::cmd::view::table::other(&h.state().s, folder);
     assert!(other.no_grid, "grid lines are off for the view");
 }
 
 #[test]
 fn people_card_views_take_the_reading_pane() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 900.0));
     for view in ["Card", "Business Card"] {
         run_cmd(&mut h, "view.changeView", json!({"name": view}));
@@ -1424,13 +1425,13 @@ fn people_card_views_take_the_reading_pane() {
 #[test]
 fn notes_table_groups_by_colour_and_categories() {
     let mut a = app();
-    let folder = select_module_folder(&mut a, mailcraft_model::FolderKind::Notes);
+    let folder = select_module_folder(&mut a, iridium_mail_model::FolderKind::Notes);
     let mut h = harness(super::notes, a, (1500.0, 900.0));
     run_cmd(&mut h, "view.changeView", json!({"name": "Notes List"}));
     run_cmd(&mut h, "view.viewSettings", json!({"groupBy": ["icon"]}));
     assert!(has_part(&h, "Group Color: "), "colour groups");
     run_cmd(&mut h, "view.viewSettings", json!({"groupBy": ["categories"]}));
-    let groups = mailcraft_engine::cmd::view::modules::groups(&h.state().s, folder);
+    let groups = iridium_mail_engine::cmd::view::modules::groups(&h.state().s, folder);
     let label = groups.first().cloned().unwrap();
     assert!(has_part(&h, &format!("Group {label}:")));
     run_cmd(&mut h, "view.formatColumns", json!({"column": "subject", "label": "Title"}));
@@ -1440,7 +1441,7 @@ fn notes_table_groups_by_colour_and_categories() {
 #[test]
 fn module_view_settings_lists_group_by_and_other_settings() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     run_cmd(&mut h, "view.changeView", json!({"name": "Card"}));
     run_cmd(&mut h, "view.viewSettings", json!({}));
@@ -1457,7 +1458,7 @@ fn module_view_settings_lists_group_by_and_other_settings() {
 #[test]
 fn mail_merge_window_offers_fields_catalog_and_an_existing_document() {
     let mut a = app();
-    select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+    select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
     let mut h = harness(super::people, a, (1500.0, 1000.0));
     let dir = std::env::current_exe()
         .unwrap()
@@ -1517,7 +1518,7 @@ fn people_bar_buttons_never_overlap() {
     for (w, view) in [(976.0, "Card"), (976.0, "List"), (760.0, "People"), (560.0, "Phone"), (420.0, "Card")]
     {
         let mut a = app();
-        select_module_folder(&mut a, mailcraft_model::FolderKind::Contacts);
+        select_module_folder(&mut a, iridium_mail_model::FolderKind::Contacts);
         let mut h = harness(super::people, a, (w, 700.0));
         run_cmd(&mut h, "view.changeView", json!({"name": view}));
         let rects: Vec<(&str, egui::Rect)> = labels

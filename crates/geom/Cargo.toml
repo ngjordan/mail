@@ -1,6 +1,6 @@
 [package]
-name = "mailcraft-geom"
-description = "Units, points, sizes, rectangles and colours shared by every MailCraft crate"
+name = "iridium-mail-geom"
+description = "Units, points, sizes, rectangles and colours shared by every Mail crate"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -9,7 +9,7 @@
 //! numeric character references; it does not expand DTD entities (a DOCTYPE is skipped). Input size, depth
 //! and element count are capped.
 
-use mailcraft_model::Security;
+use iridium_mail_model::Security;
 
 use crate::error::{NetError, Result};
 

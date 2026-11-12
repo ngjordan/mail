@@ -1,13 +1,13 @@
-//! The JMAP client against the in-process JMAP server from `mailcraft-testmail` (HTTPS on 127.0.0.1).
+//! The JMAP client against the in-process JMAP server from `iridium-mail-testmail` (HTTPS on 127.0.0.1).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::jmap::{JmapAuth, JmapClient};
-use mailcraft_net::{ConnectOptions, NetError};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::jmap::{JmapAuth, JmapClient};
+use iridium_mail_net::{ConnectOptions, NetError};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Map, json};
 
 const USER: &str = "alice@example.com";
@@ -101,7 +101,7 @@ fn quota_get_reports_mail_storage() {
 
 #[test]
 fn quota_list_parsing_is_defensive() {
-    use mailcraft_net::jmap::quota_from_list;
+    use iridium_mail_net::jmap::quota_from_list;
     assert_eq!(quota_from_list(&[]), None);
     let list = vec![
         json!({"resourceType": "octets", "used": 5, "hardLimit": 10, "types": ["Calendar"]}),

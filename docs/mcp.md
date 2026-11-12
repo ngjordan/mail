@@ -1,7 +1,7 @@
-# MailCraft MCP server
+# Mail MCP server
 
-`mailcraft-cli mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdin/stdout,
-so an agent (Claude Code, Claude Desktop, any MCP client) can read and drive MailCraft. It goes through the
+`iridium-mail-cli mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server on stdin/stdout,
+so an agent (Claude Code, Claude Desktop, any MCP client) can read and drive Mail. It goes through the
 same command registry as the ribbon, menus and shortcuts: whatever a person can click, an agent can run by id.
 
 Implementation: `crates/mcp` (layer L5). Transport: JSON-RPC 2.0, one message per line, UTF-8 (the MCP stdio
@@ -14,9 +14,9 @@ transport). Protocol revisions: `2025-06-18` (preferred), `2025-03-26`, `2024-11
 The server owns its own session; no window is involved.
 
 ```sh
-mailcraft-cli mcp                       # the built-in sample mailbox (synthetic mail, nothing saved)
-mailcraft-cli mcp --sample              # same, explicitly
-mailcraft-cli mcp --profile ~/mail/test # a MailCraft data folder (created when missing); changes are saved
+iridium-mail-cli mcp                       # the built-in sample mailbox (synthetic mail, nothing saved)
+iridium-mail-cli mcp --sample              # same, explicitly
+iridium-mail-cli mcp --profile ~/mail/test # a Mail data folder (created when missing); changes are saved
 ```
 
 Use the sample mailbox to try things. With `--profile`, commands change real data the same way the app would
@@ -27,8 +27,8 @@ Use the sample mailbox to try things. With `--profile`, commands change real dat
 Start the app with its control channel, then point the server at it:
 
 ```sh
-mailcraft --sample --control-port 7982
-mailcraft-cli mcp --connect 127.0.0.1:7982
+iridium-mail --sample --control-port 7982
+iridium-mail-cli mcp --connect 127.0.0.1:7982
 ```
 
 Tool calls then act on the open window: the person watching sees folders change, messages get selected and
@@ -42,13 +42,13 @@ Differences in bridged mode:
 
 ## Client configuration
 
-Claude Code (project `.mcp.json`, or `claude mcp add mailcraft -- mailcraft-cli mcp --sample`):
+Claude Code (project `.mcp.json`, or `claude mcp add iridium-mail -- iridium-mail-cli mcp --sample`):
 
 ```json
 {
   "mcpServers": {
-    "mailcraft": {
-      "command": "mailcraft-cli",
+    "iridium-mail": {
+      "command": "iridium-mail-cli",
       "args": ["mcp", "--sample"]
     }
   }
@@ -60,16 +60,16 @@ Bridged to a running app:
 ```json
 {
   "mcpServers": {
-    "mailcraft": {
-      "command": "mailcraft-cli",
+    "iridium-mail": {
+      "command": "iridium-mail-cli",
       "args": ["mcp", "--connect", "127.0.0.1:7982"]
     }
   }
 }
 ```
 
-From a source checkout, use `"command": "cargo", "args": ["run", "-q", "-p", "mailcraft-cli", "--", "mcp",
-"--sample"]` (slower to start; `cargo build -p mailcraft-cli` first). Claude Desktop and other clients take
+From a source checkout, use `"command": "cargo", "args": ["run", "-q", "-p", "iridium-mail-cli", "--", "mcp",
+"--sample"]` (slower to start; `cargo build -p iridium-mail-cli` first). Claude Desktop and other clients take
 the same `command`/`args` pair in their own config files.
 
 ## Tools
@@ -124,7 +124,7 @@ Client → server (one line each):
 Server → client (sample mailbox; text content shortened):
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"mailcraft","title":"MailCraft","version":"0.1.0"},"instructions":"MailCraft mail client (headless: sample mailbox (in memory)). …"}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"iridium-mail","title":"Mail","version":"0.1.0"},"instructions":"Mail mail client (headless: sample mailbox (in memory)). …"}}
 {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"{\n  \"folder\": 1,\n  \"folderName\": \"Inbox\",\n  \"items\": 20,\n  \"next_offset\": 2,\n  \"rows\": [{\"type\": \"group\", \"label\": \"Today\", \"count\": 3, …}, {\"type\": \"item\", \"id\": 23, \"who\": \"Grace Kim\", \"subject\": \"Slides for Thursday\", \"time\": \"11:45 AM\", \"unread\": true, …}],\n  \"total_rows\": 29 …}"}],"isError":false}}
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\n  \"focus\": 23,\n  \"folder\": 1,\n  \"items\": [23]\n}"}],"isError":false}}
 {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"{\n  \"command\": \"mail.flag\",\n  \"result\": {\"changed\": 1, \"ids\": [23]}\n}"}],"isError":false}}
@@ -140,5 +140,5 @@ Try it by hand:
 
 ```sh
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"status","arguments":{}}}' \
-  | mailcraft-cli mcp --sample
+  | iridium-mail-cli mcp --sample
 ```

@@ -4,7 +4,7 @@
 //! outside the organization, or with high importance), a one-line bar says how many issues there are and
 //! why, with Check Accessibility (`review.accessibility`) to open the checker.
 //!
-//! The engine decides ([`mailcraft_engine::cmd::review::accessibility_warning`]); the result is cached per
+//! The engine decides ([`iridium_mail_engine::cmd::review::accessibility_warning`]); the result is cached per
 //! compose until the body, the recipients, the importance, dark mode or the options change.
 
 use std::hash::{Hash, Hasher};
@@ -44,7 +44,7 @@ fn inputs_key(app: &App, cid: u64) -> u64 {
 }
 
 fn cache_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-a11y", cid))
+    Id::unique(("iridium-mail-compose-a11y", cid))
 }
 
 /// The engine's warning for compose `cid`, cached.
@@ -56,7 +56,7 @@ pub(super) fn warning(ui: &Ui, app: &App, cid: u64) -> Option<Value> {
     {
         return Some(v);
     }
-    let v = mailcraft_engine::cmd::review::accessibility_warning(&app.s, cid)?;
+    let v = iridium_mail_engine::cmd::review::accessibility_warning(&app.s, cid)?;
     ctx.data_mut(|d| d.insert_temp(cache_id(cid), (key, v.clone())));
     Some(v)
 }
@@ -104,7 +104,8 @@ pub(super) fn bar(ui: &mut Ui, app: &mut App, cid: u64) {
     ui.allocate_ui_with_layout(vec2(width, BAR_H), Layout::left_to_right(Align::Center), |ui| {
         let rect = ui.max_rect();
         ui.painter().rect_filled(rect, 0.0, fill);
-        let group = ui.interact(rect, Id::unique(("mailcraft-compose-a11y-bar", cid)), egui::Sense::hover());
+        let group =
+            ui.interact(rect, Id::unique(("iridium-mail-compose-a11y-bar", cid)), egui::Sense::hover());
         group.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Unknown, true, BAR_LABEL));
         ui.add_space(16.0);
         ui.label(RichText::new(text).color(ink));

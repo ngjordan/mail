@@ -3,7 +3,7 @@
 //! kept with the profile — and View › Line Up Icons snaps them back to the grid), Notes List and
 //! Last 7 Days (tables with column headers that sort, newest first by default). Notes are edited in place;
 //! the text is saved with `notes.update` when the edit box loses focus. The reading pane (off by default) shows the selected note. The order and the
-//! filter come from the engine (`mailcraft_engine::cmd::notes::view_rows`), the view and the icon
+//! filter come from the engine (`iridium_mail_engine::cmd::notes::view_rows`), the view and the icon
 //! arrangement from the folder's module view.
 
 use std::collections::{HashMap, HashSet};
@@ -14,10 +14,10 @@ use egui::{
 };
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::calendar::pim::Kind;
-use mailcraft_engine::cmd::notes::{IconMode, NotesViewState, title};
-use mailcraft_engine::cmd::view::modules::{ModuleKind, ModuleView, ViewRow};
-use mailcraft_model::{FolderKind, ItemId, ListTime, Note, NoteColor};
+use iridium_mail_engine::cmd::calendar::pim::Kind;
+use iridium_mail_engine::cmd::notes::{IconMode, NotesViewState, title};
+use iridium_mail_engine::cmd::view::modules::{ModuleKind, ModuleView, ViewRow};
+use iridium_mail_model::{FolderKind, ItemId, ListTime, Note, NoteColor};
 
 use super::common::{
     ModState, a11y, blend, change_view, child, collapsed_labels, current_folder, empty_message, folder_rows,
@@ -70,7 +70,7 @@ fn legacy_request(app: &mut App, st: &mut ModState) {
 /// Rows of the current folder's view, in order (a note may be listed under several groups).
 fn view_rows(app: &App) -> Vec<ViewRow> {
     current_folder(app, Kind::Note)
-        .map(|f| mailcraft_engine::cmd::notes::view_rows(&app.s, f))
+        .map(|f| iridium_mail_engine::cmd::notes::view_rows(&app.s, f))
         .unwrap_or_default()
 }
 
@@ -444,14 +444,14 @@ pub(crate) fn grid_metrics(small: bool, tight: bool) -> (f32, f32, f32) {
 
 fn grid(ui: &mut Ui, app: &mut App, st: &mut ModState, order: &[ItemId], view: &ModuleView) {
     let small = view.icon_mode == IconMode::Small;
-    let tight = mailcraft_engine::queries::view_settings(&app.s, app.s.selection.folder).tighter_spacing;
+    let tight = iridium_mail_engine::queries::view_settings(&app.s, app.s.selection.folder).tighter_spacing;
     let (w, h, gap) = grid_metrics(small, tight);
     let cols = ((ui.available_width() + gap) / (w + gap)).floor().max(1.0) as usize;
     let rows = order.len().div_ceil(cols);
     // Room for icons dragged below or right of the grid.
     // Saved positions, with the icon being dragged (saved when it is dropped) on top.
     let mut placed = current_folder(app, Kind::Note)
-        .map(|f| mailcraft_engine::cmd::notes::positions(&app.s, f))
+        .map(|f| iridium_mail_engine::cmd::notes::positions(&app.s, f))
         .unwrap_or_default();
     if let Some((id, pos)) = st.note_drag {
         placed.insert(id, pos);
@@ -480,7 +480,7 @@ fn grid(ui: &mut Ui, app: &mut App, st: &mut ModState, order: &[ItemId], view: &
         if resp.dragged() {
             let d = resp.drag_delta();
             let (x, y) = placed.get(&id.0).copied().unwrap_or((slot.x, slot.y));
-            let max = mailcraft_engine::cmd::notes::MAX_OFFSET;
+            let max = iridium_mail_engine::cmd::notes::MAX_OFFSET;
             let pos = ((x + d.x).clamp(0.0, max), (y + d.y).clamp(0.0, max));
             st.note_drag = Some((id.0, pos));
             st.note_pos.insert(id.0, pos);
@@ -569,7 +569,7 @@ fn preview_line(n: &Note) -> String {
 /// Notes List and Last 7 Days: column headers (click to sort, again to reverse) over one row per note, with
 /// AutoPreview, grid lines and Conditional Formatting from the folder's View Settings.
 fn table(ui: &mut Ui, app: &mut App, st: &mut ModState, view: &ModuleView, rows: &[ViewRow], rect: Rect) {
-    use mailcraft_engine::cmd::view::modules::{self, note_columns, note_shown, note_sort_descending};
+    use iridium_mail_engine::cmd::view::modules::{self, note_columns, note_shown, note_sort_descending};
     let folder = current_folder(app, Kind::Note);
     // The first row of each note (a note listed under several groups is edited there only): one pass, not
     // a search per row.
@@ -659,7 +659,7 @@ fn table(ui: &mut Ui, app: &mut App, st: &mut ModState, view: &ModuleView, rows:
                 } else if resp.hovered() {
                     ui.painter().rect_filled(row, CornerRadius::ZERO, app.theme.hover);
                 }
-                let style = mailcraft_engine::cmd::notes::row_style(&app.s, view, &n);
+                let style = iridium_mail_engine::cmd::notes::row_style(&app.s, view, &n);
                 let color = style.color.as_deref().and_then(hex_color).unwrap_or(app.theme.text);
                 let font = FontId::proportional(row_font);
                 for (key, x, w) in &cols {
@@ -830,19 +830,19 @@ mod tests {
 
     #[test]
     fn legacy_view_request_reaches_the_engine() {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         let notes =
             app.s.mailbox.folders.values().find(|f| f.kind == FolderKind::Notes).map(|f| f.id).unwrap();
         app.run("nav.selectFolder", json!({"folder": notes.0}));
         let mut st = ModState::default();
         apply_view(&mut st, &json!("small"));
         legacy_request(&mut app, &mut st);
-        let v = mailcraft_engine::cmd::view::modules::state(&app.s, notes, ModuleKind::Notes);
+        let v = iridium_mail_engine::cmd::view::modules::state(&app.s, notes, ModuleKind::Notes);
         assert_eq!(v.icon_mode, IconMode::Small);
         // Applied once: changing the engine view later is not undone.
         app.run("notes.iconView", json!({"mode": "large"}));
         legacy_request(&mut app, &mut st);
-        let v = mailcraft_engine::cmd::view::modules::state(&app.s, notes, ModuleKind::Notes);
+        let v = iridium_mail_engine::cmd::view::modules::state(&app.s, notes, ModuleKind::Notes);
         assert_eq!(v.icon_mode, IconMode::Large);
         assert_eq!(view_rows(&app).len(), 2);
     }
@@ -861,7 +861,7 @@ mod tests {
 
     #[test]
     fn commit_saves_changed_text_only() {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         let mut st = ModState::default();
         let id = *app.s.mailbox.notes.keys().next().unwrap();
         let before = app.s.mailbox.notes[&id].modified;

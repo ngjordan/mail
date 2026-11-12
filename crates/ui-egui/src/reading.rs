@@ -4,7 +4,7 @@
 //! (stable colour per sender) next to "Name <address>", To and Cc lines; on the right an optional
 //! background toggle (dark mode only), the Reply | Reply All | Forward segmented control (icon-only when
 //! narrow), a "…" menu and the sent date (short form when narrow); info bars; attachment chips; the
-//! "pictures not downloaded" bar; then the body (HTML through mailcraft-html, plain text as paragraphs).
+//! "pictures not downloaded" bar; then the body (HTML through iridium-mail-html, plain text as paragraphs).
 //! When an inline response exists for the selected item the compose area's inline editor replaces the view.
 //!
 //! Local UI state (not in the Session): which items show the light background in dark mode, which items may
@@ -31,8 +31,8 @@ use std::sync::Arc;
 use egui::{
     Align, Color32, FontId, Id, Layout, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, Ui, UiBuilder, Vec2,
 };
-use mailcraft_engine::queries::{self, ReadingHeader};
-use mailcraft_model::{BodyFormat, Doc, ItemId};
+use iridium_mail_engine::queries::{self, ReadingHeader};
+use iridium_mail_model::{BodyFormat, Doc, ItemId};
 use serde_json::json;
 
 use crate::body::{self, BodyOptions, BodyView};
@@ -143,7 +143,7 @@ pub const NEXT_LINK: &str = "Next message";
 
 /// Reading Pane options › "Mark items as read when viewed in the Reading Pane" after the wait in seconds.
 fn mark_read_timer(ctx: &egui::Context, app: &mut App, id: u64) {
-    let key = per_viewport(ctx, Id::unique("mailcraft.reading.read-timer"));
+    let key = per_viewport(ctx, Id::unique("iridium-mail.reading.read-timer"));
     let st = &app.s.settings;
     let unread = app.s.mailbox.mail.get(ItemId(id)).is_some_and(|m| !m.read);
     if !st.bool("mail.readingPane.markReadWhenViewed") || !unread {
@@ -178,11 +178,11 @@ struct ReadScroll {
 }
 
 fn scroll_id(ctx: &egui::Context) -> Id {
-    per_viewport(ctx, Id::unique("mailcraft.reading.scroll-metrics"))
+    per_viewport(ctx, Id::unique("iridium-mail.reading.scroll-metrics"))
 }
 
 fn pending_scroll_id(ctx: &egui::Context) -> Id {
-    per_viewport(ctx, Id::unique("mailcraft.reading.scroll-to"))
+    per_viewport(ctx, Id::unique("iridium-mail.reading.scroll-to"))
 }
 
 /// `base` for the window being drawn: the main window keeps `base`, each explorer window (a second main
@@ -208,13 +208,16 @@ pub(crate) fn forget_viewport(ctx: &egui::Context, vp: egui::ViewportId) {
     }
     let salt = |base: Id| salted(base, vp);
     ctx.data_mut(|d| {
-        d.remove::<MsgCache>(salt(Id::unique(("mailcraft.reading.cache", Surface::Main))));
-        d.remove::<FindBar>(salt(Id::unique(("mailcraft.reading.find", Surface::Main))));
-        d.remove::<(u64, Request)>(salt(Id::unique(("mailcraft.reading.request", Surface::Main))));
-        d.remove::<ReadScroll>(salt(Id::unique("mailcraft.reading.scroll-metrics")));
-        d.remove::<f32>(salt(Id::unique("mailcraft.reading.scroll-to")));
-        d.remove::<(u64, f64)>(salt(Id::unique("mailcraft.reading.read-timer")));
-        d.remove::<[egui::Rect; 3]>(salt(egui::Id::unique(("mailcraft.reading.stops", Surface::Main.key()))));
+        d.remove::<MsgCache>(salt(Id::unique(("iridium-mail.reading.cache", Surface::Main))));
+        d.remove::<FindBar>(salt(Id::unique(("iridium-mail.reading.find", Surface::Main))));
+        d.remove::<(u64, Request)>(salt(Id::unique(("iridium-mail.reading.request", Surface::Main))));
+        d.remove::<ReadScroll>(salt(Id::unique("iridium-mail.reading.scroll-metrics")));
+        d.remove::<f32>(salt(Id::unique("iridium-mail.reading.scroll-to")));
+        d.remove::<(u64, f64)>(salt(Id::unique("iridium-mail.reading.read-timer")));
+        d.remove::<[egui::Rect; 3]>(salt(egui::Id::unique((
+            "iridium-mail.reading.stops",
+            Surface::Main.key(),
+        ))));
     });
 }
 
@@ -319,7 +322,7 @@ pub fn read_windows(ctx: &egui::Context, app: &mut App) {
                 ctx.data_mut(|d| d.insert_temp(neighbour_id(id), (prev, next)));
             }
         }
-        let title = window_title(&m.subject, mailcraft_engine::smime::display_body(&app.s, m).format);
+        let title = window_title(&m.subject, iridium_mail_engine::smime::display_body(&app.s, m).format);
         let builder = egui::ViewportBuilder::default()
             .with_title(title)
             .with_inner_size(READ_WINDOW_SIZE)
@@ -361,16 +364,16 @@ pub fn read_windows(ctx: &egui::Context, app: &mut App) {
 
 /// The viewport of `item`'s read window.
 pub(crate) fn read_viewport_id(item: u64) -> egui::ViewportId {
-    egui::ViewportId::from_hash_of(("mailcraft.read-window", item))
+    egui::ViewportId::from_hash_of(("iridium-mail.read-window", item))
 }
 
 fn neighbour_id(item: u64) -> Id {
-    Id::unique(("mailcraft.read-window.neighbours", item))
+    Id::unique(("iridium-mail.read-window.neighbours", item))
 }
 
 /// Folder a read window's item was in when the window opened on it.
 fn folder_id(item: u64) -> Id {
-    Id::unique(("mailcraft.read-window.folder", item))
+    Id::unique(("iridium-mail.read-window.folder", item))
 }
 
 /// "<subject> - Message (HTML)".
@@ -432,7 +435,7 @@ struct Toggles {
 }
 
 fn toggles_id() -> Id {
-    Id::unique("mailcraft.reading.toggles")
+    Id::unique("iridium-mail.reading.toggles")
 }
 
 fn toggles(ctx: &egui::Context) -> Toggles {
@@ -455,7 +458,7 @@ struct MsgCache {
 }
 
 fn cache_id(ctx: &egui::Context, surface: Surface) -> Id {
-    surface_id(ctx, Id::unique(("mailcraft.reading.cache", surface)), surface)
+    surface_id(ctx, Id::unique(("iridium-mail.reading.cache", surface)), surface)
 }
 
 /// Layout key of the doc built for source key `sk`.
@@ -467,7 +470,7 @@ fn doc_key(sk: u64) -> u64 {
 /// remote pictures, when the pane has one for that same content.
 fn shared_pane_doc(ctx: &egui::Context, item: u64, sk: u64) -> Option<(Arc<Doc>, bool)> {
     // The main window's cache, whichever window is being drawn (`cache_id` salts it for other viewports).
-    let key = Id::unique(("mailcraft.reading.cache", Surface::Main));
+    let key = Id::unique(("iridium-mail.reading.cache", Surface::Main));
     // Taken out and put back: a copy would clone the pane's whole layout.
     let pane = ctx.data_mut(|d| d.remove_temp::<MsgCache>(key))?;
     let shared =
@@ -477,7 +480,7 @@ fn shared_pane_doc(ctx: &egui::Context, item: u64, sk: u64) -> Option<(Arc<Doc>,
 }
 
 /// Cheap identity of a stored body (no full-content hash per frame).
-fn source_key(id: u64, b: &mailcraft_model::Body) -> u64 {
+fn source_key(id: u64, b: &iridium_mail_model::Body) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
     id.hash(&mut h);
     std::mem::discriminant(&b.format).hash(&mut h);
@@ -496,10 +499,10 @@ fn source_key(id: u64, b: &mailcraft_model::Body) -> u64 {
 
 /// The body to show. `unwrap`: Options › Mail › Message format › "Remove extra line breaks in plain text
 /// messages" (plain-text messages only).
-fn body_doc(b: &mailcraft_model::Body, plain: bool, unwrap: bool) -> Doc {
+fn body_doc(b: &iridium_mail_model::Body, plain: bool, unwrap: bool) -> Doc {
     let text_doc = |text: &str| {
         let joined = if unwrap && b.format == BodyFormat::PlainText {
-            mailcraft_engine::cmd::compose::remove_extra_line_breaks(text)
+            iridium_mail_engine::cmd::compose::remove_extra_line_breaks(text)
         } else {
             None
         };
@@ -509,14 +512,14 @@ fn body_doc(b: &mailcraft_model::Body, plain: bool, unwrap: bool) -> Doc {
         // Trust Center › "Read all standard mail in plain text".
         return match (&b.text, &b.html) {
             (Some(text), _) => text_doc(text),
-            (None, Some(html)) => Doc::from_plain_text(&mailcraft_html::html_to_doc(html).to_plain_text()),
+            (None, Some(html)) => Doc::from_plain_text(&iridium_mail_html::html_to_doc(html).to_plain_text()),
             (None, None) => Doc::default(),
         };
     }
     match (&b.html, &b.text, b.format) {
-        (Some(html), _, BodyFormat::Html | BodyFormat::RichText) => mailcraft_html::html_to_doc(html),
+        (Some(html), _, BodyFormat::Html | BodyFormat::RichText) => iridium_mail_html::html_to_doc(html),
         (_, Some(text), _) => text_doc(text),
-        (Some(html), None, _) => mailcraft_html::html_to_doc(html),
+        (Some(html), None, _) => iridium_mail_html::html_to_doc(html),
         (None, None, _) => Doc::default(),
     }
 }
@@ -546,15 +549,15 @@ pub const FIND_CLOSE: &str = "Close find";
 pub const NO_MATCHES: &str = "No results";
 
 fn request_id(ctx: &egui::Context, surface: Surface) -> Id {
-    surface_id(ctx, Id::unique(("mailcraft.reading.request", surface)), surface)
+    surface_id(ctx, Id::unique(("iridium-mail.reading.request", surface)), surface)
 }
 
 fn find_id(ctx: &egui::Context, surface: Surface) -> Id {
-    surface_id(ctx, Id::unique(("mailcraft.reading.find", surface)), surface)
+    surface_id(ctx, Id::unique(("iridium-mail.reading.find", surface)), surface)
 }
 
 fn find_field_id(ctx: &egui::Context, surface: Surface) -> Id {
-    surface_id(ctx, Id::unique(("mailcraft.reading.find-field", surface)), surface)
+    surface_id(ctx, Id::unique(("iridium-mail.reading.find-field", surface)), surface)
 }
 
 /// Hands a Find / Select request for message `item` to the view showing it: its read window when one is
@@ -567,7 +570,7 @@ pub fn request(ctx: &egui::Context, app: &App, item: u64, r: Request) {
         for w in &app.ui.explorers {
             if w.selection.focus == Some(ItemId(item)) || w.selection.items.contains(&ItemId(item)) {
                 let id = salted(
-                    Id::unique(("mailcraft.reading.request", Surface::Main)),
+                    Id::unique(("iridium-mail.reading.request", Surface::Main)),
                     crate::explorer::viewport_id(w.id),
                 );
                 ctx.data_mut(|d| d.insert_temp(id, (item, r.clone())));
@@ -586,7 +589,7 @@ struct FindBar {
     text: String,
     match_case: bool,
     /// Matches of `text` in the body (document order) and what they were found for.
-    hits: Vec<(mailcraft_layout::TextPos, mailcraft_layout::TextPos)>,
+    hits: Vec<(iridium_mail_layout::TextPos, iridium_mail_layout::TextPos)>,
     hits_for: Option<(u64, String, bool)>,
     /// The match shown as the selection.
     current: usize,
@@ -665,7 +668,7 @@ fn take_request(ctx: &egui::Context, surface: Surface, id: u64, bar: &mut FindBa
                 body::leaf_paths(&cache.doc)
                     .into_iter()
                     .next()
-                    .map(|p| mailcraft_layout::TextPos { block_path: p, offset: 0 })
+                    .map(|p| iridium_mail_layout::TextPos { block_path: p, offset: 0 })
             });
             if let Some(at) = at {
                 body::select_similar_at(&mut cache.view, &cache.doc, &at);
@@ -673,10 +676,10 @@ fn take_request(ctx: &egui::Context, surface: Surface, id: u64, bar: &mut FindBa
             focus_body(ctx, &cache.view);
         }
         Request::SelectObject(n) => {
-            let objects = mailcraft_engine::cmd::format::doc_objects(&cache.doc);
+            let objects = iridium_mail_engine::cmd::format::doc_objects(&cache.doc);
             if let Some(o) = objects.get(n) {
-                let at = mailcraft_layout::TextPos { block_path: o.at.path.clone(), offset: o.at.offset };
-                let end = mailcraft_layout::TextPos {
+                let at = iridium_mail_layout::TextPos { block_path: o.at.path.clone(), offset: o.at.offset };
+                let end = iridium_mail_layout::TextPos {
                     block_path: o.at.path.clone(),
                     offset: o.at.offset.saturating_add(1),
                 };
@@ -798,13 +801,13 @@ fn empty_state(ui: &mut Ui, app: &mut App) {
 fn message_view(ui: &mut Ui, app: &mut App, id: u64, surface: Surface, narrow: bool) {
     // S/MIME: a signed or encrypted message is shown opened (verified, decrypted); a valid signer's
     // certificate is remembered for encrypted replies.
-    mailcraft_engine::smime::on_view(&mut app.s, ItemId(id));
+    iridium_mail_engine::smime::on_view(&mut app.s, ItemId(id));
     // A message a server search found (Include Older Results) downloads in full when it is opened.
-    mailcraft_engine::sync::older::opened(&mut app.s, ItemId(id));
+    iridium_mail_engine::sync::older::opened(&mut app.s, ItemId(id));
     // A body the account's offline window took off this computer downloads again when it is opened online.
-    mailcraft_engine::offline::opened(&mut app.s, ItemId(id));
+    iridium_mail_engine::offline::opened(&mut app.s, ItemId(id));
     // Options › Language › Always translate: a message in another language is translated when first shown.
-    mailcraft_engine::translate::auto_translate(&mut app.s, ItemId(id));
+    iridium_mail_engine::translate::auto_translate(&mut app.s, ItemId(id));
     let Some(h) = queries::reading_header(&app.s, ItemId(id)) else {
         empty_state(ui, app);
         return;
@@ -814,18 +817,18 @@ fn message_view(ui: &mut Ui, app: &mut App, id: u64, surface: Surface, narrow: b
     let mut cache: MsgCache = ctx.data_mut(|d| d.remove_temp::<MsgCache>(key)).unwrap_or_default();
     // Junk Email Options › "Disable links and other functionality in phishing messages": a message in Junk
     // Email is shown as plain text, without pictures, and its links do not open.
-    let links_off = mailcraft_engine::junk::links_disabled(&app.s, ItemId(id));
+    let links_off = iridium_mail_engine::junk::links_disabled(&app.s, ItemId(id));
     let plain = app.s.settings.bool("trust.plainText") || links_off;
     let unwrap = app.s.settings.bool("mail.format.removeExtraLineBreaks");
     // Translate Message: a translation shows in place of the body (Show Original switches back).
-    let translated = mailcraft_engine::translate::shown(&app.s, ItemId(id)).map(|t| t.text.clone());
+    let translated = iridium_mail_engine::translate::shown(&app.s, ItemId(id)).map(|t| t.text.clone());
     let translated_key = translated.as_ref().map_or(0, |t| {
         let mut hs = std::collections::hash_map::DefaultHasher::new();
         t.hash(&mut hs);
         hs.finish() | 1
     });
-    if let Some(m) = mailcraft_engine::smime::display_item(&app.s, ItemId(id)) {
-        let shown_body = mailcraft_engine::smime::display_body(&app.s, &m);
+    if let Some(m) = iridium_mail_engine::smime::display_item(&app.s, ItemId(id)) {
+        let shown_body = iridium_mail_engine::smime::display_body(&app.s, &m);
         let sk = source_key(id, &shown_body)
             ^ u64::from(plain)
             ^ (u64::from(unwrap) << 1)
@@ -886,7 +889,7 @@ fn message_view(ui: &mut Ui, app: &mut App, id: u64, surface: Surface, narrow: b
     let allow_remote = !links_off && (tg.pictures.contains(&id) || !app.s.settings.bool("trust.blockImages"));
     // A read window can be zoomed on its own (Message › Zoom); the reading pane uses the shared zoom.
     let pct = match surface {
-        Surface::Read(_) => mailcraft_engine::cmd::view::read_zoom(&app.s, ItemId(id)),
+        Surface::Read(_) => iridium_mail_engine::cmd::view::read_zoom(&app.s, ItemId(id)),
         _ => app.s.view.zoom,
     };
     let zoom = match pct {
@@ -925,7 +928,7 @@ fn message_view(ui: &mut Ui, app: &mut App, id: u64, surface: Surface, narrow: b
 
     let mut clicked_link = None;
     let mut area = egui::ScrollArea::vertical()
-        .id_salt(("mailcraft.reading.scroll", surface, id))
+        .id_salt(("iridium-mail.reading.scroll", surface, id))
         .auto_shrink([false, false]);
     let pending_scroll = pending_scroll_id(&ctx);
     if surface == Surface::Main
@@ -1015,9 +1018,9 @@ fn header(ui: &mut Ui, app: &mut App, h: &ReadingHeader, id: u64, narrow: bool, 
     let subject_size = if in_window { 18.0 } else { 20.0 };
     // Search words in the subject on the highlight background (File › Options › Search).
     let hits = if app.s.settings.bool("search.highlight") {
-        mailcraft_engine::search_index::highlights(
+        iridium_mail_engine::search_index::highlights(
             &app.s,
-            mailcraft_engine::search_index::Field::Subject,
+            iridium_mail_engine::search_index::Field::Subject,
             subject,
         )
     } else {
@@ -1141,7 +1144,7 @@ fn header(ui: &mut Ui, app: &mut App, h: &ReadingHeader, id: u64, narrow: bool, 
         info_bar(ui, app, "info", line, None);
     }
     // Junk Email: the folder notice and the suspicious-domain warning.
-    let junk = mailcraft_engine::junk::reading_info(&app.s, ItemId(id));
+    let junk = iridium_mail_engine::junk::reading_info(&app.s, ItemId(id));
     for (key, icon) in [("infobar", "junk"), ("warning", "warning")] {
         if let Some(line) = junk.get(key).and_then(serde_json::Value::as_str) {
             ui.add_space(6.0);
@@ -1160,7 +1163,7 @@ fn header(ui: &mut Ui, app: &mut App, h: &ReadingHeader, id: u64, narrow: bool, 
 }
 
 fn stops_id(ctx: &egui::Context, surface: Surface) -> egui::Id {
-    surface_id(ctx, egui::Id::unique(("mailcraft.reading.stops", surface.key())), surface)
+    surface_id(ctx, egui::Id::unique(("iridium-mail.reading.stops", surface.key())), surface)
 }
 
 /// Where the message view of `surface` drew its header, info bars and body in the last frame (visible
@@ -1367,8 +1370,8 @@ fn info_bar(ui: &mut Ui, app: &mut App, icon: &str, text: &str, link: Option<&st
 /// The S/MIME info bars of message `id`: "Encrypted…" or why it cannot be opened, and who signed it with the
 /// signature's status; Details opens the signature details (`mail.signatureDetails`).
 fn security_bars(ui: &mut Ui, app: &mut App, id: u64) {
-    let Some(sec) = mailcraft_engine::smime::security(&app.s, ItemId(id)) else { return };
-    let lines = mailcraft_engine::smime::info_lines(&sec);
+    let Some(sec) = iridium_mail_engine::smime::security(&app.s, ItemId(id)) else { return };
+    let lines = iridium_mail_engine::smime::info_lines(&sec);
     let last = lines.len().saturating_sub(1);
     for (i, (kind, text)) in lines.iter().enumerate() {
         let icon = match *kind {
@@ -1387,14 +1390,14 @@ fn security_bars(ui: &mut Ui, app: &mut App, id: u64) {
 
 /// Translate Message on a received message: which translation shows, with a switch to the original.
 fn translation_bar(ui: &mut Ui, app: &mut App, id: u64) {
-    if mailcraft_engine::translate::pending(&app.s, ItemId(id)) {
+    if iridium_mail_engine::translate::pending(&app.s, ItemId(id)) {
         // The translation server is working on it (on a worker thread; the window stays usable).
         ui.add_space(6.0);
         info_bar(ui, app, "email", "Translating this message…", None);
         return;
     }
     let Some(t) = app.s.translations.get(&ItemId(id)).cloned() else { return };
-    let lang = mailcraft_engine::translate::language_name(&t.to).unwrap_or(t.to.as_str()).to_owned();
+    let lang = iridium_mail_engine::translate::language_name(&t.to).unwrap_or(t.to.as_str()).to_owned();
     let (text, action) = if t.show_original {
         (format!("This is the original message. A translation into {lang} is available."), "Show translation")
     } else {
@@ -1410,7 +1413,7 @@ fn translation_bar(ui: &mut Ui, app: &mut App, id: u64) {
 /// A message of which only the header was downloaded: say so, with a link that downloads the rest now.
 fn header_only_bar(ui: &mut Ui, app: &mut App, id: u64) {
     // A body the offline window took off: say why, and offer the download unless working offline.
-    if let Some(text) = mailcraft_engine::offline::placeholder(&app.s, ItemId(id)) {
+    if let Some(text) = iridium_mail_engine::offline::placeholder(&app.s, ItemId(id)) {
         ui.add_space(6.0);
         let link = (!app.s.view.work_offline).then_some("Download it now");
         if info_bar(ui, app, "sync", &text, link) {
@@ -1431,8 +1434,8 @@ fn header_only_bar(ui: &mut Ui, app: &mut App, id: u64) {
 /// Options › Language › Ask me before translating: a message that seems to be in another language offers
 /// a translation (the language is told on this computer; nothing is sent until the link is clicked).
 fn translate_offer_bar(ui: &mut Ui, app: &mut App, id: u64) {
-    let Some((from, to)) = mailcraft_engine::translate::offer(&app.s, ItemId(id)) else { return };
-    let name = |t: &str| mailcraft_engine::translate::language_name(t).unwrap_or(t).to_owned();
+    let Some((from, to)) = iridium_mail_engine::translate::offer(&app.s, ItemId(id)) else { return };
+    let name = |t: &str| iridium_mail_engine::translate::language_name(t).unwrap_or(t).to_owned();
     let text = format!("This message seems to be in {}.", name(from));
     let link = format!("Translate it into {}", name(&to));
     ui.add_space(6.0);
@@ -1527,7 +1530,7 @@ fn open_link(ctx: &egui::Context, app: &mut App, href: &str) {
 }
 
 fn link_prompt_id() -> Id {
-    Id::unique("mailcraft.reading.link-prompt")
+    Id::unique("iridium-mail.reading.link-prompt")
 }
 
 /// The "open this link?" prompt of Trust Center › "Ask before opening web links in messages".
@@ -1698,7 +1701,7 @@ mod tests {
     use super::*;
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn app_with(subject: &str) -> App {
         let mut s = sample_session();
@@ -1764,12 +1767,12 @@ mod tests {
         image::RgbaImage::from_pixel(6, 4, image::Rgba([0, 120, 215, 255]))
             .write_to(&mut png, image::ImageFormat::Png)
             .unwrap();
-        let b = mailcraft_mime::MessageBuilder {
-            from: Some(mailcraft_mime::Mailbox::new(None, "ann@example.org")),
+        let b = iridium_mail_mime::MessageBuilder {
+            from: Some(iridium_mail_mime::Mailbox::new(None, "ann@example.org")),
             subject: subject.clone(),
             text: Some("Logo".into()),
             html: Some("<p>Logo: <img src=\"cid:logo@example.org\" width=6 height=4></p>".into()),
-            attachments: vec![mailcraft_mime::AttachmentSpec {
+            attachments: vec![iridium_mail_mime::AttachmentSpec {
                 filename: "logo.png".into(),
                 mime_type: "image/png".into(),
                 data: png.into_inner(),
@@ -1778,8 +1781,8 @@ mod tests {
             ..Default::default()
         };
         let raw = b.build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
-        let mut built = mailcraft_model::MailItem::from_message(&msg, &raw, app.s.now());
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
+        let mut built = iridium_mail_model::MailItem::from_message(&msg, &raw, app.s.now());
         if let Some(m) = app.s.mailbox.mail.get_mut(id) {
             m.attachments = std::mem::take(&mut built.attachments);
         }
@@ -1805,7 +1808,7 @@ mod tests {
         h.run();
         h.get_by_label(&subject);
         let plain = body_doc(
-            &mailcraft_model::Body {
+            &iridium_mail_model::Body {
                 format: BodyFormat::Html,
                 text: None,
                 html: Some("<p>Hi <b>there</b></p>".into()),
@@ -1820,7 +1823,7 @@ mod tests {
     fn extra_line_breaks_in_plain_text_follow_the_option() {
         let text = "A plain text message that the sender's mail program wrapped at a\n\
                     fixed width, so its lines end in the middle of sentences here.\n\nBye";
-        let body = |format| mailcraft_model::Body { format, text: Some(text.into()), html: None };
+        let body = |format| iridium_mail_model::Body { format, text: Some(text.into()), html: None };
         let paragraphs = |doc: &Doc| doc.to_plain_text().lines().count();
         // On (the default): one paragraph, a blank line, the sign-off.
         let on = body_doc(&body(BodyFormat::PlainText), false, true);
@@ -1841,12 +1844,12 @@ mod tests {
 
     #[test]
     fn smime_info_bars_and_details() {
-        use mailcraft_smime::testkit;
+        use iridium_mail_smime::testkit;
         let mut s = sample_session();
         let me = s.mailbox.default_account().unwrap().address.clone();
         let my_id = testkit::identity("Sample Me", &me);
-        let pfx = mailcraft_smime::pkcs12::build(&my_id, "pw", "").unwrap();
-        let data = mailcraft_mime::transfer::encode_base64_flat(&pfx);
+        let pfx = iridium_mail_smime::pkcs12::build(&my_id, "pw", "").unwrap();
+        let data = iridium_mail_mime::transfer::encode_base64_flat(&pfx);
         s.run("options.importDigitalId", &json!({"data": data, "password": "pw", "trustIssuer": true}))
             .unwrap();
         // Ann signs and encrypts a message to me.
@@ -1856,17 +1859,17 @@ mod tests {
              Content-Type: text/plain\r\n\r\nThe code is 4711.\r\n"
         );
         let to = [my_id.cert.clone()];
-        let p = mailcraft_smime::mime::Protect {
+        let p = iridium_mail_smime::mime::Protect {
             sign: Some(&ann),
             encrypt_to: &to,
             clear_signed: true,
             now: testkit::NOW,
         };
-        let raw = mailcraft_smime::mime::protect(msg.as_bytes(), &p).unwrap();
-        let parsed = mailcraft_mime::parse(&raw).unwrap();
-        let mut item = mailcraft_model::MailItem::from_message(&parsed, &raw, s.now());
+        let raw = iridium_mail_smime::mime::protect(msg.as_bytes(), &p).unwrap();
+        let parsed = iridium_mail_mime::parse(&raw).unwrap();
+        let mut item = iridium_mail_model::MailItem::from_message(&parsed, &raw, s.now());
         item.folder = s.selection.folder;
-        let id = s.add_message(item, &mailcraft_engine::Content::source(raw.clone())).unwrap();
+        let id = s.add_message(item, &iridium_mail_engine::Content::source(raw.clone())).unwrap();
         s.selection.items = vec![id];
         s.selection.focus = Some(id);
         let mut h = harness(App::new(s));
@@ -1882,9 +1885,9 @@ mod tests {
         h.run_steps(2);
         let app = h.into_state();
         assert!(app.s.notices.iter().any(|n| matches!(n,
-            mailcraft_engine::Notice::OpenDialog(d, p) if d == "messageSecurity" && p["status"] == "valid")));
+            iridium_mail_engine::Notice::OpenDialog(d, p) if d == "messageSecurity" && p["status"] == "valid")));
         // Ann's certificate was remembered from the valid signature.
-        assert!(mailcraft_engine::smime::cert_for(&app.s, "ann@example.org").is_some());
+        assert!(iridium_mail_engine::smime::cert_for(&app.s, "ann@example.org").is_some());
     }
 
     #[test]
@@ -1909,12 +1912,12 @@ mod tests {
         // In Junk Email: the info bar, and the body is shown as plain text without working links.
         let mut app = h.into_state();
         let acct = app.s.mailbox.folder_account(app.s.mailbox.mail.get(id).unwrap().folder).unwrap();
-        let junk = app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::JunkEmail).unwrap();
+        let junk = app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::JunkEmail).unwrap();
         app.s.mailbox.move_items(&[id], junk).unwrap();
-        assert!(mailcraft_engine::junk::links_disabled(&app.s, id));
+        assert!(iridium_mail_engine::junk::links_disabled(&app.s, id));
         let mut h = harness(app);
         h.run_steps(2);
-        assert!(h.query_by_label(mailcraft_engine::junk::JUNK_INFOBAR).is_some());
+        assert!(h.query_by_label(iridium_mail_engine::junk::JUNK_INFOBAR).is_some());
     }
 
     fn app_with_text(text: &str) -> (App, u64) {
@@ -1945,7 +1948,7 @@ mod tests {
         let ctx = egui::Context::default();
         let explorer = crate::explorer::viewport_id(1);
         let frame = Frame { width: 1400.0, height: 900.0, ..Frame::default() };
-        let base = Id::unique(("mailcraft.reading.cache", Surface::Main));
+        let base = Id::unique(("iridium-mail.reading.cache", Surface::Main));
         let draw = |app: &mut App, vp: egui::ViewportId, item: ItemId| {
             app.s.selection.items = vec![item];
             app.s.selection.focus = Some(item);
@@ -2081,10 +2084,9 @@ mod tests {
         h.run();
         h.get_by_label("Reading pane options").click();
         h.run();
-        let opened =
-            h.state().s.notices.iter().any(
-                |n| matches!(n, mailcraft_engine::Notice::OpenDialog(id, _) if id == "readingPaneOptions"),
-            );
+        let opened = h.state().s.notices.iter().any(
+            |n| matches!(n, iridium_mail_engine::Notice::OpenDialog(id, _) if id == "readingPaneOptions"),
+        );
         assert!(opened, "{:?}", h.state().s.notices);
     }
 
@@ -2125,15 +2127,15 @@ mod tests {
     }
 
     /// A message whose body the offline window took off: the pane says so instead of showing an empty body,
-    /// and offers the download when MailCraft is online.
+    /// and offers the download when Mail is online.
     #[test]
     fn a_body_taken_off_by_the_offline_window_shows_why() {
         let mut s = sample_session();
-        let acct = s.mailbox.add_account(mailcraft_model::Account {
-            kind: mailcraft_model::AccountKind::Imap,
+        let acct = s.mailbox.add_account(iridium_mail_model::Account {
+            kind: iridium_mail_model::AccountKind::Imap,
             display_name: "Work".into(),
             address: "me@example.com".into(),
-            incoming: Some(mailcraft_model::ServerSettings {
+            incoming: Some(iridium_mail_model::ServerSettings {
                 host: "127.0.0.1".into(),
                 port: 9,
                 ..Default::default()
@@ -2141,19 +2143,19 @@ mod tests {
             ..Default::default()
         });
         s.mailbox.create_default_folders(acct);
-        let inbox = s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Inbox).unwrap();
         s.mailbox.folders.get_mut(&inbox).unwrap().remote_name = Some("INBOX".into());
-        let item = mailcraft_model::MailItem {
+        let item = iridium_mail_model::MailItem {
             folder: inbox,
             subject: "Old report".into(),
             remote_id: Some("5".into()),
-            received: mailcraft_model::DateTime::from_unix(s.now().unix - 800 * 86_400, 0),
+            received: iridium_mail_model::DateTime::from_unix(s.now().unix - 800 * 86_400, 0),
             ..Default::default()
         };
         let raw = b"From: ann@example.org\r\nSubject: Old report\r\n\r\nThe old figures\r\n".to_vec();
-        let id = s.add_message(item, &mailcraft_engine::Content::source(raw)).unwrap();
+        let id = s.add_message(item, &iridium_mail_engine::Content::source(raw)).unwrap();
         s.view.work_offline = true;
-        assert_eq!(mailcraft_engine::offline::pass(&mut s, acct).evicted, 1);
+        assert_eq!(iridium_mail_engine::offline::pass(&mut s, acct).evicted, 1);
         s.selection.folder = inbox;
         s.selection.items = vec![id];
         s.selection.focus = Some(id);
@@ -2170,7 +2172,7 @@ mod tests {
         assert!(h.query_by_label("Download it now").is_some());
     }
 
-    fn app_with_session(mut s: mailcraft_engine::Session, subject: &str) -> App {
+    fn app_with_session(mut s: iridium_mail_engine::Session, subject: &str) -> App {
         let id = s.mailbox.mail.items().find(|m| m.subject == subject).map(|m| m.id).unwrap();
         s.selection.items = vec![id];
         s.selection.focus = Some(id);
@@ -2222,7 +2224,9 @@ mod tests {
         );
         h.run();
         let cached = |h: &Harness<'_, App>, surface: Surface| {
-            h.ctx.data(|d| d.get_temp::<MsgCache>(Id::unique(("mailcraft.reading.cache", surface)))).unwrap()
+            h.ctx
+                .data(|d| d.get_temp::<MsgCache>(Id::unique(("iridium-mail.reading.cache", surface))))
+                .unwrap()
         };
         let pane = cached(&h, Surface::Main);
         assert_eq!(pane.item, id);
@@ -2248,13 +2252,22 @@ mod tests {
     fn a_new_read_window_shows_once_its_first_frame_is_drawn() {
         let built: Arc<std::sync::Mutex<Vec<(egui::ViewportId, Option<bool>)>>> = Arc::default();
         let log = Arc::clone(&built);
+        // The commands the window was told to carry out. This egui hands an immediate
+        // viewport's own commands back with that viewport's output, so the backend reads
+        // them from there.
+        let asked: Arc<std::sync::Mutex<Vec<egui::ViewportCommand>>> = Arc::default();
+        let sink = Arc::clone(&asked);
         // Stands in for eframe: draws the window's frame and notes how the window was asked to be built.
         egui::Context::set_immediate_viewport_renderer(move |ctx, vp| {
             log.lock().unwrap().push((vp.ids.this, vp.builder.visible));
             let mut ui_cb = vp.viewport_ui_cb;
             let mut input = egui::RawInput { viewport_id: vp.ids.this, ..Default::default() };
             input.viewports.insert(vp.ids.this, egui::ViewportInfo::default());
-            ctx.run_ui(input, |ui| ui_cb(ui)).textures_delta.clear();
+            let mut out = ctx.run_ui(input, |ui| ui_cb(ui));
+            if let Some(o) = out.viewport_output.get(&vp.ids.this) {
+                sink.lock().unwrap().extend(o.commands.iter().cloned());
+            }
+            out.textures_delta.clear();
         });
         let s = sample_session();
         let id = s.mailbox.mail.ids().next().unwrap().0;
@@ -2272,15 +2285,16 @@ mod tests {
             }
             let mut out = ctx.run_ui(input, |ui| read_windows(ui.ctx(), app));
             out.textures_delta.clear();
-            out.viewport_output.get(&vid).map(|o| o.commands.clone()).unwrap_or_default()
         };
         let shows = |c: &[egui::ViewportCommand]| c.contains(&egui::ViewportCommand::Visible(true));
-        let first = frame(&mut app, false);
-        let second = frame(&mut app, true);
+        frame(&mut app, false);
+        let first_asked = std::mem::take(&mut *asked.lock().unwrap());
+        frame(&mut app, true);
+        let second_asked = std::mem::take(&mut *asked.lock().unwrap());
         let built = built.lock().unwrap().clone();
         assert_eq!(built, vec![(vid, Some(false)), (vid, Some(true))], "created hidden, then kept shown");
-        assert!(shows(&first), "shown once its first frame is drawn");
-        assert!(!shows(&second));
+        assert!(shows(&first_asked), "shown once its first frame is drawn");
+        assert!(!shows(&second_asked), "not shown again once it is up");
     }
 
     #[test]
@@ -2532,7 +2546,7 @@ mod tests {
                 .mailbox
                 .folders
                 .values()
-                .find(|f| f.kind == mailcraft_model::FolderKind::Mail && f.id != inbox && f.role.is_none())
+                .find(|f| f.kind == iridium_mail_model::FolderKind::Mail && f.id != inbox && f.role.is_none())
                 .map(|f| f.id)
                 .unwrap_or(inbox);
             let mut app = App::new(s);
@@ -2564,7 +2578,7 @@ mod tests {
     }
 
     /// A read window editing the first Inbox message, with a subject edit not saved yet.
-    fn editing_with_unsaved_edits(s: mailcraft_engine::Session) -> (Harness<'static, App>, ItemId) {
+    fn editing_with_unsaved_edits(s: iridium_mail_engine::Session) -> (Harness<'static, App>, ItemId) {
         let inbox = s.selection.folder;
         let id = s.mailbox.items_in(inbox).first().map(|m| m.id).unwrap();
         let mut app = App::new(s);
@@ -2577,12 +2591,12 @@ mod tests {
         (h, id)
     }
 
-    fn other_mail_folder(s: &mailcraft_engine::Session) -> mailcraft_model::FolderId {
+    fn other_mail_folder(s: &iridium_mail_engine::Session) -> iridium_mail_model::FolderId {
         let inbox = s.selection.folder;
         s.mailbox
             .folders
             .values()
-            .find(|f| f.kind == mailcraft_model::FolderKind::Mail && f.id != inbox && f.role.is_none())
+            .find(|f| f.kind == iridium_mail_model::FolderKind::Mail && f.id != inbox && f.role.is_none())
             .map(|f| f.id)
             .unwrap()
     }
@@ -2634,7 +2648,7 @@ mod tests {
 
     #[test]
     fn exit_with_unsaved_edits_asks_first_and_stays_open() {
-        // Regression: File › Exit and the main window's close button closed MailCraft and dropped the edits.
+        // Regression: File › Exit and the main window's close button closed Mail and dropped the edits.
         let (mut h, id) = editing_with_unsaved_edits(sample_session());
         let ctx = h.ctx.clone();
         assert!(!crate::edit_message::may_exit(&ctx, h.state_mut()));
@@ -2643,7 +2657,7 @@ mod tests {
         let toast = h.state().ui.toast.as_ref().map(|t| t.0.clone());
         assert_eq!(toast.as_deref(), Some(crate::edit_message::EXIT_WAITS_NOTE));
         assert!(crate::edit_message::is_editing(h.state(), id.0));
-        // Don't Save: nothing is left unsaved, so MailCraft may close.
+        // Don't Save: nothing is left unsaved, so Mail may close.
         h.get_by_label("Don't Save").click();
         h.run_steps(2);
         assert!(crate::edit_message::may_exit(&ctx, h.state_mut()));
@@ -2720,7 +2734,7 @@ mod tests {
         prompt_save(&h);
         h.run_steps(3);
         assert!(h.state().s.mailbox.mail.get(id).unwrap().subject.ends_with('!'));
-        assert!(!close(&mut h), "nothing unsaved: MailCraft closes");
+        assert!(!close(&mut h), "nothing unsaved: Mail closes");
     }
 
     #[test]
@@ -2845,7 +2859,7 @@ mod tests {
         app.theme = crate::theme::Theme::dark();
         let mut h = sized(app, 900.0);
         h.run_steps(2);
-        let mapped_white = body::map_color(mailcraft_geom::Color::WHITE, true);
+        let mapped_white = body::map_color(iridium_mail_geom::Color::WHITE, true);
         assert!(painted_rects(&h, mapped_white).is_empty(), "no grey page box behind the text");
         h.get_by_label("Switch background to light").click();
         h.run_steps(2);

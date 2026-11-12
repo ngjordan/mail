@@ -8,9 +8,9 @@ use std::net::TcpStream;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailcraft_testmail::rustls::pki_types::ServerName;
-use mailcraft_testmail::rustls::{ClientConfig, ClientConnection, StreamOwned};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_testmail::rustls::pki_types::ServerName;
+use iridium_mail_testmail::rustls::{ClientConfig, ClientConnection, StreamOwned};
+use iridium_mail_testmail::{Config, TestServers};
 
 pub const ALICE: &str = "alice@example.com";
 pub const BOB: &str = "bob@example.com";

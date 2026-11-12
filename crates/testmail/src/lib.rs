@@ -207,7 +207,7 @@ impl Default for Config {
 }
 
 /// The client id the OAuth test server accepts by default.
-pub const OAUTH_TEST_CLIENT: &str = "mailcraft-test-client";
+pub const OAUTH_TEST_CLIENT: &str = "iridium-mail-test-client";
 
 /// Running test servers. Stops all listener and connection threads on drop.
 pub struct TestServers {

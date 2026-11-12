@@ -5,7 +5,7 @@
 //! server reply is treated as hostile input. Credentials never cross an unencrypted connection unless
 //! [`ConnectOptions::allow_plaintext_auth`] says so.
 
-use mailcraft_model::{Security, ServerSettings};
+use iridium_mail_model::{Security, ServerSettings};
 
 use crate::error::{NetError, Result};
 use crate::sasl::{self, Credentials, Mechanism};

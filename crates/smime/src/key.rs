@@ -3,7 +3,7 @@
 //! A [`PrivateKey`] reads PKCS #8 (`PRIVATE KEY`), PKCS #1 (`RSA PRIVATE KEY`) and password-encrypted PKCS #8
 //! (`ENCRYPTED PRIVATE KEY`), as DER or PEM. For storage at rest a key is [`PrivateKey::seal`]ed: written as
 //! an encrypted PKCS #8 (PBES2: PBKDF2-HMAC-SHA256 and AES-256-CBC, RFC 8018) under a secret that the caller
-//! keeps elsewhere (MailCraft keeps it with the account passwords, in the OS keyring where there is one).
+//! keeps elsewhere (Mail keeps it with the account passwords, in the OS keyring where there is one).
 //!
 //! An [`Identity`] (a digital ID) is a key with its certificate and the issuing chain.
 

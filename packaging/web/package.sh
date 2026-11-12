@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Web build of MailCraft (apps/mailcraft-web) as a zip of static files.
+# Web build of Mail (apps/iridium-mail-web) as a zip of static files.
 #
 #     packaging/web/package.sh [--out DIR]
 #
-# With Trunk on PATH: `trunk build --release` (the documented way, apps/mailcraft-web/README.md).
+# With Trunk on PATH: `trunk build --release` (the documented way, apps/iridium-mail-web/README.md).
 # Without it: cargo build --release --target wasm32-unknown-unknown, then wasm-bindgen --target web (the
 # wasm-bindgen-cli version must equal the wasm-bindgen crate in Cargo.lock; it is installed with
 # `cargo install` when missing), and an index.html made from the Trunk one with the Trunk links replaced.
 # packaging/web/_headers is added in both cases.
 #
-# Output: mailcraft-VERSION-web.zip (one folder, mailcraft-VERSION-web/, to serve as the site root).
+# Output: iridium-mail-VERSION-web.zip (one folder, iridium-mail-VERSION-web/, to serve as the site root).
 set -euo pipefail
 here="$(dirname "${BASH_SOURCE[0]}")"
 # shellcheck source=packaging/env.sh
@@ -25,10 +25,10 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-web="$MC_ROOT/apps/mailcraft-web"
+web="$MC_ROOT/apps/iridium-mail-web"
 target_dir="${CARGO_TARGET_DIR:-$MC_ROOT/target}"
 work="$target_dir/packaging/web"
-name="mailcraft-$MC_VERSION-web"
+name="iridium-mail-$MC_VERSION-web"
 site="$work/$name"
 rm -rf "$work"
 mkdir -p "$site" "$out"
@@ -39,11 +39,11 @@ if command -v rustup >/dev/null 2>&1; then
 fi
 
 if command -v trunk >/dev/null 2>&1; then
-	mc_log "trunk build --release (git $MAILCRAFT_GIT_HASH, $MAILCRAFT_BUILD_DATE)"
+	mc_log "trunk build --release (git $IRIDIUM_MAIL_GIT_HASH, $IRIDIUM_MAIL_BUILD_DATE)"
 	(cd "$web" && trunk build --release --dist "$site")
 else
 	mc_log "trunk not found: cargo + wasm-bindgen"
-	(cd "$MC_ROOT" && cargo build --locked --release --target wasm32-unknown-unknown -p mailcraft-web)
+	(cd "$MC_ROOT" && cargo build --locked --release --target wasm32-unknown-unknown -p iridium-mail-web)
 	want="$(awk '/^name = "wasm-bindgen"$/ { getline; gsub(/version = |"/, ""); print; exit }' "$MC_ROOT/Cargo.lock")"
 	[ -n "$want" ] || mc_die "wasm-bindgen not found in Cargo.lock"
 	if ! wasm-bindgen --version 2>/dev/null | grep -q " $want\$"; then
@@ -51,13 +51,13 @@ else
 		cargo install --locked wasm-bindgen-cli --version "$want"
 	fi
 	wasm-bindgen --target web --no-typescript --out-dir "$site" \
-		"$target_dir/wasm32-unknown-unknown/release/mailcraft-web.wasm"
-	cp "$MC_ROOT/assets/app-icon/hicolor/128x128/apps/mailcraft.png" "$site/mailcraft.png"
+		"$target_dir/wasm32-unknown-unknown/release/iridium-mail-web.wasm"
+	cp "$MC_ROOT/assets/app-icon/hicolor/128x128/apps/iridium-mail.png" "$site/iridium-mail.png"
 	# Replace the two Trunk directives: the Rust link becomes the wasm-bindgen loader, the copy-file link
 	# is done above.
 	awk '
 		/<link data-trunk rel="rust"/ {
-			print "  <script type=\"module\">import init from \"./mailcraft-web.js\"; init();</script>"
+			print "  <script type=\"module\">import init from \"./iridium-mail-web.js\"; init();</script>"
 			next
 		}
 		/<link data-trunk rel="copy-file"/ { next }

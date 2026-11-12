@@ -6,11 +6,11 @@
 
 use std::collections::BTreeSet;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_engine::search_index::{self, context, search_folder_filter};
-use mailcraft_model::{FolderKind, ItemId};
-use mailcraft_search::{Doc, Filter, matches, parse};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_engine::search_index::{self, context, search_folder_filter};
+use iridium_mail_model::{FolderKind, ItemId};
+use iridium_mail_search::{Doc, Filter, matches, parse};
 use serde_json::{Map, Value, json};
 
 struct Rng(u64);

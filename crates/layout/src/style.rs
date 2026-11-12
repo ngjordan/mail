@@ -1,8 +1,8 @@
 //! Text style inheritance and resolution to concrete font/size/colour.
 
-use mailcraft_fonts::{BODY_FAMILY, BODY_SIZE_PT, FontDb, FontId, LineMetrics};
-use mailcraft_geom::{Color, pt_to_px};
-use mailcraft_model::{TextStyle, UnderlineKind};
+use iridium_mail_fonts::{BODY_FAMILY, BODY_SIZE_PT, FontDb, FontId, LineMetrics};
+use iridium_mail_geom::{Color, pt_to_px};
+use iridium_mail_model::{TextStyle, UnderlineKind};
 
 /// Family list used for monospace text (`Pre`, `monospace: Some(true)`).
 pub(crate) const MONO_FAMILY: &str = "Consolas, Courier New, monospace";

@@ -7,9 +7,9 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_engine::model::{Block, DrawingKind, Mailbox};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_engine::model::{Block, DrawingKind, Mailbox};
 
 use super::editor::{BODY_LABEL, PAD};
 use super::*;

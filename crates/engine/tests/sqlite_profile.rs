@@ -1,12 +1,12 @@
 //! Storage stage S6: a session on a SQLite profile (`--store sqlite`). Commands, undo and redo, bodies and
 //! sources, restarts and the legacy profile next to it behave as on the legacy storage, whatever
-//! `MAILCRAFT_STORE` says.
+//! `IRIDIUM_MAIL_STORE` says.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{DateTime, FolderRole, ItemId, MailItem};
-use mailcraft_store::{Content, Op, StoreKind};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{DateTime, FolderRole, ItemId, MailItem};
+use iridium_mail_store::{Content, Op, StoreKind};
 use serde_json::json;
 
 fn now() -> DateTime {
@@ -15,10 +15,10 @@ fn now() -> DateTime {
 
 /// A SQLite profile holding the sample mailbox (its content copied into the profile's packs).
 fn sample_profile(dir: &std::path::Path) -> Session {
-    let sample = mailcraft_engine::sample::sample_session_at(now());
+    let sample = iridium_mail_engine::sample::sample_session_at(now());
     let mut s = Session::open_with(dir, StoreKind::Sqlite).unwrap();
     assert_eq!(s.store.as_ref().unwrap().kind(), StoreKind::Sqlite);
-    let keys = mailcraft_store::bodies::keys_of(sample.mailbox.mail.items());
+    let keys = iridium_mail_store::bodies::keys_of(sample.mailbox.mail.items());
     let n = s.bodies.import(sample.bodies.export(&keys)).unwrap();
     assert_eq!(n, keys.len());
     s.mailbox = sample.mailbox.clone();
@@ -30,7 +30,10 @@ fn sample_profile(dir: &std::path::Path) -> Session {
 }
 
 /// The JSON paths where two mailboxes differ (a readable failure instead of two whole mailboxes).
-fn differences(a: &mailcraft_engine::model::Mailbox, b: &mailcraft_engine::model::Mailbox) -> Vec<String> {
+fn differences(
+    a: &iridium_mail_engine::model::Mailbox,
+    b: &iridium_mail_engine::model::Mailbox,
+) -> Vec<String> {
     fn walk(path: String, a: &serde_json::Value, b: &serde_json::Value, out: &mut Vec<String>) {
         use serde_json::Value;
         match (a, b) {
@@ -65,8 +68,8 @@ fn inbox_ids(s: &Session) -> Vec<ItemId> {
 fn commands_undo_and_restarts_on_a_sqlite_profile() {
     let dir = tempfile::tempdir().unwrap();
     let mut s = sample_profile(dir.path());
-    assert!(dir.path().join(mailcraft_store::SQL_DB_FILE).is_file());
-    assert!(dir.path().join(mailcraft_store::packs::PACKS_DIR).is_dir());
+    assert!(dir.path().join(iridium_mail_store::SQL_DB_FILE).is_file());
+    assert!(dir.path().join(iridium_mail_store::packs::PACKS_DIR).is_dir());
     let ids = inbox_ids(&s);
     assert!(ids.len() >= 3, "the sample Inbox has mail");
     let (a, b, c) = (ids[0], ids[1], ids[2]);
@@ -113,7 +116,7 @@ fn a_legacy_profile_stays_legacy_and_says_so() {
     drop(Session::open_with(dir.path(), StoreKind::Legacy).unwrap());
     let s = Session::open_with(dir.path(), StoreKind::Sqlite).unwrap();
     assert_eq!(s.store.as_ref().unwrap().kind(), StoreKind::Legacy);
-    assert!(!dir.path().join(mailcraft_store::SQL_DB_FILE).exists());
+    assert!(!dir.path().join(iridium_mail_store::SQL_DB_FILE).exists());
     assert!(
         s.notices.iter().any(|n| format!("{n:?}").contains("SQLite storage is only used for new profiles")),
         "{:?}",
@@ -130,7 +133,7 @@ fn exit_folds_the_log_into_the_database() {
         s.run("mail.markRead", &json!({"ids": [id.0]})).unwrap();
     }
     s.run("file.exit", &json!({})).unwrap();
-    let wal = dir.path().join(format!("{}-wal", mailcraft_store::SQL_DB_FILE));
+    let wal = dir.path().join(format!("{}-wal", iridium_mail_store::SQL_DB_FILE));
     assert_eq!(std::fs::metadata(&wal).map_or(0, |m| m.len()), 0, "the write-ahead log is folded in on exit");
     let before = s.mailbox.clone();
     drop(s);

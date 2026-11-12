@@ -40,7 +40,7 @@
 
 use std::fmt;
 
-use mailcraft_model::dates::{civil_from_days, days_from_civil};
+use iridium_mail_model::dates::{civil_from_days, days_from_civil};
 
 use crate::doc::{DocKind, Level};
 use crate::token::words;
@@ -817,7 +817,7 @@ pub fn make_term(key: Key, value: &str, quoted: bool) -> Query {
             name: "conversation".into(),
             label: "conversation".into(),
             op: PropOp::Is,
-            value: mailcraft_model::subject::conversation_topic(value),
+            value: iridium_mail_model::subject::conversation_topic(value),
         }),
         // Text keys returned above.
         _ => return invalid(),

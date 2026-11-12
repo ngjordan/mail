@@ -3,13 +3,13 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use egui::{Event, Key, Modifiers, RawInput};
-use mailcraft_engine::Module;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_ui_egui::keys::{
+use iridium_mail_engine::Module;
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_ui_egui::keys::{
     self, Action, Chord, KeyContext, KeytipAction, KeytipStep, KeytipTarget, keytip_step, resolve,
     resolve_with,
 };
-use mailcraft_ui_egui::{App, Surface};
+use iridium_mail_ui_egui::{App, Surface};
 use serde_json::json;
 
 fn c(text: &str) -> Chord {
@@ -308,7 +308,7 @@ fn press_applies_keys_and_keytips() {
     assert_eq!(app.ui.keytips.as_deref(), Some(""));
     keys::press(&ctx, &mut app, Surface::Main, "H");
     assert_eq!(app.ui.keytips.as_deref(), Some("H"));
-    assert_eq!(Some(mailcraft_ui_egui::ribbon::selected_tab(&app, Surface::Main)), Some("Home"));
+    assert_eq!(Some(iridium_mail_ui_egui::ribbon::selected_tab(&app, Surface::Main)), Some("Home"));
     keys::press(&ctx, &mut app, Surface::Main, "Escape");
     assert_eq!(app.ui.keytips.as_deref(), Some(""));
     keys::press(&ctx, &mut app, Surface::Main, "Escape");
@@ -338,7 +338,7 @@ fn keytips_continue_into_dropdown_entries() {
     assert_eq!(app.ui.keytips, None);
     assert!(matches!(
         app.s.mailbox.mail.get(first).map(|m| &m.flag),
-        Some(mailcraft_model::FlagState::Flagged { .. })
+        Some(iridium_mail_model::FlagState::Flagged { .. })
     ));
     // Escape inside an opened dropdown steps back to the tab's keytips.
     keys::press(&ctx, &mut app, Surface::Main, "Alt H G");
@@ -370,7 +370,7 @@ fn f11_focuses_search_people() {
     assert_eq!(resolve(c("F11"), &main_mail()), Some(Action::FocusSearchPeople));
     let r = keys::press(&ctx, &mut app, Surface::Main, "F11");
     assert_eq!(r["ok"], true, "{r}");
-    assert_eq!(mailcraft_ui_egui::ribbon::selected_tab(&app, Surface::Main), "Home");
+    assert_eq!(iridium_mail_ui_egui::ribbon::selected_tab(&app, Surface::Main), "Home");
 }
 
 #[test]
@@ -431,7 +431,7 @@ fn handle_consumes_bound_events() {
     );
     assert_eq!(app.ui.keytips.as_deref(), Some(""));
     frame(&ctx, &mut app, vec![key(Key::V, Modifiers::NONE), Event::Text("v".into())]);
-    assert_eq!(Some(mailcraft_ui_egui::ribbon::selected_tab(&app, Surface::Main)), Some("View"));
+    assert_eq!(Some(iridium_mail_ui_egui::ribbon::selected_tab(&app, Surface::Main)), Some("View"));
     frame(&ctx, &mut app, vec![key(Key::Escape, Modifiers::NONE)]);
     frame(&ctx, &mut app, vec![key(Key::Escape, Modifiers::NONE)]);
     assert_eq!(app.ui.keytips, None);

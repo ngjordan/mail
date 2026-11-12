@@ -1,4 +1,4 @@
-//! `rules.*`: CRUD over [`Mailbox::rules`](mailcraft_model::Mailbox) (`plan/reference/rules.md`), the one-click
+//! `rules.*`: CRUD over [`Mailbox::rules`](iridium_mail_model::Mailbox) (`plan/reference/rules.md`), the one-click
 //! "Always Move Messages From" rule, Create Rule from a message, rule templates (Rules Wizard "Start from a
 //! template"), Change Rule quick actions, Copy to other accounts, Run Rules Now, rules for sent and arriving
 //! messages, and `.mcrules` export/import (JSON, folders written as paths so files move between mailboxes).
@@ -13,8 +13,8 @@ use serde_json::{Value, json};
 
 use crate::cmd::util::{ok, opt_bool, opt_folder, opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session, always};
-use mailcraft_model::rule::{ActionScope, RuleContext};
-use mailcraft_model::{FolderId, FolderKind, ItemId, Rule, RuleAction, RuleCondition};
+use iridium_mail_model::rule::{ActionScope, RuleContext};
+use iridium_mail_model::{FolderId, FolderKind, ItemId, Rule, RuleAction, RuleCondition};
 
 /// The rule executor (`crate::rules_exec`).
 pub use crate::rules_exec as exec;
@@ -65,7 +65,7 @@ pub(crate) fn parse_field<T: serde::de::DeserializeOwned>(
 
 /// Reads a file of at most `cap` bytes.
 pub(crate) fn read_file_capped(path: &Path, cap: u64) -> Result<Vec<u8>, CmdError> {
-    match mailcraft_store::journal::read_capped(path, cap) {
+    match iridium_mail_store::journal::read_capped(path, cap) {
         Ok(Some(b)) => Ok(b),
         Ok(None) => Err(CmdError::Failed(format!("{} not found", path.display()))),
         Err(e) => Err(CmdError::Failed(format!("{}: {e}", path.display()))),
@@ -75,7 +75,7 @@ pub(crate) fn read_file_capped(path: &Path, cap: u64) -> Result<Vec<u8>, CmdErro
 /// Writes `data` to `path` atomically.
 pub(crate) fn write_file(path: &Path, data: &[u8]) -> Result<(), CmdError> {
     use std::io::Write;
-    mailcraft_store::journal::write_atomic(path, |w| w.write_all(data))
+    iridium_mail_store::journal::write_atomic(path, |w| w.write_all(data))
         .map_err(|e| CmdError::Failed(format!("{}: {e}", path.display())))
 }
 
@@ -754,9 +754,13 @@ fn remap_actions(actions: &mut [RuleAction], map: &dyn Fn(FolderId) -> Option<Fo
 }
 
 /// Mail folder of `account` (any account when `None`) whose path is `path`.
-fn folder_by_path(s: &Session, account: Option<mailcraft_model::AccountId>, path: &str) -> Option<FolderId> {
+fn folder_by_path(
+    s: &Session,
+    account: Option<iridium_mail_model::AccountId>,
+    path: &str,
+) -> Option<FolderId> {
     let want = path.trim().trim_matches('\\').to_lowercase();
-    let mut cands: Vec<&mailcraft_model::Folder> = s
+    let mut cands: Vec<&iridium_mail_model::Folder> = s
         .mailbox
         .folders
         .values()
@@ -783,7 +787,7 @@ fn export(s: &mut Session, p: &Value) -> CmdResult {
             }
         }
     }
-    let doc = json!({"mailcraft_rules": 2, "format": RULES_EXTENSION, "rules": s.mailbox.rules, "folders": folders});
+    let doc = json!({"iridium_mail_rules": 2, "format": RULES_EXTENSION, "rules": s.mailbox.rules, "folders": folders});
     let bytes = serde_json::to_vec_pretty(&doc).map_err(|e| CmdError::Failed(e.to_string()))?;
     write_file(&path, &bytes)?;
     Ok(json!({"exported": s.mailbox.rules.len(), "path": path.display().to_string()}))
@@ -919,8 +923,7 @@ fn template_rule(s: &Session, key: &str, p: &Value) -> Result<Rule, CmdError> {
         }
         "mobileAlert" => {
             return Err(CmdError::Disabled(
-                "alerts to a mobile device need a text messaging service, which MailCraft does not have"
-                    .into(),
+                "alerts to a mobile device need a text messaging service, which Mail does not have".into(),
             ));
         }
         "blankReceive" | "blankSend" => {
@@ -1052,7 +1055,7 @@ fn apply_outgoing(s: &mut Session, p: &Value) -> CmdResult {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use mailcraft_model::{Address, FolderRole, MailItem, Mailbox};
+    use iridium_mail_model::{Address, FolderRole, MailItem, Mailbox};
 
     pub(crate) fn session() -> (Session, FolderId, FolderId) {
         let mb = Mailbox::new_local("Test");
@@ -1351,7 +1354,7 @@ pub(crate) mod tests {
         assert_eq!(
             s.mailbox.rules[0].actions,
             vec![
-                RuleAction::MarkImportance(mailcraft_model::Importance::High),
+                RuleAction::MarkImportance(iridium_mail_model::Importance::High),
                 RuleAction::MoveTo(proj),
                 RuleAction::StopProcessingMoreRules
             ]
@@ -1364,8 +1367,8 @@ pub(crate) mod tests {
     #[test]
     fn copy_to_other_accounts_maps_folders_by_path() {
         let (mut s, _, proj) = session();
-        let other = s.mailbox.add_account(mailcraft_model::Account {
-            kind: mailcraft_model::AccountKind::Imap,
+        let other = s.mailbox.add_account(iridium_mail_model::Account {
+            kind: iridium_mail_model::AccountKind::Imap,
             display_name: "Work".into(),
             address: "work@example.com".into(),
             ..Default::default()
@@ -1382,7 +1385,7 @@ pub(crate) mod tests {
         assert_eq!(copy.account(), Some("work@example.com"));
         assert!(!copy.enabled);
         assert_eq!(copy.name, "Budget (work@example.com)");
-        let work_inbox = s.mailbox.role_folder(other, mailcraft_model::FolderRole::Inbox).unwrap();
+        let work_inbox = s.mailbox.role_folder(other, iridium_mail_model::FolderRole::Inbox).unwrap();
         let work_proj = s.mailbox.create_folder(work_inbox, "Projects").unwrap();
         let c = s.run("rules.copyToAccounts", &json!({"id": id, "accounts": [other.0]})).unwrap();
         assert_eq!(c["disabled"], 0);
@@ -1404,9 +1407,9 @@ pub(crate) mod tests {
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("Inbox\\\\Projects"), "{text}");
         // Another mailbox whose Projects folder has a different id gets it remapped.
-        let mut t = Session::new(mailcraft_model::Mailbox::new_local("Other"));
+        let mut t = Session::new(iridium_mail_model::Mailbox::new_local("Other"));
         let acct = t.mailbox.accounts[0].id;
-        let inbox = t.mailbox.role_folder(acct, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = t.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Inbox).unwrap();
         t.mailbox.create_folder(inbox, "Filler").unwrap();
         let tproj = t.mailbox.create_folder(inbox, "Projects").unwrap();
         assert_ne!(tproj, proj);

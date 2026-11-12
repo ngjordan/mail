@@ -1,7 +1,7 @@
 //! Message content: bodies and sources read on demand (storage stage S5, `plan/storage-adr.md` §6).
 //!
 //! Mail items hold neither their decoded body nor their RFC 5322 source; both live in the session's
-//! [`mailcraft_store::BodyStore`] (on disk in a profile, in memory otherwise), and items refer to them by key
+//! [`iridium_mail_store::BodyStore`] (on disk in a profile, in memory otherwise), and items refer to them by key
 //! (`blob` for the source, `body_key` for a body record). Everything that shows or scans content reads it
 //! here: the reading pane, compose (replies, forwards, drafts), rules and junk filtering, search indexing,
 //! print, save and export. Decoded bodies go through the store's byte-capped cache.
@@ -17,8 +17,8 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use mailcraft_model::{Body, ItemId, MailItem};
-use mailcraft_store::{Content, StoreError};
+use iridium_mail_model::{Body, ItemId, MailItem};
+use iridium_mail_store::{Content, StoreError};
 
 use crate::{CmdError, Session};
 
@@ -28,7 +28,7 @@ pub(crate) fn content_err(e: StoreError) -> CmdError {
 }
 
 /// Bytes of a source read for its header section (expiry dates, header conditions).
-pub const HEADER_SCAN: usize = mailcraft_store::legacy::HEADER_SCAN;
+pub const HEADER_SCAN: usize = iridium_mail_store::legacy::HEADER_SCAN;
 
 /// Most remembered body tests ([`Session::body_test`]); past it they are all forgotten and found again.
 pub const MAX_BODY_TESTS: usize = 1 << 18;
@@ -135,7 +135,7 @@ impl Session {
         if let Some(raw) = &content.source
             && item.expires.is_none()
         {
-            item.expires = mailcraft_store::legacy::expiry_in(raw);
+            item.expires = iridium_mail_store::legacy::expiry_in(raw);
         }
         self.bodies.store(item, content).map_err(content_err)?;
         item.body_evicted = false;
@@ -227,10 +227,10 @@ impl Session {
     /// Every content key something in this session still refers to: the mailbox, the recoverable items, the
     /// undo and redo history. Content outside this set can go.
     pub fn content_keys_in_use(&self) -> BTreeSet<String> {
-        let mut keys = mailcraft_store::bodies::keys_of(self.mailbox.mail.items());
-        keys.extend(mailcraft_store::bodies::keys_of(self.recover.bin.items.iter().filter_map(|e| {
+        let mut keys = iridium_mail_store::bodies::keys_of(self.mailbox.mail.items());
+        keys.extend(iridium_mail_store::bodies::keys_of(self.recover.bin.items.iter().filter_map(|e| {
             match &e.item {
-                mailcraft_model::DeletedItem::Mail(m) => Some(&**m),
+                iridium_mail_model::DeletedItem::Mail(m) => Some(&**m),
                 _ => None,
             }
         })));

@@ -1,15 +1,15 @@
 //! End to end: an IMAP/SMTP account set up through commands against the local test servers
-//! (`mailcraft-testmail`, 127.0.0.1 only, synthetic users), then receive, rules, reply, send, and local
+//! (`iridium-mail-testmail`, 127.0.0.1 only, synthetic users), then receive, rules, reply, send, and local
 //! changes reaching the server. Every wait has a timeout.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::account::RemoteOp;
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox, ResponseState};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::account::RemoteOp;
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox, ResponseState};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -69,7 +69,7 @@ fn server_subjects(srv: &TestServers, user: &str, mailbox: &str) -> Vec<String> 
         .unwrap()
         .iter()
         .filter_map(|m| {
-            let msg = mailcraft_mime::parse(&m.raw).ok()?;
+            let msg = iridium_mail_mime::parse(&m.raw).ok()?;
             Some(msg.subject())
         })
         .collect()
@@ -79,7 +79,7 @@ fn server_flags(srv: &TestServers, user: &str, mailbox: &str, subject: &str) -> 
     srv.messages(user, mailbox)
         .unwrap()
         .into_iter()
-        .find(|m| mailcraft_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
+        .find(|m| iridium_mail_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
         .map(|m| m.flags)
         .unwrap_or_else(|| panic!("{subject} not in {mailbox}"))
 }
@@ -259,7 +259,7 @@ fn send_failure_keeps_message_in_outbox_and_retries() {
     assert!(
         s.notices
             .iter()
-            .any(|n| matches!(n, mailcraft_engine::Notice::Error(t) if t.contains("could not be sent"))),
+            .any(|n| matches!(n, iridium_mail_engine::Notice::Error(t) if t.contains("could not be sent"))),
         "{:?}",
         s.notices
     );
@@ -377,7 +377,7 @@ fn queued_delete_and_move_are_not_downloaded_again() {
     assert_eq!(s.mailbox.account(acct).unwrap().sync.pending.len(), 2);
     hold_queue(&mut s, acct, true);
     // An automatic update meanwhile must not bring them back into the Inbox.
-    let plan = mailcraft_engine::Plan { send: false, receive: true, folders: None, user: false };
+    let plan = iridium_mail_engine::Plan { send: false, receive: true, folders: None, user: false };
     assert_eq!(s.send_receive(&[acct], plan).unwrap(), 1);
     assert!(s.wait_for_sync(WAIT));
     assert_eq!(count(&s, inbox, "Newest"), 0, "a permanently deleted message came back");
@@ -484,7 +484,7 @@ fn archiving_on_a_server_without_an_archive_mailbox_makes_one() {
     settle(&mut s);
     assert_eq!(server_subjects(&srv, ALICE, "Archive"), ["Keep me"], "the message stays on the server");
     assert!(server_subjects(&srv, ALICE, "INBOX").is_empty());
-    assert_eq!(srv.special_use(ALICE, "Archive"), Some(mailcraft_testmail::SpecialUse::Archive));
+    assert_eq!(srv.special_use(ALICE, "Archive"), Some(iridium_mail_testmail::SpecialUse::Archive));
     assert_eq!(s.mailbox.folder(archive).unwrap().remote_name.as_deref(), Some("Archive"));
     sync(&mut s);
     assert_eq!(count(&s, archive, "Keep me"), 1, "no second copy after the next run");
@@ -516,7 +516,7 @@ fn moving_into_a_folder_below_a_missing_archive_keeps_the_mail_on_the_server() {
     settle(&mut s);
     assert_eq!(server_subjects(&srv, ALICE, "Archive/2024"), ["Keep me"], "the message stays on the server");
     assert!(server_subjects(&srv, ALICE, "INBOX").is_empty());
-    assert_eq!(srv.special_use(ALICE, "Archive"), Some(mailcraft_testmail::SpecialUse::Archive));
+    assert_eq!(srv.special_use(ALICE, "Archive"), Some(iridium_mail_testmail::SpecialUse::Archive));
     sync(&mut s);
     assert_eq!(s.mailbox.mail.items().filter(|m| m.subject == "Keep me").count(), 1);
     assert_eq!(s.mailbox.mail.get(keep).unwrap().folder, sub);

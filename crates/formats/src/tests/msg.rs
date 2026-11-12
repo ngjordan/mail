@@ -1,7 +1,7 @@
 use std::io::{Cursor, Write};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::{BodyFormat, DateTime, FolderId, Importance, MailItem, Sensitivity};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::{BodyFormat, DateTime, FolderId, Importance, MailItem, Sensitivity};
 use proptest::prelude::*;
 
 use crate::msg::{self, AttachmentContent, MsgAttachment, MsgMessage, rtf, rtfhtml};
@@ -169,8 +169,11 @@ fn mail_item_without_source_writes() {
         is_draft: true,
         ..Default::default()
     };
-    let body =
-        mailcraft_model::Body { text: Some("draft text".into()), format: BodyFormat::PlainText, html: None };
+    let body = iridium_mail_model::Body {
+        text: Some("draft text".into()),
+        format: BodyFormat::PlainText,
+        html: None,
+    };
     let back = msg::read(&msg::write_item(&item, None, Some(&body)).unwrap()).unwrap();
     assert!(back.unsent);
     assert_eq!(back.body_text.as_deref(), Some("draft text"));
@@ -250,7 +253,7 @@ fn reads_8bit_strings_rtf_body_and_header_fallback() {
     assert!(item.is_draft);
     // The rich-text format is not what the source gives, so the body store keeps a record of it.
     let mut stored = item.clone();
-    let mut bodies = mailcraft_store::BodyStore::in_memory();
+    let mut bodies = iridium_mail_store::BodyStore::in_memory();
     bodies.store(&mut stored, &m.to_mail_item(FolderId(1), DateTime::default()).1).unwrap();
     assert!(stored.blob.is_some() && stored.body_key.is_some());
     assert_eq!(bodies.body_of(&stored).unwrap().map(|b| b.format), Some(BodyFormat::RichText));

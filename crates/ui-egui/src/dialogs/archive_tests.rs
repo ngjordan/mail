@@ -6,9 +6,9 @@ use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
 use super::*;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::folder::ArchiveMode;
-use mailcraft_model::{FolderRole, ItemId, MailItem};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::folder::ArchiveMode;
+use iridium_mail_model::{FolderRole, ItemId, MailItem};
 
 fn harness(app: App) -> Harness<'static, App> {
     let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(
@@ -40,7 +40,7 @@ fn inbox(app: &App) -> FolderId {
 /// A message received `days` days before the sample's "now".
 fn old_mail(app: &mut App, days: i64) -> ItemId {
     let folder = inbox(app);
-    let received = mailcraft_model::DateTime::from_unix(app.s.now().unix - days * 86_400, 0);
+    let received = iridium_mail_model::DateTime::from_unix(app.s.now().unix - days * 86_400, 0);
     app.s.mailbox.add_mail(MailItem { folder, subject: "Old news".into(), received, ..Default::default() })
 }
 
@@ -225,8 +225,8 @@ fn scheduler_waits_while_a_dialog_is_open() {
 
 #[test]
 fn scheduler_waits_for_send_receive_when_the_server_queue_is_full() {
-    use mailcraft_model::account::{PendingOp, RemoteOp};
-    use mailcraft_model::{Account, AccountKind};
+    use iridium_mail_model::account::{PendingOp, RemoteOp};
+    use iridium_mail_model::{Account, AccountKind};
     let mut app = App::new(sample_session());
     let acct = app.s.mailbox.add_account(Account {
         kind: AccountKind::Imap,
@@ -237,10 +237,10 @@ fn scheduler_waits_for_send_receive_when_the_server_queue_is_full() {
     app.s.mailbox.create_default_folders(acct);
     let inbox = app.s.mailbox.role_folder(acct, FolderRole::Inbox).unwrap();
     app.s.mailbox.folders.get_mut(&inbox).unwrap().remote_name = Some("INBOX".into());
-    let received = mailcraft_model::DateTime::from_unix(app.s.now().unix - 400 * 86_400, 0);
-    let body = mailcraft_model::item::Body { text: Some("Downloaded".into()), ..Default::default() };
+    let received = iridium_mail_model::DateTime::from_unix(app.s.now().unix - 400 * 86_400, 0);
+    let body = iridium_mail_model::item::Body { text: Some("Downloaded".into()), ..Default::default() };
     let item = MailItem { folder: inbox, received, remote_id: Some("3".into()), ..Default::default() };
-    let old = app.s.add_message(item, &mailcraft_engine::Content::body(body)).unwrap();
+    let old = app.s.add_message(item, &iridium_mail_engine::Content::body(body)).unwrap();
     let full: Vec<PendingOp> = (1..=archive::QUEUE_ROOM)
         .map(|n| PendingOp {
             id: n as u64,

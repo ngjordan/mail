@@ -9,12 +9,12 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FlagState, FolderId, FolderRole, Importance, ItemId, Mailbox};
-use mailcraft_engine::sync::cmds;
-use mailcraft_net::graph::GraphClient;
-use mailcraft_net::graph::mail::MessagePatch;
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FlagState, FolderId, FolderRole, Importance, ItemId, Mailbox};
+use iridium_mail_engine::sync::cmds;
+use iridium_mail_net::graph::GraphClient;
+use iridium_mail_net::graph::mail::MessagePatch;
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -60,7 +60,7 @@ fn subjects(srv: &TestServers, user: &str, mailbox: &str) -> Vec<String> {
     srv.messages(user, mailbox)
         .unwrap()
         .iter()
-        .filter_map(|m| mailcraft_mime::parse(&m.raw).ok().map(|x| x.subject()))
+        .filter_map(|m| iridium_mail_mime::parse(&m.raw).ok().map(|x| x.subject()))
         .collect()
 }
 
@@ -69,7 +69,7 @@ fn server_msg(srv: &TestServers, mailbox: &str, subject: &str) -> Option<(u32, V
     srv.messages(ALICE, mailbox)
         .unwrap()
         .into_iter()
-        .find(|m| mailcraft_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
+        .find(|m| iridium_mail_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
         .map(|m| (m.uid, m.flags))
 }
 
@@ -108,8 +108,8 @@ fn add_graph(s: &mut Session, srv: &TestServers, extra: Value) -> AccountId {
 
 /// Another client of the same mailbox (the test's own Graph client).
 fn other_client(srv: &TestServers) -> GraphClient {
-    let opts = mailcraft_net::ConnectOptions::trusting(srv.cert_der.clone());
-    GraphClient::new(&srv.graph_url(), ALICE_PW, mailcraft_net::http::HttpClient::new(opts)).unwrap()
+    let opts = iridium_mail_net::ConnectOptions::trusting(srv.cert_der.clone());
+    GraphClient::new(&srv.graph_url(), ALICE_PW, iridium_mail_net::http::HttpClient::new(opts)).unwrap()
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn graph_account_receives_writes_back_and_sends() {
     s.view.auto_send_receive_minutes = 0;
     let a = add_graph(&mut s, &srv, json!({}));
     assert!(s.mailbox.account(a).unwrap().outgoing.is_none(), "sending goes through Graph");
-    assert_eq!(s.push_state(a).0, mailcraft_engine::sync::PushMode::Off, "nothing before the first run");
+    assert_eq!(s.push_state(a).0, iridium_mail_engine::sync::PushMode::Off, "nothing before the first run");
     let t = run(&mut s, "accounts.test", json!({"account": a.0, "wait": true}));
     assert_eq!(t["ok"], true, "{t}");
 
@@ -143,7 +143,7 @@ fn graph_account_receives_writes_back_and_sends() {
     assert!(!s.mailbox.mail.get(hello).unwrap().read);
     assert!(srv.graph_requests().iter().any(|r| r.contains("$value")));
     s.poll_sync();
-    assert_eq!(s.push_state(a).0, mailcraft_engine::sync::PushMode::Polling, "Graph: the Inbox is polled");
+    assert_eq!(s.push_state(a).0, iridium_mail_engine::sync::PushMode::Polling, "Graph: the Inbox is polled");
 
     // Later: new mail and changes made elsewhere arrive through the saved delta link.
     let other = other_client(&srv);
@@ -291,7 +291,7 @@ fn graph_large_attachment_goes_through_an_upload_session() {
     assert!(req.iter().any(|r| r.ends_with("/send")), "sent as a draft");
     let got = srv.messages(BOB, "INBOX").unwrap();
     assert_eq!(got.len(), 1);
-    let parsed = mailcraft_mime::parse(&got[0].raw).unwrap();
+    let parsed = iridium_mail_mime::parse(&got[0].raw).unwrap();
     let files = parsed.attachments();
     assert_eq!(files.len(), 1);
     assert_eq!((files[0].filename.as_str(), files[0].data.len()), ("plans.bin", 4 * 1024 * 1024));
@@ -319,7 +319,7 @@ fn graph_headers_first_then_marked_download() {
         .mailbox
         .folders
         .values()
-        .find(|f| f.account != a && f.kind == mailcraft_engine::model::FolderKind::Mail)
+        .find(|f| f.account != a && f.kind == iridium_mail_engine::model::FolderKind::Mail)
         .map(|f| f.id)
         .unwrap();
     select(&mut s, keep);
@@ -371,11 +371,11 @@ fn graph_oauth_sign_in_uses_graph_scopes_and_renews_a_refused_token() {
 
     // A custom provider (the test authorization server) signs in with the device flow.
     let (auth, token, device) = srv.oauth_endpoints();
-    s.sync.oauth_http = Some(mailcraft_net::ConnectOptions::trusting(srv.cert_der.clone()));
+    s.sync.oauth_http = Some(iridium_mail_net::ConnectOptions::trusting(srv.cert_der.clone()));
     let v = run(
         &mut s,
         "accounts.oauthSignIn",
-        json!({"account": a.0, "provider": "custom", "clientId": mailcraft_testmail::OAUTH_TEST_CLIENT,
+        json!({"account": a.0, "provider": "custom", "clientId": iridium_mail_testmail::OAUTH_TEST_CLIENT,
                "flow": "device", "tokenEndpoint": token, "deviceAuthorizationEndpoint": device,
                "authorizationEndpoint": auth}),
     );
@@ -475,9 +475,9 @@ fn local_message(s: &mut Session, a: AccountId, raw: &[u8]) -> ItemId {
         .find(|f| f.account != a && f.role == Some(FolderRole::Inbox))
         .map(|f| f.id)
         .unwrap();
-    let mut item = mailcraft_store::import::item_from_raw(raw, inbox, s.now());
+    let mut item = iridium_mail_store::import::item_from_raw(raw, inbox, s.now());
     item.read = true;
-    s.add_message(item, &mailcraft_engine::Content { source: Some(raw.to_vec()), body: None }).unwrap()
+    s.add_message(item, &iridium_mail_engine::Content { source: Some(raw.to_vec()), body: None }).unwrap()
 }
 
 /// A message with a 3 MB file: too large to upload in one request.
@@ -673,7 +673,7 @@ fn graph_flag_days_follow_changes_both_ways() {
     let due = find(&s, inbox, "Due").unwrap();
     let (uid, _) = server_msg(&srv, "INBOX", "Due").unwrap();
     let id = srv.graph_message_id(ALICE, "INBOX", uid).unwrap();
-    let day = |d: &str| mailcraft_mime::DateTime::parse_rfc5322(d).unwrap().unix;
+    let day = |d: &str| iridium_mail_mime::DateTime::parse_rfc5322(d).unwrap().unix;
     select(&mut s, due);
     run(&mut s, "mail.flagCustom", json!({"ids": [due.0], "due": day("Fri, 9 Oct 2026 17:00:00 +0000")}));
     settle(&mut s);
@@ -686,7 +686,7 @@ fn graph_flag_days_follow_changes_both_ways() {
     // Set on the service by another client: it comes here.
     let patch = MessagePatch {
         flag: Some((
-            mailcraft_net::graph::mail::FlagStatus::Flagged,
+            iridium_mail_net::graph::mail::FlagStatus::Flagged,
             Some("2026-10-19T08:00:00".into()),
             Some("2026-10-20T17:00:00".into()),
         )),

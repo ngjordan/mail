@@ -1,6 +1,6 @@
 //! Synthetic PST files for importer tests, written from the public [MS-PST] specification.
 //!
-//! MailCraft only reads PST files; this builder exists so tests have fixtures without real mail. It writes a
+//! Mail only reads PST files; this builder exists so tests have fixtures without real mail. It writes a
 //! Unicode PST (format version 23) with every structure a reader walks:
 //! - the header (§2.2.2.6) with both CRCs (§5.3) and the root (§2.2.2.5) pointing at the two B-trees;
 //! - the node and block B-trees (§2.2.2.7.7) as leaf pages, with one intermediate level when the entries do
@@ -232,7 +232,7 @@ const NT_ASSOC_CONTENTS_TABLE: u32 = 0x0F;
 const NT_LTP: u32 = 0x1F;
 
 /// The store record key every entry id carries (synthetic).
-const RECORD_KEY: [u8; 16] = *b"MailCraft-test-k";
+const RECORD_KEY: [u8; 16] = *b"iridium-mail-key";
 
 fn nid(kind: u32, index: u32) -> u32 {
     (index << 5) | kind

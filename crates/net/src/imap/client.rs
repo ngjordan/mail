@@ -8,7 +8,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use mailcraft_model::Security;
+use iridium_mail_model::Security;
 
 use super::namespace::{self, Namespaces};
 use super::parse::{

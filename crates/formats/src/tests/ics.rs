@@ -1,6 +1,6 @@
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{AttendeeRole, ResponseStatus};
-use mailcraft_model::{
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{AttendeeRole, ResponseStatus};
+use iridium_mail_model::{
     Appointment, Attendee, BusyStatus, DateTime, Recurrence, Task, TaskPriority, TaskStatus,
 };
 use proptest::prelude::*;
@@ -279,7 +279,7 @@ fn sample_appointment() -> Appointment {
 #[test]
 fn stored_events_leave_scheduling_to_the_client() {
     // Regression: events kept on a CalDAV server carried plain ORGANIZER / ATTENDEE, so a server that
-    // schedules (RFC 6638) mailed the attendees itself, next to the invitations MailCraft sends.
+    // schedules (RFC 6638) mailed the attendees itself, next to the invitations Mail sends.
     let a = sample_appointment();
     let now = utc(2026, 10, 1, 0, 0);
     let unfold = |t: String| t.replace("\r\n ", "");
@@ -651,8 +651,8 @@ fn named_zone_vtimezone_round_trips() {
 
 #[test]
 fn item_window_details_round_trip() {
-    use mailcraft_model::Importance;
-    use mailcraft_model::calendar::ItemAttachment;
+    use iridium_mail_model::Importance;
+    use iridium_mail_model::calendar::ItemAttachment;
     // A flight: leaves Toronto, lands in London (an end in another zone), with formatted notes, a file and
     // high importance.
     let a = Appointment {

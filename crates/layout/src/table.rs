@@ -1,9 +1,9 @@
 //! Tables: grid placement (colspan / rowspan), automatic column widths from min/max-content widths,
 //! row heights, cell backgrounds and borders.
 
-use mailcraft_geom::{Color, Rect};
-use mailcraft_model::rich::TableCell;
-use mailcraft_model::{TableBorders, TextStyle};
+use iridium_mail_geom::{Color, Rect};
+use iridium_mail_model::rich::TableCell;
+use iridium_mail_model::{TableBorders, TextStyle};
 
 use crate::DisplayItem;
 use crate::block::{Ctx, Frame, Out, blocks_min_max, layout_blocks};

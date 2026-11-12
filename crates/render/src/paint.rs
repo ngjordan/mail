@@ -4,9 +4,9 @@
 
 use std::collections::HashMap;
 
-use mailcraft_fonts::{FontDb, FontId, PathCmd, UI_FAMILY, is_zero_width};
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::{FontDb, FontId, PathCmd, UI_FAMILY, is_zero_width};
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_layout::DisplayItem;
 use tiny_skia::{
     FillRule, FilterQuality, IntSize, LineCap, Paint, PathBuilder, Pattern, Pixmap, SpreadMode, Stroke,
     Transform,

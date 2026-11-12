@@ -1,4 +1,4 @@
-//! Account setup against the in-process servers from `mailcraft-testmail` (127.0.0.1 only): discovery from
+//! Account setup against the in-process servers from `iridium-mail-testmail` (127.0.0.1 only): discovery from
 //! autoconfig documents, DNS SRV and MX records (fake responder) and tenant OpenID configurations (standing in
 //! for Microsoft's), OAuth 2.0 device sign-in with XOAUTH2 /
 //! OAUTHBEARER logins to IMAP and SMTP and token refresh, JMAP push, and the IMAP first-download window.
@@ -7,17 +7,17 @@
 
 use std::time::{Duration, Instant};
 
-use mailcraft_net::autoconfig::Protocol;
-use mailcraft_net::discover::{DiscoverOptions, ResolverChoice, discover};
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::imap::ImapClient;
-use mailcraft_net::jmap::{JmapAuth, JmapClient, StateChange};
-use mailcraft_net::oauth::{self, OAuthProvider};
-use mailcraft_net::providers::ProviderId;
-use mailcraft_net::smtp::{SmtpClient, SmtpSettings};
-use mailcraft_net::sync::{FolderState, ImapAccount, ImapSettings, months_before};
-use mailcraft_net::{ConnectOptions, Credentials, NetError, Security};
-use mailcraft_testmail::{Config, DateTime, Mx, OAUTH_TEST_CLIENT, Srv, TestServers};
+use iridium_mail_net::autoconfig::Protocol;
+use iridium_mail_net::discover::{DiscoverOptions, ResolverChoice, discover};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::imap::ImapClient;
+use iridium_mail_net::jmap::{JmapAuth, JmapClient, StateChange};
+use iridium_mail_net::oauth::{self, OAuthProvider};
+use iridium_mail_net::providers::ProviderId;
+use iridium_mail_net::smtp::{SmtpClient, SmtpSettings};
+use iridium_mail_net::sync::{FolderState, ImapAccount, ImapSettings, months_before};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError, Security};
+use iridium_mail_testmail::{Config, DateTime, Mx, OAUTH_TEST_CLIENT, Srv, TestServers};
 
 const USER: &str = "alice@example.com";
 const PASS: &str = "alice-pw";
@@ -429,7 +429,7 @@ fn jmap_push_reports_new_mail() {
     assert!(matches!(c2.open_events(&["Email"], 60), Err(NetError::Unsupported(_))));
 }
 
-fn loop_event(events: &mut mailcraft_net::eventsource::EventStream) -> String {
+fn loop_event(events: &mut iridium_mail_net::eventsource::EventStream) -> String {
     let deadline = Instant::now() + Duration::from_secs(20);
     while Instant::now() < deadline {
         if let Some(e) = events.next_event(Duration::from_millis(200)).unwrap()

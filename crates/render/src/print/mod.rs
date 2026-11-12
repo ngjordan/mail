@@ -2,7 +2,7 @@
 //! ([`crate::pdf`]) or the print preview ([`render_page`]).
 //!
 //! Styles (observed names): Memo Style (one item after another: user-name band, bold-label header block, rule,
-//! body laid out with `mailcraft-layout`), Table Style (the message list as columns, header repeated on every
+//! body laid out with `iridium-mail-layout`), Table Style (the message list as columns, header repeated on every
 //! page), Calendar Daily / Weekly / Monthly (grids), Card / Small Booklet / Phone Directory for contacts, and
 //! the Mail Merge documents (form letters, mailing labels, envelopes).
 //!
@@ -25,9 +25,9 @@ mod table;
 mod tests;
 mod text;
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_layout::{DisplayItem, DisplayList};
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_layout::{DisplayItem, DisplayList};
 
 pub use calendar::{CalendarData, CalendarEvent, CalendarStyle};
 pub use cards::{ContactCard, ContactStyle};

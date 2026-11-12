@@ -2,7 +2,7 @@
 //! expired mail, the Archive dialog's folder runs, undo and the schedule.
 
 use super::*;
-use mailcraft_model::{FlagState, TaskStatus};
+use iridium_mail_model::{FlagState, TaskStatus};
 
 const DAY: i64 = 86_400;
 
@@ -92,7 +92,7 @@ fn items_age_by_their_own_date() {
     let a = Appointment { start: ago(40), end: ago(39), ..Default::default() };
     assert_eq!(appointment_date(&a), Some(ago(39).unix), "by the end");
     let series = Appointment {
-        recurrence: Some(mailcraft_model::Recurrence { rrule: "FREQ=DAILY".into(), exdates: Vec::new() }),
+        recurrence: Some(iridium_mail_model::Recurrence { rrule: "FREQ=DAILY".into(), exdates: Vec::new() }),
         ..a.clone()
     };
     assert_eq!(appointment_date(&series), None, "recurring series stay");
@@ -162,7 +162,7 @@ fn default_run_moves_old_items_into_a_mirrored_archives_tree() {
     let contact = ItemId(s.mailbox.alloc_id());
     s.mailbox
         .contacts
-        .insert(contact, mailcraft_model::Contact { id: contact, folder: contacts, ..Default::default() });
+        .insert(contact, iridium_mail_model::Contact { id: contact, folder: contacts, ..Default::default() });
 
     let r = run(&mut s, "file.archive", json!({"all": true}));
     assert_eq!(r["moved"], 5, "{r}");
@@ -326,7 +326,7 @@ fn expired_mail_is_deleted_when_asked() {
     let raw = |date: &str| format!("Expiry-Date: {date}\r\nSubject: Offer\r\n\r\nBody\r\n").into_bytes();
     let expiring = |s: &mut Session, folder: FolderId, date: &str| {
         let item = MailItem { folder, received: ago(1), ..Default::default() };
-        s.add_message(item, &mailcraft_store::Content::source(raw(date))).unwrap()
+        s.add_message(item, &iridium_mail_store::Content::source(raw(date))).unwrap()
     };
     let expired = expiring(&mut s, inbox, "Mon, 19 Oct 2026 10:00:00 +0000");
     let later = expiring(&mut s, inbox, "Sun, 1 Nov 2026 10:00:00 +0000");
@@ -458,8 +458,8 @@ fn schedule_is_due_every_n_days_and_scheduled_runs_leave_no_undo_step() {
 
 #[test]
 fn scheduled_runs_queue_server_changes() {
-    use mailcraft_model::ServerSettings;
-    use mailcraft_model::account::RemoteOp;
+    use iridium_mail_model::ServerSettings;
+    use iridium_mail_model::account::RemoteOp;
     let mut s = session();
     let acct = s.mailbox.add_account(Account {
         kind: AccountKind::Imap,
@@ -473,8 +473,9 @@ fn scheduled_runs_queue_server_changes() {
     s.mailbox.folders.get_mut(&inbox).unwrap().remote_name = Some("INBOX".into());
     let item =
         MailItem { folder: inbox, received: ago(400), remote_id: Some("42".into()), ..Default::default() };
-    let body = mailcraft_model::item::Body { text: Some("Downloaded in full".into()), ..Default::default() };
-    let id = s.add_message(item, &mailcraft_store::Content::body(body)).unwrap();
+    let body =
+        iridium_mail_model::item::Body { text: Some("Downloaded in full".into()), ..Default::default() };
+    let id = s.add_message(item, &iridium_mail_store::Content::body(body)).unwrap();
     run(&mut s, "options.autoArchive", json!({"run": true}));
     s.fixed_now = Some(DateTime::from_unix(now_unix() + 15 * DAY, 0));
     assert!(poll(&mut s).due);
@@ -489,7 +490,7 @@ fn scheduled_runs_queue_server_changes() {
 
 /// An IMAP account with a synchronised Inbox (`INBOX`).
 fn imap_inbox(s: &mut Session) -> (AccountId, FolderId) {
-    use mailcraft_model::ServerSettings;
+    use iridium_mail_model::ServerSettings;
     let acct = s.mailbox.add_account(Account {
         kind: AccountKind::Imap,
         display_name: "user@example.com".into(),
@@ -510,13 +511,13 @@ fn server_mail(s: &mut Session, folder: FolderId, uid: usize, full: bool) -> Ite
         MailItem { folder, received: ago(400), remote_id: Some(uid.to_string()), ..Default::default() };
     s.add_message(
         item,
-        &mailcraft_store::Content::body(mailcraft_model::item::Body { text, ..Default::default() }),
+        &iridium_mail_store::Content::body(iridium_mail_model::item::Body { text, ..Default::default() }),
     )
     .unwrap()
 }
 
 fn expunges(s: &Session, acct: AccountId) -> usize {
-    use mailcraft_model::account::RemoteOp;
+    use iridium_mail_model::account::RemoteOp;
     let pending = &s.mailbox.account(acct).unwrap().sync.pending;
     pending.iter().filter(|p| matches!(p.op, RemoteOp::Expunge { .. })).count()
 }
@@ -579,7 +580,7 @@ fn header_only_server_mail_is_not_moved_out_of_the_server() {
 fn scheduled_steps_never_overflow_the_server_change_queue() {
     // Regression: a backlog larger than the server change queue (MAX_PENDING) dropped queued changes, the
     // user's own first, when steps ran back to back without send/receive in between.
-    use mailcraft_model::account::{PendingOp, RemoteOp};
+    use iridium_mail_model::account::{PendingOp, RemoteOp};
     let mut s = session();
     let (acct, inbox) = imap_inbox(&mut s);
     let backlog = crate::sync::MAX_PENDING + 1_000;
@@ -626,9 +627,9 @@ fn expired_mail_is_found_in_the_store_after_a_restart() {
         let mut s = Session::open(dir.path()).unwrap();
         let inbox = role(&s, FolderRole::Inbox);
         let item = MailItem { folder: inbox, received: ago(1), ..Default::default() };
-        let id = s.add_message(item, &mailcraft_store::Content::source(raw)).unwrap();
+        let id = s.add_message(item, &iridium_mail_store::Content::source(raw)).unwrap();
         let mb = s.mailbox.clone();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(mb))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(mb))]);
         id
     };
     let mut s = Session::open(dir.path()).unwrap();

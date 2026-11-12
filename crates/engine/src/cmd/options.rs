@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use crate::cmd::rules::dialog;
 use crate::cmd::util::{opt_bool, opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::{FolderPaneState, ReadingPanePos};
+use iridium_mail_model::{FolderPaneState, ReadingPanePos};
 
 pub use settings::{Def, Effect, Kind, Settings};
 
@@ -165,8 +165,8 @@ fn forget_key_of_old_server(s: &mut Session) {
 /// Refuses a translation server address that cannot be used (not http(s), or plain http to another computer).
 #[cfg(not(target_arch = "wasm32"))]
 fn check_translator_url(_s: &Session, url: &str) -> Result<(), CmdError> {
-    let o = mailcraft_net::translate::LibreTranslate::default_options();
-    mailcraft_net::translate::LibreTranslate::new(url, None, o)
+    let o = iridium_mail_net::translate::LibreTranslate::default_options();
+    iridium_mail_net::translate::LibreTranslate::new(url, None, o)
         .map(|_| ())
         .map_err(|e| CmdError::Params(format!("translation server: {e}")))
 }
@@ -196,8 +196,8 @@ fn test_translator(s: &mut Session, url: Option<&str>, key: Option<Option<String
     let options = s
         .translator_options
         .clone()
-        .unwrap_or_else(mailcraft_net::translate::LibreTranslate::default_options);
-    let lt = mailcraft_net::translate::LibreTranslate::new(&url, key.as_deref(), options)
+        .unwrap_or_else(iridium_mail_net::translate::LibreTranslate::default_options);
+    let lt = iridium_mail_net::translate::LibreTranslate::new(&url, key.as_deref(), options)
         .map_err(|e| CmdError::Params(format!("translation server: {e}")))?;
     let mut to = s.settings.text("language.translateTo");
     if to.split(['-', '_']).next().is_some_and(|p| p.eq_ignore_ascii_case("en")) {
@@ -472,7 +472,7 @@ mod tests {
     use crate::cmd::rules::tests::session;
     use crate::compose::ComposeState;
     use crate::{Notice, SearchScope};
-    use mailcraft_model::{BodyFormat, Doc, FolderRole, Importance};
+    use iridium_mail_model::{BodyFormat, Doc, FolderRole, Importance};
 
     #[test]
     fn open_pages_and_aliases() {

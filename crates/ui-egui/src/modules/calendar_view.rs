@@ -42,14 +42,14 @@ use egui::{
 };
 use serde_json::{Value, json};
 
-use mailcraft_engine::Module;
-use mailcraft_engine::cmd::calendar::pim::Kind;
-use mailcraft_engine::cmd::calendar::tz::Clock;
-use mailcraft_engine::cmd::calendar::{
+use iridium_mail_engine::Module;
+use iridium_mail_engine::cmd::calendar::pim::Kind;
+use iridium_mail_engine::cmd::calendar::tz::Clock;
+use iridium_mail_engine::cmd::calendar::{
     self as engine_cal, CalendarCurrentView, CalendarMode, CalendarViewState, DailyTaskList, occurrences,
     props, views,
 };
-use mailcraft_model::{Appointment, BusyStatus, FolderId, FolderKind, ItemId, ReadingPanePos, dates};
+use iridium_mail_model::{Appointment, BusyStatus, FolderId, FolderKind, ItemId, ReadingPanePos, dates};
 
 use super::common::{
     DAY, ModState, a11y, add_months, blend, category_color, child, clock, current_folder, day_of, day_string,
@@ -152,11 +152,11 @@ impl WindowUi {
 }
 
 fn ui_id() -> Id {
-    Id::unique("mailcraft.modules.calendar.ui")
+    Id::unique("iridium-mail.modules.calendar.ui")
 }
 
 fn window_ui_id(viewport: egui::ViewportId) -> Id {
-    Id::unique(("mailcraft.modules.calendar.ui.window", viewport))
+    Id::unique(("iridium-mail.modules.calendar.ui.window", viewport))
 }
 
 fn load_ui(ctx: &egui::Context) -> CalUi {
@@ -528,7 +528,7 @@ fn title(st: &ModState, sel: i64, work: &[u8], first: u8) -> String {
 }
 
 /// `label` with the alternate calendar's date after it ("Friday, October 9, 2026, 26 Tishri 5787").
-fn with_alternate(label: String, alt: Option<&mailcraft_model::altcal::AltDate>) -> String {
+fn with_alternate(label: String, alt: Option<&iridium_mail_model::altcal::AltDate>) -> String {
     match alt {
         Some(a) => format!("{label}, {}", a.long()),
         None => label,
@@ -657,11 +657,11 @@ pub(super) fn gather_in(
     to: i64,
     view: Option<&CalendarViewState>,
 ) -> Vec<Occ> {
-    use mailcraft_model::view::{FilterText, ItemStyle, rule_style, rules_active, rules_need_body};
+    use iridium_mail_model::view::{FilterText, ItemStyle, rule_style, rules_active, rules_need_body};
     let clock = cal_clock(app);
     let now = app.s.now().unix;
     let filter = view.map(|v| &v.filter).filter(|f| !f.is_empty());
-    let rules: &[mailcraft_model::view::ItemRule] = view.map_or(&[], |v| v.rules.as_slice());
+    let rules: &[iridium_mail_model::view::ItemRule] = view.map_or(&[], |v| v.rules.as_slice());
     // Each item's text is lowercased once, and only when the filter or a rule needs it.
     let want_text = filter.is_some() || rules_active(rules);
     let want_body = filter.is_some_and(|f| f.needs_body()) || rules_need_body(rules);
@@ -916,14 +916,14 @@ fn paint_block(ui: &Ui, app: &mut App, rect: Rect, o: &Occ, selected: bool, prev
 // ---------------------------------------------------------------------------------------------------------
 
 fn background_id() -> Id {
-    Id::unique("mailcraft.modules.calendar.background")
+    Id::unique("iridium-mail.modules.calendar.background")
 }
 
 /// Every frame, in any module: internet calendar refreshes that Send/Receive or Update Folder queued
 /// (`SyncState::calendar_requests`) go to the fetch workers, and finished fetches are applied. Idle frames
 /// only read one flag.
 pub(super) fn background(ctx: &egui::Context, app: &mut App) {
-    let requests = mailcraft_engine::cmd::send_receive::take_calendar_requests(&mut app.s);
+    let requests = iridium_mail_engine::cmd::send_receive::take_calendar_requests(&mut app.s);
     let active = ctx.data(|d| d.get_temp::<bool>(background_id())).unwrap_or(false);
     if requests.is_empty() && !active {
         return;
@@ -932,7 +932,7 @@ pub(super) fn background(ctx: &egui::Context, app: &mut App) {
     for d in requests {
         cu.fetches.start(ctx, d);
     }
-    if app.s.view.module != mailcraft_engine::Module::Calendar {
+    if app.s.view.module != iridium_mail_engine::Module::Calendar {
         // The calendar view polls for itself while it shows.
         windows::poll_fetches(ctx, app, &mut cu);
     }
@@ -1564,7 +1564,7 @@ fn month_view(ui: &mut Ui, app: &mut App, st: &mut ModState, look: &Look, pane: 
             vec2(cell_w, cell_h),
         );
         let resp = ui.interact(cell, Id::unique(("mc-cal-cell", k, d)), Sense::click());
-        let alt = mailcraft_engine::queries::alternate_date(&app.s, d);
+        let alt = iridium_mail_engine::queries::alternate_date(&app.s, d);
         a11y(&resp, Role::Button, &with_alternate(long_date(d), alt.as_ref()));
         let (_, m, dd) = ymd(d);
         let fill = if d == sel {
@@ -1926,7 +1926,7 @@ fn time_grid_view(
             vec2(col_w, head_h),
         );
         let resp = ui.interact(r, Id::unique(("mc-cal-dayhead", k, d)), Sense::click());
-        let alt = mailcraft_engine::queries::alternate_date(&app.s, d);
+        let alt = iridium_mail_engine::queries::alternate_date(&app.s, d);
         a11y(&resp, Role::Button, &with_alternate(long_date(d), alt.as_ref()));
         let color = if d == now { app.theme.accent } else { app.theme.text };
         let (_, _, dd) = ymd(d);
@@ -2729,7 +2729,7 @@ fn schedule_view(ui: &mut Ui, app: &mut App, st: &mut ModState, look: &Look, rec
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::Recurrence;
+    use iridium_mail_model::Recurrence;
 
     /// Release check (Schedule view): at 1024×768 the view opened on 8 AM with the current time (2:30 PM)
     /// right on the pane's edge; and a scrolled-off hour label showed cut ("M :30").
@@ -2763,7 +2763,7 @@ mod tests {
     /// calendar colour on the selected-cell fill) was nearly invisible.
     #[test]
     fn month_dots_stay_visible_on_every_cell_fill() {
-        let app = App::new(mailcraft_engine::sample::sample_session());
+        let app = App::new(iridium_mail_engine::sample::sample_session());
         let cals: Vec<FolderId> =
             app.s.mailbox.folders.values().filter(|f| f.kind == FolderKind::Calendar).map(|f| f.id).collect();
         assert!(!cals.is_empty());
@@ -2807,7 +2807,7 @@ mod tests {
 
     #[test]
     fn a_view_saved_by_one_window_is_not_adopted_by_another() {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         app.s.view.module = Module::Calendar;
         let mut a = ModState::default();
         sync_mode(&mut app, &mut a);
@@ -2830,8 +2830,8 @@ mod tests {
     /// not only to the List views.
     #[test]
     fn grid_views_follow_the_view_filter_and_conditional_formatting() {
-        use mailcraft_model::view::{ItemFilter, ItemRule};
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        use iridium_mail_model::view::{ItemFilter, ItemRule};
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         let cal = app.s.mailbox.appointments.values().next().map(|a| a.folder).unwrap();
         for subject in ["Budget review", "Lunch"] {
             app.s
@@ -2913,8 +2913,8 @@ mod tests {
     }
 
     fn appt(start: &str, end: &str, rrule: Option<&str>) -> Appointment {
-        let s = mailcraft_engine::cmd::calendar::pim::parse_local(start, 0).unwrap();
-        let e = mailcraft_engine::cmd::calendar::pim::parse_local(end, 0).unwrap();
+        let s = iridium_mail_engine::cmd::calendar::pim::parse_local(start, 0).unwrap();
+        let e = iridium_mail_engine::cmd::calendar::pim::parse_local(end, 0).unwrap();
         Appointment {
             start: s,
             end: e,

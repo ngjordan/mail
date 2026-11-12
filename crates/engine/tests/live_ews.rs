@@ -12,18 +12,18 @@
 //! - `MC_LIVE_EWS_ADDR` (optional): the server's IP address, when its name does not resolve here,
 //! - `MC_LIVE_DAV_URL` (optional): the same server's CardDAV / CalDAV address, for the DAV test.
 //!
-//! Run: `cargo test -p mailcraft-engine --test live_ews -- --ignored --test-threads=1`. Everything a test
+//! Run: `cargo test -p iridium-mail-engine --test live_ews -- --ignored --test-threads=1`. Everything a test
 //! creates carries a run tag (`MCLIVE…`) and is removed at the end, also when the test fails.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::{Duration, Instant};
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, Contact, FolderId, FolderRole, ItemId, Mailbox, Task};
-use mailcraft_net::ConnectOptions;
-use mailcraft_net::ews::{EwsAuth, EwsClient};
-use mailcraft_net::http::{HttpClient, Url};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, Contact, FolderId, FolderRole, ItemId, Mailbox, Task};
+use iridium_mail_net::ConnectOptions;
+use iridium_mail_net::ews::{EwsAuth, EwsClient};
+use iridium_mail_net::http::{HttpClient, Url};
 use serde_json::{Value, json};
 
 const WAIT: Duration = Duration::from_secs(90);
@@ -42,7 +42,7 @@ fn live() -> Option<Live> {
     let url = get("MC_LIVE_EWS_URL")?;
     if let Some(addr) = get("MC_LIVE_EWS_ADDR") {
         let host = Url::parse(&url).expect("URL").host;
-        mailcraft_net::transport::set_host_address(&host, Some(addr.parse().expect("IP address")));
+        iridium_mail_net::transport::set_host_address(&host, Some(addr.parse().expect("IP address")));
     }
     let pem = get("MC_LIVE_EWS_CA").map(|p| std::fs::read_to_string(p).expect("MC_LIVE_EWS_CA readable"));
     Some(Live {
@@ -75,7 +75,7 @@ fn tag(what: &str) -> String {
 fn server(l: &Live) -> EwsClient {
     let mut o = ConnectOptions { io_timeout: Duration::from_secs(60), ..ConnectOptions::default() };
     if let Some(pem) = &l.pem {
-        o.tls.extra_roots_der = mailcraft_engine::accounts::pem_certificates(pem).expect("PEM");
+        o.tls.extra_roots_der = iridium_mail_engine::accounts::pem_certificates(pem).expect("PEM");
     }
     let auth = EwsAuth::Auto { user: l.user.clone(), password: l.pass.clone() };
     EwsClient::connect(&l.url, auth, HttpClient::new(o), Some(&l.user)).expect("sign-in")
@@ -144,7 +144,7 @@ fn add(s: &mut Session, l: &Live) -> AccountId {
     let r = run(
         s,
         "accounts.add",
-        json!({"kind": "exchange", "address": l.user, "senderName": "MailCraft Live Test", "incoming": incoming, "password": l.pass}),
+        json!({"kind": "exchange", "address": l.user, "senderName": "Mail Live Test", "incoming": incoming, "password": l.pass}),
     );
     AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap())
 }
@@ -172,7 +172,7 @@ fn eventually(s: &mut Session, what: &str, mut done: impl FnMut(&mut Session) ->
 }
 
 /// The server's items of `folder` whose properties mention `text`.
-fn server_items(c: &EwsClient, folder: &str, text: &str) -> Vec<mailcraft_net::autoconfig::Element> {
+fn server_items(c: &EwsClient, folder: &str, text: &str) -> Vec<iridium_mail_net::autoconfig::Element> {
     c.find_items(folder, "<t:BaseShape>AllProperties</t:BaseShape>", 50_000)
         .unwrap()
         .into_iter()
@@ -202,7 +202,7 @@ fn live_ews_mail() {
     let cid = run(&mut s, "mail.newEmail", json!({}))["compose"].as_u64().unwrap();
     run(&mut s, "compose.setTo", json!({"compose": cid, "value": l.user}));
     run(&mut s, "compose.setSubject", json!({"compose": cid, "value": t}));
-    run(&mut s, "compose.insertText", json!({"compose": cid, "text": "Sent by the MailCraft live tests."}));
+    run(&mut s, "compose.insertText", json!({"compose": cid, "text": "Sent by the Mail live tests."}));
     run(&mut s, "compose.send", json!({"compose": cid}));
     settle(&mut s);
     let tt = t.clone();

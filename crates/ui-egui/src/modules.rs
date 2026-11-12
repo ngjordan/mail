@@ -51,7 +51,7 @@ pub fn takes_dialog(app: &App, name: &str, params: &Value) -> bool {
         || editors::dialogs::HANDLED.contains(&name)
         // New meetings and appointments asked for from any module (New Items, Reply with Meeting).
         || calendar_view::forms::is_form(name, params)
-        || (app.s.view.module == mailcraft_engine::Module::Calendar
+        || (app.s.view.module == iridium_mail_engine::Module::Calendar
             && calendar_view::windows::is_request(name, params))
 }
 

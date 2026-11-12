@@ -8,9 +8,11 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, Contact, FolderId, FolderRole, ItemId, Mailbox, Task, TaskStatus};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{
+    AccountId, Contact, FolderId, FolderRole, ItemId, Mailbox, Task, TaskStatus,
+};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const PAT: &str = "pat@example.com";
@@ -97,7 +99,7 @@ fn subjects(srv: &TestServers, user: &str, mailbox: &str) -> Vec<String> {
     srv.messages(user, mailbox)
         .unwrap()
         .iter()
-        .filter_map(|m| mailcraft_mime::parse(&m.raw).ok().map(|x| x.subject()))
+        .filter_map(|m| iridium_mail_mime::parse(&m.raw).ok().map(|x| x.subject()))
         .collect()
 }
 
@@ -105,7 +107,7 @@ fn flags(srv: &TestServers, mailbox: &str, subject: &str) -> Vec<String> {
     srv.messages(PAT, mailbox)
         .unwrap()
         .into_iter()
-        .find(|m| mailcraft_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
+        .find(|m| iridium_mail_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
         .map(|m| m.flags)
         .unwrap_or_default()
 }
@@ -224,14 +226,14 @@ fn ntlm_only_server_and_autodiscover_setup() {
     let srv = servers(true);
     let mut s = session();
     srv.set_autodiscover("example.com", true);
-    s.sync.discovery = mailcraft_engine::sync::DiscoverOptions {
-        resolver: mailcraft_engine::sync::ResolverChoice::Off,
+    s.sync.discovery = iridium_mail_engine::sync::DiscoverOptions {
+        resolver: iridium_mail_engine::sync::ResolverChoice::Off,
         autoconfig_urls: Vec::new(),
         tenant_url: None,
         allow_reserved: true,
         autodiscover_urls: srv.autodiscover_url_templates(),
         autodiscover_probe: None,
-        http: mailcraft_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()),
+        http: iridium_mail_engine::sync::ConnectOptions::trusting(srv.cert_der.clone()),
         ..Default::default()
     };
     // Without a password the lookup only learns that an Exchange server answers here.
@@ -314,7 +316,7 @@ fn contacts_calendar_and_tasks_synchronise_over_ews() {
     );
     let up = srv.ews_items(PAT, "contacts");
     assert_eq!(up.len(), 2, "{up:?}");
-    assert!(up.iter().any(|(_, x)| x.contains("Sam") && x.contains("MailCraftUid")), "{up:?}");
+    assert!(up.iter().any(|(_, x)| x.contains("Sam") && x.contains("MailUid")), "{up:?}");
     let series = s
         .mailbox
         .appointments
@@ -354,7 +356,7 @@ fn contacts_calendar_and_tasks_synchronise_over_ews() {
     let server_series =
         || srv.ews_items(PAT, "calendar").into_iter().find(|(_, x)| x.contains("Weekly sync"));
     let kept = server_series();
-    let next_week = mailcraft_engine::model::DateTime::from_unix(1_794_927_600 + 7 * 86_400, 0);
+    let next_week = iridium_mail_engine::model::DateTime::from_unix(1_794_927_600 + 7 * 86_400, 0);
     s.mailbox.appointments.get_mut(&series.id).unwrap().recurrence.as_mut().unwrap().exdates.push(next_week);
     let before = writes();
     run(&mut s, "sendReceive.folder", json!({"folder": calendar.0}));
@@ -481,7 +483,7 @@ fn automatic_replies_free_busy_and_meeting_answers_go_through_the_server() {
     // calendar) the organizer had the answer anyway, and a retry sent a second one.
     let cal = s.mailbox.role_folder(a, FolderRole::Calendar).unwrap();
     let saved = s.mailbox.folder(cal).unwrap().remote_name.clone();
-    mailcraft_engine::cmd::calendar::props::update(&mut s.mailbox, cal, |p| p.read_only = true);
+    iridium_mail_engine::cmd::calendar::props::update(&mut s.mailbox, cal, |p| p.read_only = true);
     assert!(s.run("calendar.respond", &json!({"id": req.0, "response": "accept"})).is_err());
     assert!(srv.ews_replies().is_empty(), "nothing reached the server: {:?}", srv.ews_replies());
     s.mailbox.folders.get_mut(&cal).unwrap().remote_name = saved;

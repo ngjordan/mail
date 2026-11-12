@@ -3,8 +3,8 @@
 
 use std::collections::BTreeMap;
 
-use mailcraft_model::account::AccountSync;
-use mailcraft_model::{
+use iridium_mail_model::account::AccountSync;
+use iridium_mail_model::{
     Account, AccountId, Appointment, Category, Folder, FolderId, ItemId, MailItem, Mailbox, Note, Task,
 };
 use proptest::prelude::*;
@@ -98,7 +98,7 @@ fn schema_is_created_once_and_checked() {
         let c = rusqlite::Connection::open(foreign.path().join(DB_FILE)).unwrap();
         c.execute_batch("CREATE TABLE t(x)").unwrap();
     }
-    assert!(Db::open(foreign.path()).is_err(), "tables without a MailCraft schema");
+    assert!(Db::open(foreign.path()).is_err(), "tables without a Mail schema");
     // Not a database at all.
     let junk = tmp();
     std::fs::write(junk.path().join(DB_FILE), b"this is not sqlite").unwrap();
@@ -117,9 +117,10 @@ fn ids_round_trip_through_sql_integers() {
 #[test]
 fn flags_and_keys_of_an_item() {
     let mut m = item(1, 1, true, "RE: Fwd: Budget  review");
-    m.importance = mailcraft_model::Importance::High;
-    m.focus = mailcraft_model::FocusClass::Other;
-    m.from = Some(mailcraft_mime::Mailbox { name: Some("Ann Lee".into()), addr: "ann@example.com".into() });
+    m.importance = iridium_mail_model::Importance::High;
+    m.focus = iridium_mail_model::FocusClass::Other;
+    m.from =
+        Some(iridium_mail_mime::Mailbox { name: Some("Ann Lee".into()), addr: "ann@example.com".into() });
     let f = rows::flags_of(&m);
     assert_eq!(f & rows::FLAG_READ, rows::FLAG_READ);
     assert_eq!(f & rows::FLAG_FOCUS_OTHER, rows::FLAG_FOCUS_OTHER);
@@ -379,7 +380,7 @@ fn op_of(a: &Act, mb: &Mailbox) -> Option<Op> {
         })),
         Act::Views(f) => {
             let mut views = mb.views.clone();
-            views.insert(FolderId(*f), mailcraft_model::ViewSettings::default());
+            views.insert(FolderId(*f), iridium_mail_model::ViewSettings::default());
             Op::PutConfig(Box::new(SmallState { views: Some(views), ..Default::default() }))
         }
         Act::Pim(kind, id, on) => {
@@ -391,7 +392,7 @@ fn op_of(a: &Act, mb: &Mailbox) -> Option<Op> {
                 }
                 (1, true) => {
                     next.contacts
-                        .insert(id, mailcraft_model::Contact { id, folder: f, ..Default::default() });
+                        .insert(id, iridium_mail_model::Contact { id, folder: f, ..Default::default() });
                 }
                 (2, true) => {
                     next.tasks.insert(id, Task { id, folder: f, ..Default::default() });

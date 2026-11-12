@@ -1,14 +1,14 @@
 //! Search › Refine › More › Add Form Field: a chooser over the item properties grouped by form
 //! (Frequently-used fields, All Mail fields, All Contact fields, …), a condition and a value; and the
 //! form-field conditions already in the search as editable rows (field, condition, value) with Remove.
-//! Conditions are `prop:` terms of the search query (`mailcraft_engine::cmd::search::FORM_FIELDS`).
+//! Conditions are `prop:` terms of the search query (`iridium_mail_engine::cmd::search::FORM_FIELDS`).
 
 use egui::{Context, RichText};
 use serde_json::{Value, json};
 
 use super::common::{Dlg, Out, btn, btn_en, combo_idx, footer, heading, muted, window, with_state};
 use crate::App;
-use mailcraft_engine::cmd::search::{FORM_FIELDS, FieldType, conditions_of, field_conditions};
+use iridium_mail_engine::cmd::search::{FORM_FIELDS, FieldType, conditions_of, field_conditions};
 
 /// One condition of the current search as the rows show it.
 #[derive(Clone, Default)]

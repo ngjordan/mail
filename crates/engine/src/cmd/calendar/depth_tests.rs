@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use super::tests::{role, session};
 use super::*;
 use crate::Module;
-use mailcraft_model::{FolderRole, Task};
+use iridium_mail_model::{FolderRole, Task};
 
 fn cal(s: &Session) -> FolderId {
     role(s, FolderRole::Calendar)
@@ -86,7 +86,7 @@ fn calendar_colours_are_stored_and_automatic_follows_position() {
     run(&mut s, "calendar.color", json!({"color": "Automatic", "folder": team.0}));
     assert_eq!(props::read(&s.mailbox, team).color, None);
     // Damaged stored properties never break the colour.
-    s.mailbox.folders.get_mut(&team).unwrap().remote_name = Some("mailcraft-calendar:{]".into());
+    s.mailbox.folders.get_mut(&team).unwrap().remote_name = Some("iridium-mail-calendar:{]".into());
     assert_eq!(calendar_color(&s.mailbox, team).0, "Green");
 }
 
@@ -95,7 +95,7 @@ fn undo_restores_calendar_properties_with_a_server_account() {
     // With an IMAP account, undo carries synchronised folder state over; calendar properties are not that.
     let mut s = session();
     if let Some(a) = s.mailbox.accounts.first_mut() {
-        a.kind = mailcraft_model::AccountKind::Imap;
+        a.kind = iridium_mail_model::AccountKind::Imap;
     }
     let main = cal(&s);
     run(&mut s, "calendar.color", json!({"color": "Teal", "folder": main.0}));
@@ -311,7 +311,7 @@ fn a_named_zone_sets_the_offset_when_the_profile_opens() {
         assert_eq!(r["offsetMin"], 540);
         s.run("file.exit", &json!({})).unwrap();
     }
-    // The saved numeric offset is stale (as after a DST change while MailCraft was closed).
+    // The saved numeric offset is stale (as after a DST change while Mail was closed).
     let path = dir.path().join("settings.json");
     let mut f: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
     f["settings"]["calendar.timeZone"] = json!(0);
@@ -843,7 +843,7 @@ fn daily_task_list_days() {
             folder,
             subject: subject.into(),
             due: due.map(|d| pim::parse_local(d, 0).unwrap()),
-            status: if done { mailcraft_model::TaskStatus::Completed } else { Default::default() },
+            status: if done { iridium_mail_model::TaskStatus::Completed } else { Default::default() },
             ..Default::default()
         };
         s.mailbox.tasks.insert(id, t);
@@ -1020,7 +1020,7 @@ fn table_view_settings_round_trip() {
     // Stored state is not trusted.
     let mut hostile = CalendarViewState {
         columns: vec![CalendarColumn::Start; 50],
-        rules: vec![mailcraft_model::view::ItemRule::default(); 100],
+        rules: vec![iridium_mail_model::view::ItemRule::default(); 100],
         ..CalendarViewState::default()
     };
     hostile.labels.insert("bogus".into(), "x".into());

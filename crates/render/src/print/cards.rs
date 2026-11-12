@@ -2,9 +2,9 @@
 //! columns), Small Booklet (the card layout in smaller type) and Phone Directory (letter headings, then
 //! name … phone lines with dot leaders, in two columns).
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::Rect;
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::Rect;
+use iridium_mail_layout::DisplayItem;
 
 use super::text::{self, Style};
 use super::{Frame, GRID, MAX_PAGES, SHADE};

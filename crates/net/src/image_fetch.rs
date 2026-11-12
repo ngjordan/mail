@@ -125,7 +125,7 @@ impl Default for ImageFetcher {
         let mut client = HttpClient::new(options);
         client.max_body = MAX_IMAGE_BYTES;
         client.max_redirects = 0;
-        client.user_agent = "Mozilla/5.0 (compatible; MailCraft)".into();
+        client.user_agent = "Mozilla/5.0 (compatible; Mail)".into();
         ImageFetcher {
             client,
             max_bytes: MAX_IMAGE_BYTES,

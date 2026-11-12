@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# AppImage of the desktop app (mailcraft-cli rides along in usr/bin).
+# AppImage of the desktop app (iridium-mail-cli rides along in usr/bin).
 #
 #     packaging/linux/appimage.sh [--target TRIPLE] [--profile release|debug] [--out DIR] [--no-update-info]
 #
 # Expects the binaries to be built already (packaging/linux/package.sh --build does that).
-# Output: MailCraft-ARCH.AppImage and MailCraft-ARCH.AppImage.zsync. The name carries no version on purpose:
+# Output: Mail-ARCH.AppImage and Mail-ARCH.AppImage.zsync. The name carries no version on purpose:
 # the update information embedded in the AppImage is
-#     gh-releases-zsync|MonkeySaint|mailcraft|latest|MailCraft-*ARCH.AppImage.zsync
+#     gh-releases-zsync|MonkeySaint|iridium-mail|latest|Mail-*ARCH.AppImage.zsync
 # and AppImageUpdate fetches the matching file from the newest GitHub release.
 #
 # The windowing libraries the app opens at run time come from the build system:
 # packaging/linux/appimage-libs.sh copies them into usr/lib (all but the AppImage excludelist), gives
-# usr/bin/mailcraft the RPATH $ORIGIN/../lib and checks the AppDir (nothing missing, glibc 2.35 at most).
+# usr/bin/iridium-mail the RPATH $ORIGIN/../lib and checks the AppDir (nothing missing, glibc 2.35 at most).
 # Build the AppImage on Debian 12 / Ubuntu 22.04 or older (the release job uses rust:1.99-bookworm).
 # packaging/linux/appimage-test.sh starts the result offline in a plain Ubuntu 22.04 container.
 #
 # Tools:
 #   appimagetool  $APPIMAGETOOL, else PATH, else (MC_DOWNLOAD_TOOLS=1) downloaded once from
 #                 https://github.com/AppImage/appimagetool/releases (continuous) into $MC_TOOL_CACHE
-#                 (default ~/.cache/mailcraft-packaging; CI keeps that folder with actions/cache).
+#                 (default ~/.cache/iridium-mail-packaging; CI keeps that folder with actions/cache).
 #                 It runs with APPIMAGE_EXTRACT_AND_RUN=1, so containers need no FUSE.
 #   runtime       for a foreign architecture (aarch64 on an x86_64 host) the type2 runtime
 #                 runtime-ARCH from https://github.com/AppImage/type2-runtime/releases (continuous), cached
@@ -55,7 +55,7 @@ esac
 host_arch="$(uname -m)"
 [ "$host_arch" = "arm64" ] && host_arch="aarch64"
 
-cache="${MC_TOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/mailcraft-packaging}"
+cache="${MC_TOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/iridium-mail-packaging}"
 
 # Prints the path of a cached download, fetching it first when allowed.
 fetch_tool() {
@@ -85,7 +85,7 @@ fi
 
 bin_dir="$(mc_bin_dir "$triple" "$profile")"
 work="${CARGO_TARGET_DIR:-$MC_ROOT/target}/packaging/appimage-$arch"
-appdir="$work/MailCraft.AppDir"
+appdir="$work/Mail.AppDir"
 rm -rf "$work"
 mkdir -p "$appdir" "$out"
 out="$(cd "$out" && pwd)"
@@ -102,19 +102,19 @@ cat >"$appdir/AppRun" <<'EOF'
 # ($ORIGIN/../lib) finds the bundled windowing libraries in usr/lib (see packaging/linux/appimage-libs.sh);
 # the environment stays as it is, so programs the app opens use the system's libraries.
 HERE="$(dirname "$(readlink -f "$0")")"
-exec "$HERE/usr/bin/mailcraft" "$@"
+exec "$HERE/usr/bin/iridium-mail" "$@"
 EOF
 chmod 0755 "$appdir/AppRun"
 
 "$MC_ROOT/packaging/linux/appimage-libs.sh" --arch "$arch" "$appdir"
 
-image="$out/MailCraft-$arch.AppImage"
+image="$out/Mail-$arch.AppImage"
 rm -f "$image" "$image.zsync"
 # -n: appimagetool's AppStream check fetches every URL in the metainfo, which fails while the repository
 # is private or offline; packaging/check.sh validates the same file with `appstreamcli validate --no-net`.
 args=(-n)
 [ -n "$runtime" ] && args+=(--runtime-file "$runtime")
-update_info_str="gh-releases-zsync|$GH_OWNER|$GH_REPO|latest|MailCraft-*$arch.AppImage.zsync"
+update_info_str="gh-releases-zsync|$GH_OWNER|$GH_REPO|latest|Mail-*$arch.AppImage.zsync"
 [ "$update_info" = 1 ] && args+=(-u "$update_info_str")
 mc_log "appimagetool ${args[*]} → $image"
 # SOURCE_DATE_EPOCH is dropped for this call: appimagetool passes its own timestamp options to mksquashfs,

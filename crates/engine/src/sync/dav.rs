@@ -3,7 +3,7 @@
 //! thread after its mail ([`run`]); results come back as [`PimEvent`]s (see `pim.rs` for the rules).
 //!
 //! Resource URLs are compared and requested in one canonical form (scheme, host, port and the normalised
-//! path, see [`mailcraft_net::http::normalize_path`]), so a server that writes `%40` where the client wrote `@`
+//! path, see [`iridium_mail_net::http::normalize_path`]), so a server that writes `%40` where the client wrote `@`
 //! does not make an item look deleted, while an escaped `/` or `.` keeps its escape and names exactly the
 //! resource the server listed.
 //!
@@ -16,7 +16,7 @@
 //! meeting answers waiting for the account go first.
 //!
 //! **Connections.** The DAV servers have their own connection settings (trusted certificate, plain-HTTP
-//! consent) in [`mailcraft_model::DavSettings`]; nothing is taken over from the incoming mail server. An OAuth
+//! consent) in [`iridium_mail_model::DavSettings`]; nothing is taken over from the incoming mail server. An OAuth
 //! account's access token goes only to its provider's own servers; any other DAV server needs a DAV
 //! password of its own.
 
@@ -25,13 +25,13 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use mailcraft_model::account::CredentialKind;
-use mailcraft_model::{Account, AccountId, FolderId, FolderKind, ItemId, RemoteRef};
-use mailcraft_net::dav::{DavAuth, DavClient, Fetched, Listing, Precondition, Resource, Service};
-use mailcraft_net::http::{Url, normalize_path};
-use mailcraft_net::jmap::JmapClient;
-use mailcraft_net::oauth::OAuthProvider;
-use mailcraft_net::{ConnectOptions, NetError};
+use iridium_mail_model::account::CredentialKind;
+use iridium_mail_model::{Account, AccountId, FolderId, FolderKind, ItemId, RemoteRef};
+use iridium_mail_net::dav::{DavAuth, DavClient, Fetched, Listing, Precondition, Resource, Service};
+use iridium_mail_net::http::{Url, normalize_path};
+use iridium_mail_net::jmap::JmapClient;
+use iridium_mail_net::oauth::OAuthProvider;
+use iridium_mail_net::{ConnectOptions, NetError};
 
 use super::Plan;
 use super::ews::EwsConn;
@@ -82,7 +82,7 @@ pub(super) struct EwsPimJob {
     kinds: BTreeSet<PimKind>,
     discover: BTreeSet<PimKind>,
     tz_offset_min: i32,
-    now: mailcraft_model::DateTime,
+    now: iridium_mail_model::DateTime,
 }
 
 /// The Microsoft Graph part of a [`DavJob`].
@@ -96,13 +96,13 @@ pub(super) struct GraphPimJob {
     discover_tasks: bool,
     discover_calendars: bool,
     /// Other people's calendars opened on the account.
-    opened: Vec<mailcraft_model::account::SharedCalendarRef>,
+    opened: Vec<iridium_mail_model::account::SharedCalendarRef>,
     /// Meeting answers waiting to go.
-    responses: Vec<mailcraft_model::account::GraphResponse>,
+    responses: Vec<iridium_mail_model::account::GraphResponse>,
     /// Notes for the attendees of meetings cancelled here.
-    cancels: Vec<mailcraft_model::account::GraphCancel>,
+    cancels: Vec<iridium_mail_model::account::GraphCancel>,
     tz_offset_min: i32,
-    now: mailcraft_model::DateTime,
+    now: iridium_mail_model::DateTime,
 }
 
 impl GraphPimJob {
@@ -121,7 +121,7 @@ pub(super) struct JmapPimJob {
     discover_contacts: bool,
     discover_calendars: bool,
     tz_offset_min: i32,
-    now: mailcraft_model::DateTime,
+    now: iridium_mail_model::DateTime,
 }
 
 impl JmapPimJob {
@@ -367,7 +367,7 @@ fn provider_serves(url: &str, provider: Option<&OAuthProvider>, incoming_host: O
 
 /// Connection options of the DAV and publishing servers: their own trusted certificate and plain-HTTP consent
 /// (never the incoming mail server's).
-fn dav_options(dav: &mailcraft_model::DavSettings) -> ConnectOptions {
+fn dav_options(dav: &iridium_mail_model::DavSettings) -> ConnectOptions {
     let mut o = ConnectOptions {
         connect_timeout: Duration::from_secs(20),
         io_timeout: Duration::from_secs(60),
@@ -594,7 +594,7 @@ fn user_error(job: &DavJob, e: &NetError) -> String {
 
 const CANCELLED: &str = "Send/Receive was cancelled.";
 
-/// True when a published file may be removed: MailCraft wrote it (it has the file's ETag), and when that
+/// True when a published file may be removed: Mail wrote it (it has the file's ETag), and when that
 /// ETag is only `*` (the server gave none, or an earlier version kept none, so `If-Match` matches any file)
 /// the address is also a file strictly inside the current publishing location.
 fn may_withdraw(publish_base: &str, url: &str, etag: &str) -> bool {
@@ -606,7 +606,7 @@ fn may_withdraw(publish_base: &str, url: &str, etag: &str) -> bool {
 }
 
 /// Uploads (or removes) one published calendar; `Ok` carries the file's new ETag (`*` when the server gave
-/// none, empty after a removal). Writes are conditional, so a file MailCraft did not write is never replaced
+/// none, empty after a removal). Writes are conditional, so a file Mail did not write is never replaced
 /// or removed: the first upload only creates (`If-None-Match: *`), later ones and the removal need the ETag
 /// of the last upload (`If-Match`).
 fn publish_one(client: &DavClient, job: &DavJob, p: &PublishJob) -> Result<String, String> {
@@ -620,7 +620,7 @@ fn publish_one(client: &DavClient, job: &DavJob, p: &PublishJob) -> Result<Strin
         // No ETag in the answer: ask for it, else remember only that the file is ours.
         Ok(None) => Ok(client.etag(&url).ok().flatten().unwrap_or_else(|| "*".into())),
         Err(NetError::Http { status: 412, .. }) if p.etag.is_empty() => Err(format!(
-            "a file MailCraft did not publish is already at {url}; it was left as it is (publish at another address)"
+            "a file Mail did not publish is already at {url}; it was left as it is (publish at another address)"
         )),
         Err(NetError::Http { status: 412, .. }) => Err(format!(
             "the published file at {url} was changed or replaced on the server; it was left as it is (publish at \
@@ -630,7 +630,7 @@ fn publish_one(client: &DavClient, job: &DavJob, p: &PublishJob) -> Result<Strin
     }
 }
 
-/// Removes a published file. A file MailCraft never wrote (no ETag) is not its to remove. A file it cannot
+/// Removes a published file. A file Mail never wrote (no ETag) is not its to remove. A file it cannot
 /// remove safely (it changed on the server since, or an earlier version published it outside the current
 /// publishing location) is left in place and reported, naming the address that is still public; the request
 /// stays, so a later run sees the file gone once it was removed by hand.
@@ -647,7 +647,7 @@ fn withdraw_one(client: &DavClient, job: &DavJob, p: &PublishJob) -> Result<Stri
             return Ok(String::new());
         }
         return Err(format!(
-            "the calendar is still published at {} (outside the current publishing location, so MailCraft does \
+            "the calendar is still published at {} (outside the current publishing location, so Mail does \
              not remove it): remove that file on the server",
             p.url
         ));
@@ -656,7 +656,7 @@ fn withdraw_one(client: &DavClient, job: &DavJob, p: &PublishJob) -> Result<Stri
         Ok(()) => Ok(String::new()),
         Err(NetError::Http { status: 412, .. }) if gone() => Ok(String::new()),
         Err(NetError::Http { status: 412, .. }) => Err(format!(
-            "the calendar is still published at {}: the file changed on the server since MailCraft published \
+            "the calendar is still published at {}: the file changed on the server since Mail published \
              it, so it was left in place (remove it on the server)",
             p.url
         )),
@@ -713,11 +713,11 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
     let jmap: Option<Result<JmapClient, NetError>> = job.jmap.as_ref().map(|j| j.conn.connect());
     let jmap_discover = job.jmap.as_ref().is_some_and(|j| j.discover_contacts || j.discover_calendars);
     // The Exchange server, for the contacts, calendar and tasks kept there.
-    let ews: Option<Result<mailcraft_net::ews::EwsClient, NetError>> =
+    let ews: Option<Result<iridium_mail_net::ews::EwsClient, NetError>> =
         job.ews.as_ref().map(|e| e.conn.connect());
     let ews_discover = job.ews.as_ref().is_some_and(|e| !e.discover.is_empty());
     // Microsoft Graph, for the contacts, calendars and tasks kept there.
-    let graph: Option<Result<mailcraft_net::graph::GraphClient, NetError>> = job.graph.as_ref().map(|g| {
+    let graph: Option<Result<iridium_mail_net::graph::GraphClient, NetError>> = job.graph.as_ref().map(|g| {
         g.conn.connect(Some(cancel)).map(|mut c| {
             graph_pim::prepare(&mut c);
             c
@@ -745,8 +745,8 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
                             // Passing (and a 404: the event went between the search and the answer): again
                             // on the next run.
                             Err(e)
-                                if mailcraft_net::graph::pim::transient(&e)
-                                    || mailcraft_net::graph::pim::not_found(&e) =>
+                                if iridium_mail_net::graph::pim::transient(&e)
+                                    || iridium_mail_net::graph::pim::not_found(&e) =>
                             {
                                 pim::GraphAnswer::Retry(failed(&e))
                             }
@@ -792,12 +792,12 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
                             }
                         }
                     }
-                    Err(e) if mailcraft_net::graph::pim::denied(&e) => {
+                    Err(e) if iridium_mail_net::graph::pim::denied(&e) => {
                         log::warn!("graph: {} not allowed: {e}", kind.label());
                         graph_denied.insert(kind);
                         error.get_or_insert_with(|| {
                             format!(
-                                "Microsoft 365 did not allow MailCraft to read the {}: sign in to the account again \
+                                "Microsoft 365 did not allow Mail to read the {}: sign in to the account again \
                                  to grant access to contacts, calendars and tasks",
                                 kind.label()
                             )
@@ -976,7 +976,7 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
                     let (tz, now) = job
                         .ews
                         .as_ref()
-                        .map_or((0, mailcraft_model::DateTime::default()), |e| (e.tz_offset_min, e.now));
+                        .map_or((0, iridium_mail_model::DateTime::default()), |e| (e.tz_offset_min, e.now));
                     let store = ews_pim::Store::new(c, f.kind, tz, now);
                     sync_folder(&store, f, &collection)
                 }
@@ -989,7 +989,7 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
                     let (tz, now) = job
                         .graph
                         .as_ref()
-                        .map_or((0, mailcraft_model::DateTime::default()), |g| (g.tz_offset_min, g.now));
+                        .map_or((0, iridium_mail_model::DateTime::default()), |g| (g.tz_offset_min, g.now));
                     let cancels = job.graph.as_ref().map_or(&[][..], |g| &g.cancels[..]);
                     let store = graph_pim::Store::new(c, f, tz, now, graph_zone.clone(), &graph_me, cancels);
                     let r = sync_folder(&store, f, &collection).map(|mut out| {
@@ -1011,7 +1011,7 @@ pub(super) fn run(account: AccountId, job: &DavJob, events: &Events, cancel: &Ar
                     let (tz, now) = job
                         .jmap
                         .as_ref()
-                        .map_or((0, mailcraft_model::DateTime::default()), |j| (j.tz_offset_min, j.now));
+                        .map_or((0, iridium_mail_model::DateTime::default()), |j| (j.tz_offset_min, j.now));
                     let store = jmap_pim::Store::new(c, f.kind, tz, now);
                     sync_folder(&store, f, &collection)
                 }
@@ -1709,7 +1709,7 @@ mod tests {
             delta_at: 0,
             items: vec![pim::LocalItem {
                 id: ItemId(9),
-                remote: Some(mailcraft_model::RemoteRef {
+                remote: Some(iridium_mail_model::RemoteRef {
                     url: format!("{base}/c/pat.vcf"),
                     etag: "\"1\"".into(),
                     uid: "pat".into(),
@@ -1766,11 +1766,12 @@ mod tests {
     #[test]
     fn dav_connections_do_not_inherit_the_mail_servers_settings() {
         // Regression: the incoming server's plain-text consent and trusted certificate applied to DAV too.
-        let d = mailcraft_model::DavSettings { url: "http://dav.example.com/".into(), ..Default::default() };
+        let d =
+            iridium_mail_model::DavSettings { url: "http://dav.example.com/".into(), ..Default::default() };
         let o = dav_options(&d);
         assert!(!o.allow_plaintext_auth);
         assert!(o.tls.extra_roots_der.is_empty());
-        let d = mailcraft_model::DavSettings { allow_plaintext_auth: true, ..d };
+        let d = iridium_mail_model::DavSettings { allow_plaintext_auth: true, ..d };
         assert!(dav_options(&d).allow_plaintext_auth);
     }
 

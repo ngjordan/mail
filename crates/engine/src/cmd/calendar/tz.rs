@@ -1,16 +1,16 @@
 //! Named time zones (IANA ids) with daylight-saving rules, for appointments (`Appointment::tz`), the
 //! calendar's own zone and the second zone shown in day and week views (Change Time Zone).
 //!
-//! Zone rules come from `mailcraft-formats` (its built-in table of common IANA zones with their current DST
-//! rules, plus fixed `UTC±hh:mm` names). Every lookup in MailCraft goes through [`zone`], [`offset_at`] and
+//! Zone rules come from `iridium-mail-formats` (its built-in table of common IANA zones with their current DST
+//! rules, plus fixed `UTC±hh:mm` names). Every lookup in Mail goes through [`zone`], [`offset_at`] and
 //! [`to_utc`], so a full tzdb crate (chrono-tz or jiff) can replace the table in one place.
 
 use std::borrow::Cow;
 
-use mailcraft_formats::ics::ZoneLookup;
-use mailcraft_formats::ics::rrule::{self, Expand, Rrule};
-use mailcraft_formats::ics::tz::{TimeZone, builtin};
-use mailcraft_model::{Appointment, DateTime};
+use iridium_mail_formats::ics::ZoneLookup;
+use iridium_mail_formats::ics::rrule::{self, Expand, Rrule};
+use iridium_mail_formats::ics::tz::{TimeZone, builtin};
+use iridium_mail_model::{Appointment, DateTime};
 
 /// Zones offered by Change Time Zone (IANA ids, west to east).
 pub const ZONES: &[&str] = &[
@@ -276,10 +276,10 @@ pub fn expand_zoned(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::Recurrence;
+    use iridium_mail_model::Recurrence;
 
     fn local(y: i64, m: u8, d: u8, h: u8, mi: u8) -> i64 {
-        mailcraft_model::dates::days_from_civil(y, m, d).unwrap() * 86_400
+        iridium_mail_model::dates::days_from_civil(y, m, d).unwrap() * 86_400
             + i64::from(h) * 3600
             + i64::from(mi) * 60
     }

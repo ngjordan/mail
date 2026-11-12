@@ -14,7 +14,7 @@
 //! 4. **Microsoft 365 tenant**: the tenant's public OpenID configuration, asked by domain only (never the
 //!    address) at `login.microsoftonline.com`, when Microsoft 365 was recognised (for the tenant id, which
 //!    single-tenant app registrations need for OAuth), or when nothing else found anything and the MX records
-//!    were looked up and name a mail exchanger MailCraft does not know (a tenant whose mail passes through a
+//!    were looked up and name a mail exchanger Mail does not know (a tenant whose mail passes through a
 //!    filtering service first has an MX record of that service). Without an MX answer (no resolver, as on
 //!    Windows; a failed lookup; no MX records) or with a null MX, the domain is not sent to Microsoft.
 //!
@@ -37,7 +37,7 @@
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use mailcraft_model::Security;
+use iridium_mail_model::Security;
 
 use crate::autoconfig::{self, AutoConfig, Protocol, ServerConfig};
 use crate::dns::{Resolver, SrvRecord};
@@ -391,7 +391,7 @@ enum MxOutcome {
     NoAnswer,
     /// A null MX (RFC 7505): the domain accepts no mail.
     NullMx,
-    /// Mail exchangers of no provider MailCraft knows.
+    /// Mail exchangers of no provider Mail knows.
     Unknown,
     /// A known provider's mail exchangers.
     Known,
@@ -414,7 +414,7 @@ fn mx_step(d: &mut Discovery, resolver: &Resolver, notes: &mut Vec<String>) -> M
     }
     let Some(p) = providers::by_mx_records(&records) else {
         let Some(first) = d.mx.first() else { return MxOutcome::NoAnswer };
-        notes.push(format!("MX {domain}: {first} is not a provider MailCraft knows"));
+        notes.push(format!("MX {domain}: {first} is not a provider Mail knows"));
         return MxOutcome::Unknown;
     };
     if d.fill_from(p) {

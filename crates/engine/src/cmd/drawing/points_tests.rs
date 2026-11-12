@@ -231,7 +231,7 @@ fn open_path_and_close_path() {
 /// Curve handles come back from drafts and files: hostile values must not crash drawing or editing.
 #[test]
 fn hostile_handles_are_cleaned_and_never_crash() {
-    use mailcraft_model::rich::PointHandles;
+    use iridium_mail_model::rich::PointHandles;
     let mut s = session();
     let cid = open(&mut s);
     let id = shape(&mut s, cid, "oval", 100.0, 100.0);

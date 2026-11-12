@@ -37,8 +37,8 @@ use serde_json::json;
 
 use crate::Session;
 use crate::cmd::calendar;
-use mailcraft_formats::ics::itip::Method;
-use mailcraft_model::{AccountId, FolderId, FolderKind, FolderRole, ItemId, MailItem};
+use iridium_mail_formats::ics::itip::Method;
+use iridium_mail_model::{AccountId, FolderId, FolderKind, FolderRole, ItemId, MailItem};
 
 /// Most new messages one pass processes beyond the junk filter and the rules (a first download can bring
 /// thousands; scheduling and receipts only look at the newest).
@@ -319,7 +319,7 @@ fn has_comments(s: &Session, m: &MailItem) -> bool {
 
 /// The Message-ID key the mail table matches by (no brackets, lower-case).
 fn bare_id(v: &str) -> String {
-    mailcraft_model::message_id_key(v)
+    iridium_mail_model::message_id_key(v)
 }
 
 /// Message-IDs (bare, lower-case) of the messages I sent that are still in the mailbox.
@@ -343,11 +343,11 @@ fn receipt_about(raw: &[u8]) -> Option<Option<String>> {
     if !ctype.trim_start().starts_with("multipart/report") {
         return None;
     }
-    let msg = mailcraft_mime::parse(raw).ok()?;
+    let msg = iridium_mail_mime::parse(raw).ok()?;
     let parts = msg.parts();
     // The original's headers returned with the report (RFC 3464 RET=HDRS / a message/rfc822 part).
     let returned = parts.iter().find_map(|p| match (&p.body, p.mime_type()) {
-        (mailcraft_mime::PartBody::Message(m), _) => m.message_id(),
+        (iridium_mail_mime::PartBody::Message(m), _) => m.message_id(),
         (_, t) if t.eq_ignore_ascii_case("text/rfc822-headers") => {
             p.text().and_then(|t| crate::cmd::compose::raw_headers(t.as_bytes()).text("Message-ID"))
         }
@@ -408,7 +408,7 @@ fn receipts_folder(s: &Session, account: Option<AccountId>, setting: &str) -> Op
 mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{deliver, invite, person, role, session};
-    use mailcraft_model::FocusClass;
+    use iridium_mail_model::FocusClass;
     use serde_json::Value;
 
     fn set(s: &mut Session, key: &str, v: Value) {
@@ -418,10 +418,10 @@ mod tests {
     /// A raw message from `from` to me, filed in `s`'s Inbox like downloaded mail.
     fn arrive(s: &mut Session, raw: &str) -> ItemId {
         let raw = raw.replace('\n', "\r\n");
-        let msg = mailcraft_mime::parse(raw.as_bytes()).unwrap();
+        let msg = iridium_mail_mime::parse(raw.as_bytes()).unwrap();
         let mut item = MailItem::from_message(&msg, raw.as_bytes(), s.now());
         item.folder = role(s, FolderRole::Inbox);
-        s.add_message(item, &mailcraft_store::Content::source(raw.as_bytes().to_vec())).unwrap()
+        s.add_message(item, &iridium_mail_store::Content::source(raw.as_bytes().to_vec())).unwrap()
     }
 
     /// A message I sent (in Sent Items) with Message-ID `<id>`.
@@ -704,7 +704,10 @@ mod tests {
         let answer = deliver(&ann, r["compose"].as_u64().unwrap(), &mut org);
         let r = on_new_mail(&mut org, &[answer]);
         assert_eq!(r.task_reports, vec![answer]);
-        assert_eq!(org.mailbox.tasks[&copy].request_state, mailcraft_model::task::TaskRequestState::Accepted);
+        assert_eq!(
+            org.mailbox.tasks[&copy].request_state,
+            iridium_mail_model::task::TaskRequestState::Accepted
+        );
         // The request itself (no REPLY) is left for its reader.
         assert!(on_new_mail(&mut ann, &[req]).task_reports.is_empty());
     }
@@ -712,9 +715,9 @@ mod tests {
     #[test]
     fn plain_votes_go_to_deleted_items_when_asked() {
         let mut s = session();
-        sent(&mut s, "vote-1@example.com", "X-MailCraft-Voting: Approve;Reject\n");
+        sent(&mut s, "vote-1@example.com", "X-Mail-Voting: Approve;Reject\n");
         let plain = "From: ann@example.com\nSubject: Approve: Budget\nIn-Reply-To: <vote-1@example.com>\n\
-                     X-MailCraft-Vote: Approve\n\n";
+                     X-Mail-Vote: Approve\n\n";
         let a = arrive(&mut s, plain);
         assert!(on_new_mail(&mut s, &[a]).responses_deleted.is_empty(), "option off");
         set(&mut s, "mail.tracking.deleteWithoutComments", json!(true));
@@ -722,13 +725,13 @@ mod tests {
         let c = arrive(
             &mut s,
             "From: bo@example.org\nSubject: Reject: Budget\nIn-Reply-To: <vote-1@example.com>\n\
-             X-MailCraft-Vote: Reject\n\nToo high.\n",
+             X-Mail-Vote: Reject\n\nToo high.\n",
         );
         // A vote about someone else's message is not mine to file away.
         let d = arrive(
             &mut s,
             "From: cy@example.net\nSubject: Approve: Other\nIn-Reply-To: <other@example.net>\n\
-             X-MailCraft-Vote: Approve\n\n",
+             X-Mail-Vote: Approve\n\n",
         );
         let r = on_new_mail(&mut s, &[b, c, d]);
         assert_eq!(r.responses_deleted, vec![b]);
@@ -805,7 +808,7 @@ mod tests {
 
     #[test]
     fn meeting_requests_wait_on_the_calendar_as_tentative() {
-        use mailcraft_model::BusyStatus;
+        use iridium_mail_model::BusyStatus;
         let mut org = session();
         let (_, cid) = invite(&mut org);
         let mut ann = person("ann@example.com", "Ann Lee");
@@ -866,12 +869,12 @@ mod tests {
     #[test]
     fn votes_keep_counting_after_deleted_items_is_emptied() {
         let mut s = session();
-        let original = sent(&mut s, "vote-2@example.com", "X-MailCraft-Voting: Approve;Reject\n");
+        let original = sent(&mut s, "vote-2@example.com", "X-Mail-Voting: Approve;Reject\n");
         set(&mut s, "mail.tracking.deleteWithoutComments", json!(true));
         let plain = |from: &str, choice: &str| {
             format!(
                 "From: {from}\nSubject: {choice}: Budget\nIn-Reply-To: <vote-2@example.com>\n\
-                 X-MailCraft-Vote: {choice}\n\n"
+                 X-Mail-Vote: {choice}\n\n"
             )
         };
         let a = arrive(&mut s, &plain("ann@example.com", "Approve"));
@@ -890,7 +893,7 @@ mod tests {
         let c = arrive(&mut s, &plain("ann@example.com", "Reject"));
         let d = arrive(
             &mut s,
-            "From: cy@example.net\nSubject: Approve: X\nIn-Reply-To: <other@example.net>\nX-MailCraft-Vote: Approve\n\n",
+            "From: cy@example.net\nSubject: Approve: X\nIn-Reply-To: <other@example.net>\nX-Mail-Vote: Approve\n\n",
         );
         assert_eq!(on_new_mail(&mut s, &[c, d]).votes_recorded, vec![c]);
         assert_eq!(tally(&s), vec![("Approve".to_owned(), 0), ("Reject".to_owned(), 2)]);

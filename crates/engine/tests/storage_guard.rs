@@ -6,10 +6,10 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_engine::{Notice, Session};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_engine::{Notice, Session};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -32,10 +32,10 @@ fn select(s: &mut Session, ids: &[ItemId]) {
 fn assert_counts_right(s: &Session, when: &str) {
     let fresh = s.mailbox.folder_counts();
     assert_eq!(*s.all_folder_counts(), fresh, "stale folder counts after {when}");
-    for row in mailcraft_engine::queries::folder_rows(s) {
+    for row in iridium_mail_engine::queries::folder_rows(s) {
         let Some(id) = row.id else { continue };
         let Some(f) = s.mailbox.folder(id) else { continue };
-        if f.kind != mailcraft_engine::model::FolderKind::Mail || f.show_total.is_some() {
+        if f.kind != iridium_mail_engine::model::FolderKind::Mail || f.show_total.is_some() {
             continue;
         }
         let want = s.mailbox.badge(id).unwrap_or_default();
@@ -87,7 +87,7 @@ fn a_mailbox_past_the_snapshot_cap_keeps_its_journal_and_still_opens() {
         let too_large = |s: &Session| {
             s.notices
                 .iter()
-                .filter(|n| matches!(n, Notice::Error(t) if t == mailcraft_engine::SNAPSHOT_TOO_LARGE))
+                .filter(|n| matches!(n, Notice::Error(t) if t == iridium_mail_engine::SNAPSHOT_TOO_LARGE))
                 .count()
         };
         assert_eq!(too_large(&s), 1, "the user is told: {:?}", s.notices);
@@ -116,7 +116,7 @@ fn folder_counts_are_memoised_and_stay_right_across_commands_undo_and_redo() {
     assert_counts_right(&s, "start");
     let passes = s.folder_count_passes();
     for _ in 0..20 {
-        let _ = mailcraft_engine::queries::folder_rows(&s);
+        let _ = iridium_mail_engine::queries::folder_rows(&s);
     }
     assert!(s.folder_count_passes() <= passes + 1, "one pass for many frames");
 
@@ -222,7 +222,7 @@ fn synced_mail_leaves_its_source_in_the_store_and_counts_follow_sync() {
     // Features that read the source still find it in the store.
     let second = s.mailbox.items_in(inbox).iter().find(|m| m.subject == "Second").map(|m| m.id).unwrap();
     assert_eq!(
-        mailcraft_engine::junk::list_address(&s, s.mailbox.mail.get(second).unwrap()).as_deref(),
+        iridium_mail_engine::junk::list_address(&s, s.mailbox.mail.get(second).unwrap()).as_deref(),
         Some("team@lists.example.org")
     );
     select(&mut s, &[second]);
@@ -338,7 +338,7 @@ fn source_readers_see_the_stored_source_after_it_left_memory() {
     let dir = tempdir();
     let mut s = open_legacy(&dir.path().join("profile")).unwrap();
     // 2026-10-15: after the offer below expired.
-    s.fixed_now = Some(mailcraft_engine::model::DateTime { unix: 1_792_000_000, offset_min: 0 });
+    s.fixed_now = Some(iridium_mail_engine::model::DateTime { unix: 1_792_000_000, offset_min: 0 });
     let inbox = s.selection.folder;
     let list_id = "List-Id: Team news <team.lists.example.org>\r\n";
     let list = import_eml(&mut s, dir.path(), "list", &message("Newsletter", "n1", list_id), inbox);
@@ -388,14 +388,15 @@ fn source_readers_see_the_stored_source_after_it_left_memory() {
     assert!(!s.mailbox.mail.get(plain).unwrap().read);
 
     // Expiry: the list strikes the message through, and search finds it, also after it changed.
-    let expired =
-        |s: &Session, id| mailcraft_engine::cmd::view::mail::is_expired(s, s.mailbox.mail.get(id).unwrap());
+    let expired = |s: &Session, id| {
+        iridium_mail_engine::cmd::view::mail::is_expired(s, s.mailbox.mail.get(id).unwrap())
+    };
     assert!(expired(&s, offer));
     assert!(!expired(&s, plain));
     s.selection.folder = inbox;
     let found = |s: &Session| {
-        let filter = mailcraft_engine::search_index::scope_filter(s);
-        let hits = mailcraft_engine::search_index::hits(s, "expires:any", &filter);
+        let filter = iridium_mail_engine::search_index::scope_filter(s);
+        let hits = iridium_mail_engine::search_index::hits(s, "expires:any", &filter);
         hits.iter().map(|h| ItemId(h.id)).collect::<Vec<_>>()
     };
     assert_eq!(found(&s), vec![offer]);
@@ -403,15 +404,18 @@ fn source_readers_see_the_stored_source_after_it_left_memory() {
     run(&mut s, "mail.markRead", json!({}));
     assert_eq!(found(&s), vec![offer], "re-indexed with its expiry date");
     assert!(expired(&s, offer));
-    assert!(mailcraft_engine::search_index::item_matches(
+    assert!(iridium_mail_engine::search_index::item_matches(
         &s,
         s.mailbox.mail.get(offer).unwrap(),
         "expires:any"
     ));
 
     // S/MIME: opaque-signed mail is readable, so a reply need not be encrypted; enveloped data is encrypted.
-    assert!(!mailcraft_engine::smime::is_encrypted(&s, s.mailbox.mail.get(signed).unwrap()), "opaque-signed");
-    assert!(mailcraft_engine::smime::is_encrypted(&s, s.mailbox.mail.get(sealed).unwrap()), "enveloped");
+    assert!(
+        !iridium_mail_engine::smime::is_encrypted(&s, s.mailbox.mail.get(signed).unwrap()),
+        "opaque-signed"
+    );
+    assert!(iridium_mail_engine::smime::is_encrypted(&s, s.mailbox.mail.get(sealed).unwrap()), "enveloped");
 }
 
 /// Regression test (issue #25 review): when the journal refuses a batch for its size, the same state is
@@ -431,7 +435,7 @@ fn a_batch_the_journal_refuses_is_saved_as_a_snapshot() {
         run(&mut s, "mail.markRead", json!({}));
         assert!(s.pending_ops.is_empty(), "saved as a snapshot: {} op(s) queued", s.pending_ops.len());
         assert!(s.store.as_ref().unwrap().generation() > generation, "a new snapshot was written");
-        assert_eq!(notices_of(&s, mailcraft_engine::UNSAVED_TOO_LARGE), 0);
+        assert_eq!(notices_of(&s, iridium_mail_engine::UNSAVED_TOO_LARGE), 0);
         (id, generation)
     };
     let s = open_legacy(dir.path()).unwrap();
@@ -459,7 +463,7 @@ fn changes_neither_journal_nor_snapshot_can_take_stay_queued_until_there_is_room
         run(&mut s, "mail.markRead", json!({}));
         select(&mut s, &ids[1..2]);
         run(&mut s, "mail.markRead", json!({}));
-        assert_eq!(notices_of(&s, mailcraft_engine::UNSAVED_TOO_LARGE), 1, "told once: {:?}", s.notices);
+        assert_eq!(notices_of(&s, iridium_mail_engine::UNSAVED_TOO_LARGE), 1, "told once: {:?}", s.notices);
         assert!(s.pending_ops.len() >= 2, "both changes stay queued");
         // Room again: the next write saves everything queued.
         let store = s.store.as_mut().unwrap();
@@ -468,7 +472,7 @@ fn changes_neither_journal_nor_snapshot_can_take_stay_queued_until_there_is_room
         select(&mut s, &ids[2..3]);
         run(&mut s, "mail.markRead", json!({}));
         assert!(s.pending_ops.is_empty());
-        assert_eq!(notices_of(&s, mailcraft_engine::UNSAVED_TOO_LARGE), 1);
+        assert_eq!(notices_of(&s, iridium_mail_engine::UNSAVED_TOO_LARGE), 1);
         ids
     };
     let s = open_legacy(dir.path()).unwrap();
@@ -497,7 +501,7 @@ fn a_refused_mailbox_is_saved_once_it_shrinks() {
         let generation = store.generation();
         select(&mut s, &ids[..1]);
         run(&mut s, "mail.markRead", json!({}));
-        assert_eq!(notices_of(&s, mailcraft_engine::UNSAVED_TOO_LARGE), 1);
+        assert_eq!(notices_of(&s, iridium_mail_engine::UNSAVED_TOO_LARGE), 1);
         select(&mut s, &ids[4..]);
         run(&mut s, "mail.delete", json!({}));
         assert!(!s.pending_ops.is_empty(), "moving to Deleted Items makes no room");
@@ -505,7 +509,7 @@ fn a_refused_mailbox_is_saved_once_it_shrinks() {
         run(&mut s, "folder.emptyDeleted", json!({}));
         assert!(s.pending_ops.is_empty(), "saved once the mailbox shrank");
         assert!(s.store.as_ref().unwrap().generation() > generation);
-        assert_eq!(notices_of(&s, mailcraft_engine::UNSAVED_TOO_LARGE), 1);
+        assert_eq!(notices_of(&s, iridium_mail_engine::UNSAVED_TOO_LARGE), 1);
         (ids[..4].to_vec(), ids[4..].to_vec())
     };
     let s = open_legacy(dir.path()).unwrap();
@@ -515,7 +519,7 @@ fn a_refused_mailbox_is_saved_once_it_shrinks() {
 }
 
 /// Timings for the folder pane and the undo estimate on a large synthetic mailbox (run by hand:
-/// `cargo test -p mailcraft-engine --test storage_guard -- --ignored --nocapture`).
+/// `cargo test -p iridium-mail-engine --test storage_guard -- --ignored --nocapture`).
 #[test]
 #[ignore = "benchmark"]
 fn bench_folder_pane_and_undo_estimate() {
@@ -530,7 +534,7 @@ fn bench_folder_pane_and_undo_estimate() {
     let n = std::env::var("BENCH_ITEMS").ok().and_then(|v| v.parse().ok()).unwrap_or(40_000usize);
     for i in 0..n {
         let folder = folders[i % folders.len()];
-        s.mailbox.add_mail(mailcraft_engine::model::MailItem {
+        s.mailbox.add_mail(iridium_mail_engine::model::MailItem {
             folder,
             subject: format!("Bench message {i}"),
             read: i % 5 != 0,
@@ -539,7 +543,7 @@ fn bench_folder_pane_and_undo_estimate() {
         });
     }
     s.mailbox_changed();
-    let rows = mailcraft_engine::queries::folder_rows(&s).len();
+    let rows = iridium_mail_engine::queries::folder_rows(&s).len();
     let time = |f: &mut dyn FnMut()| {
         let t = Instant::now();
         f();
@@ -554,11 +558,11 @@ fn bench_folder_pane_and_undo_estimate() {
     });
     s.mailbox_changed();
     let cold = time(&mut || {
-        std::hint::black_box(mailcraft_engine::queries::folder_rows(&s));
+        std::hint::black_box(iridium_mail_engine::queries::folder_rows(&s));
     });
     let warm = time(&mut || {
         for _ in 0..100 {
-            std::hint::black_box(mailcraft_engine::queries::folder_rows(&s));
+            std::hint::black_box(iridium_mail_engine::queries::folder_rows(&s));
         }
     });
     let mut bytes = 0;
@@ -572,8 +576,8 @@ fn bench_folder_pane_and_undo_estimate() {
          step(s) of this mailbox",
         warm / 100,
         bytes >> 20,
-        (mailcraft_engine::undo::DEFAULT_MAX_BYTES / bytes.max(1))
-            .clamp(1, mailcraft_engine::undo::DEFAULT_LIMIT)
+        (iridium_mail_engine::undo::DEFAULT_MAX_BYTES / bytes.max(1))
+            .clamp(1, iridium_mail_engine::undo::DEFAULT_LIMIT)
     );
 
     // Sources held in memory after an import into a profile (they used to stay until the next start).
@@ -605,7 +609,7 @@ fn bench_folder_pane_and_undo_estimate() {
 }
 
 /// These tests measure the legacy journal and snapshot: their profiles use legacy storage whatever
-/// `MAILCRAFT_STORE` says.
-fn open_legacy(dir: &std::path::Path) -> Result<Session, mailcraft_engine::CmdError> {
-    Session::open_with(dir, mailcraft_store::StoreKind::Legacy)
+/// `IRIDIUM_MAIL_STORE` says.
+fn open_legacy(dir: &std::path::Path) -> Result<Session, iridium_mail_engine::CmdError> {
+    Session::open_with(dir, iridium_mail_store::StoreKind::Legacy)
 }

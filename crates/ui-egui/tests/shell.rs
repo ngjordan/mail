@@ -5,10 +5,10 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use mailcraft_engine::queries::{self, ListRow};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{Address, Body, BodyFormat, DateTime, MailItem};
-use mailcraft_ui_egui::App;
+use iridium_mail_engine::queries::{self, ListRow};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{Address, Body, BodyFormat, DateTime, MailItem};
+use iridium_mail_ui_egui::App;
 use serde_json::json;
 
 fn harness(w: f32, h: f32) -> Harness<'static, App> {
@@ -167,7 +167,7 @@ fn other_modules_and_ribbon_modes() {
 fn notices_become_dialogs_and_toasts() {
     let mut h = harness(1280.0, 800.0);
     h.state_mut().run("view.reminderWindow", json!({})).unwrap();
-    h.state_mut().s.notices.push(mailcraft_engine::Notice::Info("Hello from a test".into()));
+    h.state_mut().s.notices.push(iridium_mail_engine::Notice::Info("Hello from a test".into()));
     h.run_steps(2);
     let app = h.state();
     assert!(app.s.notices.is_empty());
@@ -182,7 +182,7 @@ fn notices_become_dialogs_and_toasts() {
     h.state_mut().run("search.focus", json!({})).unwrap();
     h.run_steps(2);
     assert!(h.state().ui.search_active);
-    assert_eq!(h.state().ui.tab(mailcraft_ui_egui::Surface::Main), Some("Search"));
+    assert_eq!(h.state().ui.tab(iridium_mail_ui_egui::Surface::Main), Some("Search"));
 
     // File › Info opens the backstage.
     h.state_mut().run("file.info", json!({})).unwrap();
@@ -245,7 +245,7 @@ fn from_refiner_puts_the_caret_between_the_quotes() {
     h.run_steps(4);
     assert!(h.state().ui.search_active);
     assert_eq!(h.state().ui.search_text, "budget from:\"\"");
-    let box_id = egui::Id::unique("mailcraft_search_box");
+    let box_id = egui::Id::unique("iridium_mail_search_box");
     assert!(h.ctx.memory(|m| m.has_focus(box_id)), "the search box has the keyboard focus");
     let state = egui::TextEdit::load_state(&h.ctx, box_id).expect("search box state");
     let range = state.cursor.char_range().expect("caret");
@@ -282,7 +282,7 @@ fn bulk_folder_actions_and_ignore_ask_first() {
             ..Default::default()
         };
         let text = |text: &str| {
-            mailcraft_engine::Content::body(Body {
+            iridium_mail_engine::Content::body(Body {
                 format: BodyFormat::PlainText,
                 text: Some(text.into()),
                 html: None,

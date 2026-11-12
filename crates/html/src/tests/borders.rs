@@ -1,6 +1,6 @@
 //! Paragraph and table borders, bookmarks (anchors) and link ScreenTips through HTML.
 
-use mailcraft_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
+use iridium_mail_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
 
 use super::*;
 
@@ -219,7 +219,7 @@ fn bookmarks_are_written_as_anchors_and_read_back() {
         })
         .collect();
     assert_eq!(names[0], "abc");
-    assert_eq!(names[1].len(), mailcraft_model::rich::MAX_ANCHOR_NAME);
+    assert_eq!(names[1].len(), iridium_mail_model::rich::MAX_ANCHOR_NAME);
 }
 
 #[test]

@@ -1,5 +1,5 @@
 //! `review.*`: proofing and reading tools. Spelling and Grammar checks the compose body with
-//! `mailcraft-proof` (bundled US English plus the user's dictionary); issues are cached on the compose and
+//! `iridium-mail-proof` (bundled US English plus the user's dictionary); issues are cached on the compose and
 //! refreshed when the body changed (edit counter), positions are body [`DocPos`]es. Word Count,
 //! Accessibility, Thesaurus (small bundled list) and Language work on the compose body. Read Aloud and Translate need platform services (speech, a translator backend):
 //! the engine gathers the text and hands it to the UI through a dialog notice; a translator calls back with
@@ -17,9 +17,9 @@ use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::compose::{ComposeState, DocPos, SpellIssue, TextIssue};
 use crate::settings::Settings;
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_model::{Doc, ItemId};
-use mailcraft_proof::hunspell::{DictionaryFile, Hunspell};
-use mailcraft_proof::{IssueKind, Refinements, SpellOptions, Speller};
+use iridium_mail_model::{Doc, ItemId};
+use iridium_mail_proof::hunspell::{DictionaryFile, Hunspell};
+use iridium_mail_proof::{IssueKind, Refinements, SpellOptions, Speller};
 
 mod accessibility;
 
@@ -115,7 +115,7 @@ fn dictionary_dirs(s: &Session) -> Vec<std::path::PathBuf> {
     if !own.trim().is_empty() {
         dirs.push(std::path::PathBuf::from(own.trim()));
     }
-    dirs.extend(mailcraft_proof::hunspell::dictionary_dirs());
+    dirs.extend(iridium_mail_proof::hunspell::dictionary_dirs());
     dirs
 }
 
@@ -138,13 +138,13 @@ static DICTIONARY_GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::
 pub fn installed_dictionaries(s: &Session) -> Arc<Vec<DictionaryFile>> {
     let dirs = dictionary_dirs(s);
     let Ok(mut guard) = LISTINGS.lock() else {
-        return Arc::new(mailcraft_proof::hunspell::find_dictionaries(&dirs));
+        return Arc::new(iridium_mail_proof::hunspell::find_dictionaries(&dirs));
     };
     let map = guard.get_or_insert_with(HashMap::new);
     if let Some(found) = map.get(&dirs) {
         return Arc::clone(found);
     }
-    let found = Arc::new(mailcraft_proof::hunspell::find_dictionaries(&dirs));
+    let found = Arc::new(iridium_mail_proof::hunspell::find_dictionaries(&dirs));
     map.insert(dirs, Arc::clone(&found));
     found
 }
@@ -176,7 +176,7 @@ fn store_dictionary(dic: &std::path::Path, h: Option<Arc<Hunspell>>) {
 /// is returned until it is (where threads cannot be started it is read here).
 fn hunspell_for(s: &Session, lang: &str, wait: bool) -> Option<Arc<Hunspell>> {
     let found = installed_dictionaries(s);
-    let file = mailcraft_proof::hunspell::dictionary_for(&found, lang)?.clone();
+    let file = iridium_mail_proof::hunspell::dictionary_for(&found, lang)?.clone();
     {
         let mut guard = LOADED.lock().ok()?;
         let map = guard.get_or_insert_with(HashMap::new);
@@ -187,7 +187,7 @@ fn hunspell_for(s: &Session, lang: &str, wait: bool) -> Option<Arc<Hunspell>> {
                 map.insert(file.dic.clone(), Slot::Loading(file.tag.clone()));
                 let bg = file.clone();
                 let started =
-                    std::thread::Builder::new().name("mailcraft-dictionary".into()).spawn(move || {
+                    std::thread::Builder::new().name("iridium-mail-dictionary".into()).spawn(move || {
                         let h = read_dictionary(&bg);
                         store_dictionary(&bg.dic, h);
                     });
@@ -508,7 +508,7 @@ fn drawing_spelling(sp: &Speller, c: &ComposeState, grammar: bool) -> Vec<Value>
 
 /// The Editor score (0–100): 100 for a message with nothing flagged, minus 4 points per correction and 2 per
 /// refinement for every 100 words (counted as at least 50 words, so one slip in a short note does not sink
-/// it). MailCraft's own measure; it only ranks how much the pane has to say.
+/// it). Mail's own measure; it only ranks how much the pane has to say.
 pub fn editor_score(corrections: usize, refinements: usize, words: usize) -> u32 {
     let weight = corrections.saturating_mul(4).saturating_add(refinements.saturating_mul(2));
     let penalty = weight.saturating_mul(100) / words.max(50);
@@ -739,16 +739,17 @@ pub(crate) fn valid_lang(tag: &str) -> bool {
 /// Whether spelling in `lang` is checked: English (the bundled US English lists; other English varieties
 /// use them too) or a language with a dictionary installed on the computer.
 pub fn has_dictionary(s: &Session, lang: &str) -> bool {
-    is_english(lang) || mailcraft_proof::hunspell::dictionary_for(&installed_dictionaries(s), lang).is_some()
+    is_english(lang)
+        || iridium_mail_proof::hunspell::dictionary_for(&installed_dictionaries(s), lang).is_some()
 }
 
-/// Where a language's dictionary comes from, for the Language dialog: "MailCraft" (bundled English), the
+/// Where a language's dictionary comes from, for the Language dialog: "Mail" (bundled English), the
 /// installed dictionary's tag ("fr-FR"), or `None` when there is none.
 pub fn dictionary_source(s: &Session, lang: &str) -> Option<String> {
     if is_english(lang) {
-        return Some("MailCraft".into());
+        return Some("Mail".into());
     }
-    mailcraft_proof::hunspell::dictionary_for(&installed_dictionaries(s), lang).map(|d| d.tag.clone())
+    iridium_mail_proof::hunspell::dictionary_for(&installed_dictionaries(s), lang).map(|d| d.tag.clone())
 }
 
 /// Why the message's spelling is not checked: "Do not check spelling or grammar", or a proofing language
@@ -831,7 +832,7 @@ fn read_aloud(s: &mut Session, p: &Value) -> CmdResult {
     Ok(json!({"dialog": "readAloud", "text": payload.get("text")}))
 }
 
-/// MailCraft's own everyday replacements, offered before the bundled thesaurus's.
+/// Mail's own everyday replacements, offered before the bundled thesaurus's.
 const THESAURUS: &[(&str, &[&str])] = &[
     ("good", &["fine", "great", "excellent", "decent", "positive"]),
     ("bad", &["poor", "awful", "inferior", "faulty", "unpleasant"]),
@@ -878,13 +879,13 @@ const THESAURUS: &[(&str, &[&str])] = &[
 /// Most synonyms offered.
 const MAX_SYNONYMS: usize = 20;
 
-/// Synonyms for `word` (case-insensitive; empty when unknown): MailCraft's short list of everyday
+/// Synonyms for `word` (case-insensitive; empty when unknown): Mail's short list of everyday
 /// replacements first, then the bundled thesaurus (base forms too: "meetings" finds "meeting").
 pub fn synonyms(word: &str) -> Vec<&'static str> {
     let w = word.trim().to_lowercase();
     let mut out: Vec<&'static str> =
         THESAURUS.iter().find(|(k, _)| *k == w).map(|(_, v)| v.to_vec()).unwrap_or_default();
-    if let Some((_, more)) = mailcraft_proof::thesaurus::lookup(&w) {
+    if let Some((_, more)) = iridium_mail_proof::thesaurus::lookup(&w) {
         for m in more {
             if !out.contains(&m) {
                 out.push(m);
@@ -897,7 +898,7 @@ pub fn synonyms(word: &str) -> Vec<&'static str> {
 
 /// The head word the thesaurus used for `word` ("meeting" for "meetings"), when it differs.
 pub fn thesaurus_headword(word: &str) -> Option<&'static str> {
-    let (head, _) = mailcraft_proof::thesaurus::lookup(word)?;
+    let (head, _) = iridium_mail_proof::thesaurus::lookup(word)?;
     (!head.eq_ignore_ascii_case(word.trim())).then_some(head)
 }
 
@@ -1177,7 +1178,7 @@ mod tests {
     use super::super::compose::tests::{open, session};
     use super::*;
     use crate::Notice;
-    use mailcraft_model::{FolderRole, MailItem};
+    use iridium_mail_model::{FolderRole, MailItem};
 
     #[test]
     fn word_count_body_and_selection() {
@@ -1269,7 +1270,7 @@ mod tests {
         assert!(
             s.pending_ops
                 .iter()
-                .any(|o| matches!(o, mailcraft_store::Op::PutConfig(c) if c.custom_dictionary.is_some()))
+                .any(|o| matches!(o, iridium_mail_store::Op::PutConfig(c) if c.custom_dictionary.is_some()))
         );
         s.run("compose.insertText", &json!({"text": " Zorbleflax"})).unwrap();
         let r = s.run("review.spelling", &json!({"grammar": false})).unwrap();
@@ -1383,12 +1384,17 @@ mod tests {
         assert!(spell_check(&sp, c, false, 3));
         assert_eq!(c.spell_issues.len(), 1);
         c.insert_text(" mroe");
+        // Another test may read a dictionary in the background while this one runs, and
+        // that makes the last check out of date on purpose (see `options_key`). Re-baseline
+        // so this test measures the debounce and not that.
+        c.spell_options_key = options_key(sp.options());
         assert!(!spell_check(&sp, c, false, 3), "debounced: one edit < 3");
         c.insert_text(" x");
         c.insert_text(" y");
         assert!(spell_check(&sp, c, false, 3));
         assert_eq!(c.spell_issues.len(), 2);
         assert!(spell_check(&sp, c, true, 3), "forced");
+        c.spell_options_key = options_key(sp.options());
         assert!(!spell_check(&sp, c, false, 1), "nothing changed");
         // Byte → char mapping with multi-byte text before the word.
         let issues = text_issues(&sp, "Ünïcødé wrold \u{FFFC} ok");
@@ -1401,7 +1407,7 @@ mod tests {
         open(&mut s);
         let c = s.composes.values_mut().next_back().unwrap();
         c.kind = crate::compose::ComposeKind::Reply;
-        c.body = mailcraft_model::Doc::from_plain_text(
+        c.body = iridium_mail_model::Doc::from_plain_text(
             "Thanks, wrold\n\n-----Original Message-----\nFrom: x\nmispeled text",
         );
         c.ensure_body();
@@ -1488,7 +1494,7 @@ mod tests {
     #[test]
     fn other_languages_use_installed_dictionaries() {
         // A synthetic Hunspell-format dictionary in the Editor Options folder stands in for an installed one.
-        let dir = std::env::temp_dir().join(format!("mailcraft-review-dict-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("iridium-mail-review-dict-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("qab_QB.aff"), "SET UTF-8\nSFX S Y 1\nSFX S 0 s .\n").unwrap();
         std::fs::write(dir.join("qab_QB.dic"), "4\nbonjour/S\nmonde/S\nchat/S\nle\n").unwrap();
@@ -1610,7 +1616,7 @@ mod tests {
         set(&mut s, "mail.editor.writingStyle", json!("grammar"));
         let live = live_proofing(&s);
         assert!(live.marks("agreement") && !live.marks("passive") && !live.all());
-        assert_eq!(spell_options(&s.settings).refinements, mailcraft_proof::Refinements::NONE);
+        assert_eq!(spell_options(&s.settings).refinements, iridium_mail_proof::Refinements::NONE);
         set(&mut s, "mail.editor.writingStyle", json!("grammarRefinements"));
         assert!(live_proofing(&s).marks("passive"));
         // Grammar not marked as you type: refinements are not either.
@@ -1640,20 +1646,20 @@ mod tests {
         assert!(spelling_stale(&s, &s.composes[&id]));
     }
 
-    fn table(rows: Vec<Vec<(&str, bool)>>) -> mailcraft_model::Block {
-        use mailcraft_model::rich::TableCell;
-        mailcraft_model::Block::Table {
+    fn table(rows: Vec<Vec<(&str, bool)>>) -> iridium_mail_model::Block {
+        use iridium_mail_model::rich::TableCell;
+        iridium_mail_model::Block::Table {
             borders: None,
             rows: rows
                 .into_iter()
                 .map(|r| {
                     r.into_iter()
                         .map(|(t, bold)| TableCell {
-                            blocks: vec![mailcraft_model::Block::Paragraph {
+                            blocks: vec![iridium_mail_model::Block::Paragraph {
                                 style: Default::default(),
-                                inlines: vec![mailcraft_model::Inline::Text {
+                                inlines: vec![iridium_mail_model::Inline::Text {
                                     text: t.into(),
-                                    style: mailcraft_model::TextStyle {
+                                    style: iridium_mail_model::TextStyle {
                                         bold: bold.then_some(true),
                                         ..Default::default()
                                     },
@@ -1678,7 +1684,7 @@ mod tests {
 
     #[test]
     fn accessibility_checks_tables_links_headings_and_blanks() {
-        use mailcraft_model::{Block, Inline};
+        use iridium_mail_model::{Block, Inline};
         let mut s = session();
         let id = open(&mut s);
         let c = s.composes.get_mut(&id).unwrap();
@@ -1717,9 +1723,9 @@ mod tests {
                 style: Default::default(),
                 inlines: vec![Inline::Text { text: "Deep".into(), style: Default::default() }],
             },
-            mailcraft_model::Block::text_paragraph(""),
-            mailcraft_model::Block::text_paragraph(""),
-            mailcraft_model::Block::text_paragraph("Lined   up"),
+            iridium_mail_model::Block::text_paragraph(""),
+            iridium_mail_model::Block::text_paragraph(""),
+            iridium_mail_model::Block::text_paragraph("Lined   up"),
             Block::Paragraph {
                 style: Default::default(),
                 inlines: vec![Inline::Image {
@@ -1787,7 +1793,7 @@ mod tests {
             (json!(false), json!(false)),
             "no condition holds"
         );
-        s.composes.get_mut(&id).unwrap().importance = mailcraft_model::Importance::High;
+        s.composes.get_mut(&id).unwrap().importance = iridium_mail_model::Importance::High;
         let st = status(&mut s);
         assert_eq!((st["show"].clone(), st["checked"].clone()), (json!(true), json!(true)));
         assert_eq!(st["reasons"], json!(["highImportance"]));
@@ -1811,7 +1817,7 @@ mod tests {
         assert_eq!(status(&mut s)["reasons"], json!(["darkBackground"]));
         s.composes.get_mut(&id).unwrap().light_canvas = true;
         assert_eq!(status(&mut s)["show"], false, "Switch Background shows it light");
-        s.composes.get_mut(&id).unwrap().body.background = Some(mailcraft_geom::Color::rgb(20, 20, 30));
+        s.composes.get_mut(&id).unwrap().body.background = Some(iridium_mail_geom::Color::rgb(20, 20, 30));
         assert_eq!(status(&mut s)["reasons"], json!(["darkBackground"]));
         set(&mut s, "accessibility.warnDarkBackground", json!(false));
         assert_eq!(status(&mut s)["show"], false);
@@ -1865,8 +1871,8 @@ mod tests {
         assert!(s.run("review.readAloud", &json!({})).is_err(), "nothing to read");
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let m = MailItem { folder: inbox, subject: "Hola".into(), ..Default::default() };
-        let body = mailcraft_model::Body { text: Some("Hola mundo".into()), ..Default::default() };
-        let mid = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some("Hola mundo".into()), ..Default::default() };
+        let mid = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
         s.selection.focus = Some(mid);
         let r = s.run("review.readAloud", &json!({})).unwrap();
         assert_eq!(r["text"], "Hola mundo");
@@ -1902,8 +1908,8 @@ mod tests {
         let mut s = session();
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let m = MailItem { folder: inbox, subject: "Hola".into(), ..Default::default() };
-        let body = mailcraft_model::Body { text: Some("hola mundo".into()), ..Default::default() };
-        let mid = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some("hola mundo".into()), ..Default::default() };
+        let mid = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
         s.selection.focus = Some(mid);
         // No translator: the window explains, nothing is translated or kept.
         let r = s.run("review.translate", &json!({"id": mid.0})).unwrap();
@@ -1971,8 +1977,8 @@ mod tests {
         s.background_translate = true;
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let m = MailItem { folder: inbox, subject: "Hola".into(), ..Default::default() };
-        let body = mailcraft_model::Body { text: Some("hola mundo".into()), ..Default::default() };
-        let mid = s.add_message(m, &mailcraft_store::Content::body(body)).unwrap();
+        let body = iridium_mail_model::Body { text: Some("hola mundo".into()), ..Default::default() };
+        let mid = s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap();
         let (go, rx) = std::sync::mpsc::channel();
         crate::translate::set_translator(&mut s, Some(std::sync::Arc::new(Gated(std::sync::Mutex::new(rx)))));
 
@@ -2031,8 +2037,8 @@ mod tests {
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let add = |s: &mut Session, text: &str| {
             let m = MailItem { folder: inbox, subject: "Hola".into(), ..Default::default() };
-            let body = mailcraft_model::Body { text: Some(text.into()), ..Default::default() };
-            s.add_message(m, &mailcraft_store::Content::body(body)).unwrap()
+            let body = iridium_mail_model::Body { text: Some(text.into()), ..Default::default() };
+            s.add_message(m, &iridium_mail_store::Content::body(body)).unwrap()
         };
         let (a, b) = (add(&mut s, "hola"), add(&mut s, "adios"));
         for id in [a, b] {

@@ -1,6 +1,6 @@
 # FreeBSD build on demand, in a FreeBSD VM on a GitHub-hosted Ubuntu runner (vmactions/freebsd-vm). Runs the
 # engine and CLI tests, then produces the same files as the release job:
-# mailcraft-VERSION-freebsd-ARCH.tar.gz and mailcraft-VERSION.pkg.
+# iridium-mail-VERSION-freebsd-ARCH.tar.gz and iridium-mail-VERSION.pkg.
 name: freebsd
 
 on:
@@ -39,7 +39,7 @@ jobs:
             uname -a
             rustc --version
             cargo --version
-            cargo test --locked -p mailcraft-engine -p mailcraft-cli
+            cargo test --locked -p iridium-mail-engine -p iridium-mail-cli
             bash packaging/freebsd/package.sh --build --profile "$MC_PROFILE" --out dist
       - uses: actions/upload-artifact@v4
         with:

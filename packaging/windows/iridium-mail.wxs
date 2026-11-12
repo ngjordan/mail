@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX Toolset v4 source for the Mail MSI. Built by packaging/windows/package.ps1:
+
+      wix build -arch x64 -d Version=X.Y.Z -d BinDir=<folder with the .exe files> -d RepoDir=<repo root>
+                -o iridium-mail-X.Y.Z-windows-x86_64.msi iridium-mail.wxs
+
+  Per-machine install into Program Files\Mail with a Start menu shortcut; iridium-mail-cli.exe is put on the
+  system PATH. The UpgradeCode never changes: it is how a newer MSI finds and replaces an older one.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Mail"
+           Manufacturer="Mail contributors"
+           Version="$(var.Version)"
+           UpgradeCode="67A0B8A2-55E8-4873-9223-ABACD1EE743F"
+           Scope="perMachine"
+           Compressed="yes"
+           Language="1033">
+    <SummaryInformation Description="Mail $(var.Version) installer" Manufacturer="Mail contributors" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Mail is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- The Id must end in .ico: Windows Installer names the extracted shortcut icon after it and reads its
+         format from the extension; without one, Start menu shortcuts show a blank icon. -->
+    <Icon Id="Mail.ico" SourceFile="$(var.RepoDir)\assets\app-icon\iridium-mail.ico" />
+    <Property Id="ARPPRODUCTICON" Value="Mail.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/MonkeySaint/iridium-mail" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/MonkeySaint/iridium-mail/issues" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Mail">
+        <Directory Id="LicencesFolder" Name="licences" />
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Mail" Level="1">
+      <ComponentGroupRef Id="Programs" />
+      <ComponentGroupRef Id="Licences" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="Programs" Directory="INSTALLFOLDER">
+      <Component>
+        <File Id="MailExe" Source="$(var.BinDir)\iridium-mail.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut"
+                    Directory="ProgramMenuFolder"
+                    Name="Mail"
+                    Description="Mail, calendar, people, tasks and notes"
+                    WorkingDirectory="INSTALLFOLDER"
+                    Icon="Mail.ico"
+                    Advertise="yes" />
+        </File>
+      </Component>
+      <Component>
+        <File Id="MailCliExe" Source="$(var.BinDir)\iridium-mail-cli.exe" KeyPath="yes" />
+        <Environment Id="PathEntry" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last"
+                     Action="set" System="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="Licences" Directory="LicencesFolder">
+      <Component><File Source="$(var.RepoDir)\README.md" /></Component>
+      <Component><File Source="$(var.RepoDir)\LICENSE-MIT" /></Component>
+      <Component><File Source="$(var.RepoDir)\LICENSE-APACHE" /></Component>
+      <Component><File Source="$(var.RepoDir)\NOTICE" /></Component>
+      <Component><File Source="$(var.RepoDir)\ATTRIBUTION.md" /></Component>
+      <Component><File Source="$(var.RepoDir)\assets\fonts\OFL-Inter.txt" /></Component>
+      <Component><File Source="$(var.RepoDir)\assets\fonts\OFL-Liberation.txt" /></Component>
+      <Component><File Source="$(var.RepoDir)\assets\fonts\OFL-Carlito.txt" /></Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

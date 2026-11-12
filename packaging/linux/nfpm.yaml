@@ -5,7 +5,7 @@
 #   MC_VERSION   workspace version (packaging/env.sh)
 #   NFPM_ARCH    Go-style architecture: amd64 or arm64 (nfpm maps it to amd64/x86_64, arm64/aarch64)
 #   MC_MAINTAINER, MC_HOMEPAGE, MC_SUMMARY  from packaging/env.sh
-name: mailcraft
+name: iridium-mail
 arch: ${NFPM_ARCH}
 platform: linux
 version: ${MC_VERSION}
@@ -14,14 +14,14 @@ release: "1"
 section: mail
 priority: optional
 maintainer: ${MC_MAINTAINER}
-vendor: MailCraft contributors
+vendor: Mail contributors
 homepage: ${MC_HOMEPAGE}
 # nfpm does not expand variables here; packaging/check.sh keeps it equal to LICENSE_SPDX in env.sh.
 license: MIT OR Apache-2.0
 description: |
   ${MC_SUMMARY}.
-  MailCraft is an open-source desktop mail client written in Rust: module rail, ribbon, folder pane,
-  message list and reading pane, with calendar, people, tasks and notes. Includes mailcraft-cli, a
+  Mail is an open-source desktop mail client written in Rust: module rail, ribbon, folder pane,
+  message list and reading pane, with calendar, people, tasks and notes. Includes iridium-mail-cli, a
   command-line tool and MCP server.
 
 scripts:

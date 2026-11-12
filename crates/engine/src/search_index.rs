@@ -1,4 +1,4 @@
-//! The session's search index (`mailcraft-search`) kept in step with the mailbox, plus the search state
+//! The session's search index (`iridium-mail-search`) kept in step with the mailbox, plus the search state
 //! that is not view state: recent searches and the Include Deleted Items toggle.
 //!
 //! Keeping in step: [`SearchState::note_ops`] is called with every batch of store ops the session journals
@@ -25,13 +25,13 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::{Mutex, MutexGuard};
 
-use mailcraft_model::{
+use iridium_mail_model::{
     Appointment, Contact, FlagState, FolderId, FolderKind, FolderRole, ItemId, MailItem, Mailbox, Note, Task,
 };
 /// Fields of a mail item that search highlights apply to (for [`highlights`]).
-pub use mailcraft_search::Field;
-use mailcraft_search::{Context, Counts, Doc, DocKind, Filter, Hit, Index, Query, Stats};
-use mailcraft_store::{BodyStore, Op};
+pub use iridium_mail_search::Field;
+use iridium_mail_search::{Context, Counts, Doc, DocKind, Filter, Hit, Index, Query, Stats};
+use iridium_mail_store::{BodyStore, Op};
 
 use crate::{SearchScope, Session};
 
@@ -466,14 +466,14 @@ fn deleted_folders(mb: &Mailbox) -> BTreeSet<FolderId> {
 pub const EXCLUDED_STORES_SETTING: &str = "search.excludedStores";
 
 /// The key Locations to Search knows an account or data file by: its address, else its name (lower case).
-pub fn store_key(a: &mailcraft_model::Account) -> String {
+pub fn store_key(a: &iridium_mail_model::Account) -> String {
     let name = if a.address.trim().is_empty() { a.display_name.trim() } else { a.address.trim() };
     name.to_lowercase()
 }
 
 /// Accounts and data files that All Mailboxes and All Items search (Locations to Search: every store,
 /// less the ones the user unchecked).
-pub fn searched_stores(s: &Session) -> BTreeSet<mailcraft_model::AccountId> {
+pub fn searched_stores(s: &Session) -> BTreeSet<iridium_mail_model::AccountId> {
     let excluded: BTreeSet<String> =
         s.settings.list(EXCLUDED_STORES_SETTING).iter().map(|k| k.trim().to_lowercase()).collect();
     s.mailbox.accounts.iter().filter(|a| !excluded.contains(&store_key(a))).map(|a| a.id).collect()
@@ -520,7 +520,7 @@ pub fn scope_folders(s: &Session) -> Vec<FolderId> {
         return Vec::new();
     }
     let deleted = if s.search.include_deleted { BTreeSet::new() } else { deleted_folders(mb) };
-    let mail_like = |f: &mailcraft_model::Folder| f.kind == FolderKind::Mail && !deleted.contains(&f.id);
+    let mail_like = |f: &iridium_mail_model::Folder| f.kind == FolderKind::Mail && !deleted.contains(&f.id);
     match s.view.search_scope {
         SearchScope::CurrentFolder => vec![sel],
         SearchScope::Subfolders => mb.subtree(sel),
@@ -587,7 +587,7 @@ fn cache_key(query: &Query, ctx: &Context, filter: &Filter, generation: u64) -> 
         &(filter.folders.is_some(), folders, filter.kinds.iter().map(|k| *k as u8).collect::<Vec<_>>()),
     );
     // `folder:` reads folder names.
-    if query.terms().iter().any(|(t, _)| matches!(t, mailcraft_search::Term::Folder(_))) {
+    if query.terms().iter().any(|(t, _)| matches!(t, iridium_mail_search::Term::Folder(_))) {
         h(&mut st, &ctx.folders);
     }
     st.finish()
@@ -611,7 +611,7 @@ pub fn indexing(s: &Session) -> bool {
 
 /// Items matching `query` within `filter`, best first.
 pub fn hits(s: &Session, query: &str, filter: &Filter) -> Vec<Hit> {
-    let q = mailcraft_search::parse(query);
+    let q = iridium_mail_search::parse(query);
     let ctx = context(s);
     let mut inner = s.search.lock();
     SearchState::ensure_locked(&mut inner, &s.mailbox, &s.bodies);
@@ -631,7 +631,7 @@ pub fn hits(s: &Session, query: &str, filter: &Filter) -> Vec<Hit> {
 /// Total and unread counts of `query` within `filter` (drawn every frame: of the bodies still waiting, only a
 /// few are read here; while more wait the counts may miss words only those bodies hold).
 pub fn count(s: &Session, query: &str, filter: &Filter) -> Counts {
-    let q = mailcraft_search::parse(query);
+    let q = iridium_mail_search::parse(query);
     let ctx = context(s);
     let mut inner = s.search.lock();
     SearchState::ensure_locked(&mut inner, &s.mailbox, &s.bodies);
@@ -693,7 +693,7 @@ pub fn search_folder_counts(s: &Session, folder: FolderId) -> Counts {
 
 /// True when mail item `m` matches `query` (direct evaluation, no index).
 pub fn item_matches(s: &Session, m: &MailItem, query: &str) -> bool {
-    mailcraft_search::matches(&mailcraft_search::parse(query), &mail_doc(m, &s.bodies), &context(s))
+    iridium_mail_search::matches(&iridium_mail_search::parse(query), &mail_doc(m, &s.bodies), &context(s))
 }
 
 /// Highlight ranges (byte offsets) of the active search's words in `text` shown as `field`.
@@ -701,7 +701,7 @@ pub fn highlights(s: &Session, field: Field, text: &str) -> Vec<(usize, usize)> 
     if s.view.search.trim().is_empty() {
         return Vec::new();
     }
-    mailcraft_search::highlights(&mailcraft_search::parse(&s.view.search), field, text)
+    iridium_mail_search::highlights(&iridium_mail_search::parse(&s.view.search), field, text)
 }
 
 /// Kinds the active scope searches.
@@ -798,7 +798,7 @@ pub fn search_folder_template(template: &str, value: &str) -> Result<(String, St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Address, DateTime};
+    use iridium_mail_model::{Address, DateTime};
     use serde_json::json;
 
     const NOW: i64 = 1_791_547_200;
@@ -900,8 +900,8 @@ mod tests {
         for i in 0..n {
             let word = if i + 1 == n { "zanzibar" } else { "filler" };
             let item = MailItem { folder, subject: format!("Message {i}"), ..Default::default() };
-            let body = mailcraft_model::Body { text: Some(format!("Body {word}")), ..Default::default() };
-            last = s.add_message(item, &mailcraft_store::Content::body(body)).unwrap();
+            let body = iridium_mail_model::Body { text: Some(format!("Body {word}")), ..Default::default() };
+            last = s.add_message(item, &iridium_mail_store::Content::body(body)).unwrap();
         }
         let filter = Filter { folders: None, kinds: vec![DocKind::Mail] };
         assert_eq!(count(&s, "message", &filter).total, n, "every header is indexed at once");
@@ -929,7 +929,7 @@ mod tests {
         let acct = s.mailbox.accounts.first().map(|a| a.id).unwrap();
         let cal = s.mailbox.role_folder(acct, FolderRole::Calendar).unwrap();
         let id = ItemId(s.mailbox.alloc_id());
-        let attendee = |name: &str| mailcraft_model::Attendee {
+        let attendee = |name: &str| iridium_mail_model::Attendee {
             mailbox: Address { name: Some(name.into()), addr: "x@example.com".into() },
             ..Default::default()
         };
@@ -974,9 +974,9 @@ mod tests {
             let v = if matches!(id, "large" | "old") { "5" } else { "x" };
             let (name, query) = search_folder_template(id, v).unwrap();
             assert!(!name.is_empty() && !query.is_empty(), "{id}");
-            let parsed = mailcraft_search::parse(&query);
+            let parsed = iridium_mail_search::parse(&query);
             assert!(
-                parsed.terms().iter().all(|(t, _)| !matches!(t, mailcraft_search::Term::Invalid(..))),
+                parsed.terms().iter().all(|(t, _)| !matches!(t, iridium_mail_search::Term::Invalid(..))),
                 "{id}"
             );
         }
@@ -1030,7 +1030,7 @@ mod tests {
         let id = ItemId(s.mailbox.alloc_id());
         s.mailbox.tasks.insert(
             id,
-            mailcraft_model::Task {
+            iridium_mail_model::Task {
                 id,
                 folder: tasks,
                 subject: "File budget report".into(),

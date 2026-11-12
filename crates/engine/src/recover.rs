@@ -14,7 +14,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use mailcraft_model::{AccountId, FolderId, ItemId, MAX_RECOVERABLE, Mailbox, RecoverBin, Recoverable};
+use iridium_mail_model::{AccountId, FolderId, ItemId, MAX_RECOVERABLE, Mailbox, RecoverBin, Recoverable};
 
 use crate::{Notice, Session};
 
@@ -48,8 +48,8 @@ pub(crate) fn load(s: &mut Session) {
         Err(e) => {
             log::error!("recoverable items unreadable: {e}");
             let dir = store.dir.clone();
-            let file = dir.join(mailcraft_store::RECOVERABLE_FILE);
-            let _ = std::fs::rename(&file, dir.join(format!("{}.bad", mailcraft_store::RECOVERABLE_FILE)));
+            let file = dir.join(iridium_mail_store::RECOVERABLE_FILE);
+            let _ = std::fs::rename(&file, dir.join(format!("{}.bad", iridium_mail_store::RECOVERABLE_FILE)));
             s.notify(Notice::Error(format!(
                 "The list of recoverable deleted items could not be read ({e}); it starts empty."
             )));

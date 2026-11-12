@@ -1,4 +1,4 @@
-# MailCraft control protocol
+# Mail control protocol
 
 The running app can be driven over a local socket: tests, scripts and agents run commands, query state,
 press keys, resize the window and take screenshots. Implementation: `crates/ui-egui/src/control.rs`.
@@ -6,7 +6,7 @@ press keys, resize the window and take screenshots. Implementation: `crates/ui-e
 ## Enabling it
 
 - The listener binds **127.0.0.1 only**, on the port given by `--control-port N` or the environment variable
-  `MAILCRAFT_CONTROL_PORT` (the shell stores it in `UiState::control_port` and calls `control::frame` each
+  `IRIDIUM_MAIL_CONTROL_PORT` (the shell stores it in `UiState::control_port` and calls `control::frame` each
   frame). Port `0` picks a free port (useful in tests; `Control::port()` reports it).
 - Without a port the channel is off. If the port cannot be bound the app logs an error and runs without it.
 - There is no authentication: any local process can connect. Do not enable it on shared machines.

@@ -10,7 +10,7 @@
 //! Windows Credential Manager keeps at most 2560 bytes per credential (1280 UTF-16 code units), and OAuth
 //! access tokens are often longer. A secret longer than [`CHUNK_UNITS`] UTF-16 code units is therefore split
 //! over several entries on every platform: the parts go to `<key>#<generation>.<n>` (n = 1, 2, …) and `<key>`
-//! itself holds a small marker, `mailcraft-chunks/1 gen=<g> parts=<n> bytes=<len> sha256=<hex>`. Reads accept
+//! itself holds a small marker, `iridium-mail-chunks/1 gen=<g> parts=<n> bytes=<len> sha256=<hex>`. Reads accept
 //! both the plain single-entry form (every secret stored before, and every short one) and the chunked form.
 //!
 //! A replacement writes its parts under the other generation first and the marker last, so until the marker
@@ -27,7 +27,7 @@ pub const CHUNK_UNITS: usize = 1000;
 /// Most parts one secret is split into (and most read back from a hostile store).
 pub const MAX_CHUNKS: usize = 64;
 /// Start of the marker that stands for a chunked secret.
-const MARKER_PREFIX: &str = "mailcraft-chunks/1 ";
+const MARKER_PREFIX: &str = "iridium-mail-chunks/1 ";
 
 /// A handle on the OS credential store under one service name.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -78,7 +78,7 @@ impl Keychain {
             return Err(format!("no credential store: {}", err(e)));
         }
         let k = Keychain { service: service.to_owned() };
-        k.get("mailcraft-probe/does-not-exist")?;
+        k.get("iridium-mail-probe/does-not-exist")?;
         Ok(k)
     }
 
@@ -379,11 +379,11 @@ mod tests {
     fn rejects_bad_names_without_touching_the_store() {
         assert!(Keychain::open("").is_err());
         assert!(Keychain::open(&"x".repeat(300)).is_err());
-        let k = Keychain { service: "MailCraft test".into() };
+        let k = Keychain { service: "Mail test".into() };
         assert!(k.entry("").is_err());
         assert!(k.entry("a\nb").is_err());
         assert!(!Keychain::store_name().is_empty());
-        assert_eq!(k.service(), "MailCraft test");
+        assert_eq!(k.service(), "Mail test");
     }
 
     #[test]

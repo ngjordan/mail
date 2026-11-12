@@ -1,6 +1,6 @@
 //! Grammar rules beyond the mechanical checks: article agreement ("a apple"), subject–verb agreement with
 //! personal pronouns ("she don't"), punctuation spacing and doubled marks, the lower-case pronoun "i", and
-//! commonly confused words ("could of", "their is", "better then"). The rules are MailCraft's own and
+//! commonly confused words ("could of", "their is", "better then"). The rules are Mail's own and
 //! deliberately narrow: each fires only in a context where the fix is almost always right, so a flagged
 //! phrase is worth a look and the suggestion can be applied as is.
 //!

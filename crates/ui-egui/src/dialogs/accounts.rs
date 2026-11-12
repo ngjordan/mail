@@ -15,7 +15,7 @@
 //! hints are shown (its OAuth sign-in is opened with that provider, and the tenant, chosen). Its More
 //! Settings section holds the per-account options (POP3 server copies, download mode, how far back the first
 //! download goes, headers only on slow connections, Send/Receive group membership and interval, push), and
-//! Sign in with OAuth 2.0 runs `accounts.oauthSignIn` with a client id the user registered (MailCraft ships
+//! Sign in with OAuth 2.0 runs `accounts.oauthSignIn` with a client id the user registered (Mail ships
 //! none; see `crates/net/data/README.md`). **Test Account Settings** needs an account to test: in the Add
 //! wizard the first test adds the account, later tests update it, and Cancel removes it again.
 
@@ -26,10 +26,10 @@ use super::common::{
     self, Dlg, Out, btn, btn_en, footer, heading, muted, ok_cancel, primary, window, with_state,
 };
 use crate::App;
-use mailcraft_engine::accounts::{AccountOptions, DownloadMode};
-use mailcraft_engine::offline::OfflineWindow;
-use mailcraft_engine::sync::{PushMode, TestReport};
-use mailcraft_model::{Account, AccountId, AccountKind, Security};
+use iridium_mail_engine::accounts::{AccountOptions, DownloadMode};
+use iridium_mail_engine::offline::OfflineWindow;
+use iridium_mail_engine::sync::{PushMode, TestReport};
+use iridium_mail_model::{Account, AccountId, AccountKind, Security};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -98,7 +98,7 @@ fn new_data_file(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                         )
                         .labelled_by(l.id);
                         if common::browse_button(ui, app) {
-                            let filters = [crate::FileFilter::new("MailCraft data file", &["mcdata"])];
+                            let filters = [crate::FileFilter::new("Mail data file", &["mcdata"])];
                             let suggest = if st.path.trim().is_empty() {
                                 format!("{}.mcdata", st.name.trim())
                             } else {
@@ -272,7 +272,11 @@ fn account_type(app: &App, a: &Account) -> &'static str {
     if a.shared.is_some() {
         return "Shared mailbox (IMAP)";
     }
-    if mailcraft_engine::accounts::kind_label(&app.s, a) == "pop3" { "POP/SMTP" } else { kind_label(a.kind) }
+    if iridium_mail_engine::accounts::kind_label(&app.s, a) == "pop3" {
+        "POP/SMTP"
+    } else {
+        kind_label(a.kind)
+    }
 }
 
 pub(crate) fn kind_label(k: AccountKind) -> &'static str {
@@ -436,7 +440,7 @@ fn email_tab(ui: &mut Ui, app: &mut App, st: &mut SettingsState) -> Out {
     }
     let loc = app.s.secrets.location();
     if loc == "memory" {
-        muted(ui, app, "Passwords are kept in memory and forgotten when MailCraft closes.");
+        muted(ui, app, "Passwords are kept in memory and forgotten when Mail closes.");
     } else if app.s.secrets.encrypted() {
         muted(ui, app, &format!("Passwords and sign-in tokens are kept in the {loc}."));
     } else {
@@ -680,8 +684,8 @@ impl Extra {
         }
     }
 
-    fn fill_dav(&mut self, d: Option<&mailcraft_model::DavSettings>) {
-        let d = d.cloned().unwrap_or(mailcraft_model::DavSettings {
+    fn fill_dav(&mut self, d: Option<&iridium_mail_model::DavSettings>) {
+        let d = d.cloned().unwrap_or(iridium_mail_model::DavSettings {
             contacts: true,
             tasks: true,
             calendar: true,
@@ -838,7 +842,7 @@ impl Wizard {
     fn guess(&mut self) {
         let domain = self.domain();
         if self.graph {
-            mailcraft_engine::accounts::GRAPH_BASE.clone_into(&mut self.in_host);
+            iridium_mail_engine::accounts::GRAPH_BASE.clone_into(&mut self.in_host);
             // Graph takes no password: the sign-in is the OAuth section's.
             self.open_oauth();
         } else if self.ews {
@@ -1105,15 +1109,16 @@ impl Wizard {
         self.jmap = a.kind == AccountKind::Jmap;
         self.graph = a.kind == AccountKind::Graph;
         self.ews = a.kind == AccountKind::Exchange;
-        self.pop3 = mailcraft_engine::accounts::kind_label(&app.s, a) == "pop3";
-        self.extra = Extra::from_options(&mailcraft_engine::accounts::account_options(&app.s, a.id));
+        self.pop3 = iridium_mail_engine::accounts::kind_label(&app.s, a) == "pop3";
+        self.extra = Extra::from_options(&iridium_mail_engine::accounts::account_options(&app.s, a.id));
         self.extra.fill_dav(a.dav.as_ref());
         self.extra.dav_has_password =
-            app.s.secrets.get(&mailcraft_engine::accounts::dav_secret_key(a.id)).is_some();
+            app.s.secrets.get(&iridium_mail_engine::accounts::dav_secret_key(a.id)).is_some();
         self.address.clone_from(&a.address);
         self.name.clone_from(&a.sender_name);
         self.account_name.clone_from(&a.display_name);
-        self.has_secret = app.s.secrets.get(&mailcraft_engine::accounts::secret_key(a.id, false)).is_some();
+        self.has_secret =
+            app.s.secrets.get(&iridium_mail_engine::accounts::secret_key(a.id, false)).is_some();
         if let Some(i) = &a.incoming {
             self.in_host.clone_from(&i.host);
             self.in_sec = sec_index(i.security);
@@ -1304,7 +1309,7 @@ impl Wizard {
         if self.change.is_none()
             && let Some(id) = self.created
             && account_of(app, id)
-                .is_some_and(|a| mailcraft_engine::accounts::kind_label(&app.s, &a) != self.kind())
+                .is_some_and(|a| iridium_mail_engine::accounts::kind_label(&app.s, &a) != self.kind())
         {
             // Another account type for the same address (< Back): the type of an account cannot be changed, so
             // the one this wizard added for the old type goes and a new one is added.
@@ -1406,7 +1411,7 @@ fn page_email(ui: &mut Ui, app: &mut App, st: &mut Wizard) -> Out {
     muted(
         ui,
         app,
-        "MailCraft looks up your provider's server settings (or suggests some from your address); you can check \
+        "Mail looks up your provider's server settings (or suggests some from your address); you can check \
          and change them on the next page.",
     );
     if !st.error.is_empty() {
@@ -1468,7 +1473,7 @@ fn page_looking_up(ui: &mut Ui, app: &mut App, st: &mut Wizard) -> Out {
         ui.spinner();
         ui.label(format!("Looking up the server settings for {}…", st.domain()));
     });
-    muted(ui, app, "MailCraft asks your provider's configuration page and your domain's DNS records.");
+    muted(ui, app, "Mail asks your provider's configuration page and your domain's DNS records.");
     ctx_repaint(ui);
     footer(ui, |ui| {
         if btn(ui, "Cancel") {
@@ -1615,7 +1620,7 @@ fn page_settings(ui: &mut Ui, app: &mut App, st: &mut Wizard, uid: u64) -> Out {
                     ui,
                     "Graph endpoint:",
                     &mut st.in_host,
-                    mailcraft_engine::accounts::GRAPH_BASE,
+                    iridium_mail_engine::accounts::GRAPH_BASE,
                     false,
                 );
                 return;
@@ -1877,8 +1882,8 @@ fn pim_server_settings(ui: &mut Ui, app: &mut App, st: &mut Wizard, uid: u64) {
         for r in &a.sync.shared_roots {
             let mut on = open.contains(&r.root);
             let kind = match r.kind {
-                mailcraft_model::account::SharedKind::OtherUser => "another person's mailbox",
-                mailcraft_model::account::SharedKind::Shared => "shared mailbox",
+                iridium_mail_model::account::SharedKind::OtherUser => "another person's mailbox",
+                iridium_mail_model::account::SharedKind::Shared => "shared mailbox",
             };
             if ui.checkbox(&mut on, format!("{} ({kind})", r.name)).changed() {
                 let p = json!({"account": a.id.0, "mailbox": r.root, "open": on});
@@ -1926,7 +1931,7 @@ fn oauth_section(ui: &mut Ui, app: &mut App, st: &mut Wizard, uid: u64) -> Optio
             muted(
                 ui,
                 app,
-                "MailCraft has no built-in registration with any provider. Register an application with your provider and enter its client id (and client secret, if the provider issued one).",
+                "Mail has no built-in registration with any provider. Register an application with your provider and enter its client id (and client secret, if the provider issued one).",
             );
             let e = &mut st.extra;
             egui::Grid::new(("mc-wiz-oauth-grid", uid)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
@@ -2014,7 +2019,7 @@ fn oauth_section(ui: &mut Ui, app: &mut App, st: &mut Wizard, uid: u64) -> Optio
                                 }
                             });
                         } else if let Some(u) = &f.auth_url {
-                            ui.label("Finish signing in in your browser; MailCraft waits for it here.");
+                            ui.label("Finish signing in in your browser; Mail waits for it here.");
                             ui.horizontal(|ui| {
                                 if ui.link("Open the sign-in page again").clicked() {
                                     open_url = Some(u.clone());
@@ -2061,7 +2066,7 @@ fn page_done(ui: &mut Ui, app: &mut App, st: &mut Wizard) -> Out {
         ui.label(format!("{}  ({})", st.address.trim(), st.kind_name()));
     });
     if st.change.is_none() {
-        muted(ui, app, "MailCraft downloads your folders and mail at the next send/receive.");
+        muted(ui, app, "Mail downloads your folders and mail at the next send/receive.");
     }
     let mut out = Out::Keep;
     footer(ui, |ui| {
@@ -2441,7 +2446,10 @@ mod tests {
         e.dav_plain = true;
         let v = e.dav_param();
         assert_eq!((v["password"].as_str(), v["allowPlaintextAuth"].as_bool()), (Some("dav-pw"), Some(true)));
-        e.fill_dav(Some(&mailcraft_model::DavSettings { allow_plaintext_auth: false, ..Default::default() }));
+        e.fill_dav(Some(&iridium_mail_model::DavSettings {
+            allow_plaintext_auth: false,
+            ..Default::default()
+        }));
         assert!(e.dav_password.is_empty() && !e.dav_plain);
     }
 

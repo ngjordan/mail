@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 use super::common::{Dlg, Out, btn, btn_en, enter_pressed, footer, muted, primary, window, with_state};
 use super::compose_dlg::cmd;
 use crate::App;
-use mailcraft_engine::cmd::insert::valid_bookmark;
+use iridium_mail_engine::cmd::insert::valid_bookmark;
 
 /// One bookmark of the message.
 #[derive(Clone, Debug, PartialEq)]
@@ -207,7 +207,7 @@ mod tests {
 
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn harness(app: App) -> Harness<'static, App> {
         let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(

@@ -65,8 +65,8 @@ struct State {
 /// `#rrggbb` or `auto` → an egui colour (auto = black).
 fn color32(c: &str) -> Color32 {
     let c = c.trim();
-    mailcraft_geom::Color::parse_hex(c.trim_start_matches('#'))
-        .or_else(|| mailcraft_html::parse_css_color(c))
+    iridium_mail_geom::Color::parse_hex(c.trim_start_matches('#'))
+        .or_else(|| iridium_mail_html::parse_css_color(c))
         .map_or(Color32::BLACK, |c| Color32::from_rgb(c.r, c.g, c.b))
 }
 
@@ -286,12 +286,12 @@ fn borders_tab(
                 ui.label("Color:");
                 let mut names: Vec<String> = vec!["Automatic".into()];
                 names.extend(
-                    mailcraft_engine::cmd::format::STANDARD_COLORS.iter().map(|(n, _)| (*n).to_owned()),
+                    iridium_mail_engine::cmd::format::STANDARD_COLORS.iter().map(|(n, _)| (*n).to_owned()),
                 );
                 let current = if st.pen.color == "auto" {
                     "Automatic".to_owned()
                 } else {
-                    mailcraft_engine::cmd::format::STANDARD_COLORS
+                    iridium_mail_engine::cmd::format::STANDARD_COLORS
                         .iter()
                         .find(|(_, h)| h.eq_ignore_ascii_case(&st.pen.color))
                         .map_or_else(|| st.pen.color.clone(), |(n, _)| (*n).to_owned())
@@ -302,7 +302,7 @@ fn borders_tab(
                     st.pen.color = if pick == "Automatic" {
                         "auto".into()
                     } else {
-                        mailcraft_engine::cmd::format::STANDARD_COLORS
+                        iridium_mail_engine::cmd::format::STANDARD_COLORS
                             .iter()
                             .find(|(n, _)| *n == pick)
                             .map_or_else(|| "auto".into(), |(_, h)| (*h).to_owned())
@@ -312,7 +312,7 @@ fn borders_tab(
                 }
                 if ui.add(egui::TextEdit::singleline(&mut st.color_text).desired_width(70.0)).lost_focus() {
                     let t = st.color_text.trim().to_owned();
-                    if t.eq_ignore_ascii_case("auto") || mailcraft_html::parse_css_color(&t).is_some() {
+                    if t.eq_ignore_ascii_case("auto") || iridium_mail_html::parse_css_color(&t).is_some() {
                         st.pen.color = if t.eq_ignore_ascii_case("auto") { "auto".into() } else { t };
                         pen_changed = true;
                     } else {
@@ -507,11 +507,13 @@ fn shading_tab(ui: &mut Ui, app: &App, st: &mut State, uid: u64, patterns: &[Str
         ui.label("Fill:");
         ui.horizontal(|ui| {
             let mut names: Vec<String> = vec!["No Color".into()];
-            names.extend(mailcraft_engine::cmd::format::STANDARD_COLORS.iter().map(|(n, _)| (*n).to_owned()));
+            names.extend(
+                iridium_mail_engine::cmd::format::STANDARD_COLORS.iter().map(|(n, _)| (*n).to_owned()),
+            );
             let current = if st.fill.is_empty() {
                 "No Color".to_owned()
             } else {
-                mailcraft_engine::cmd::format::STANDARD_COLORS
+                iridium_mail_engine::cmd::format::STANDARD_COLORS
                     .iter()
                     .find(|(_, h)| h.eq_ignore_ascii_case(&st.fill))
                     .map_or_else(|| st.fill.clone(), |(n, _)| (*n).to_owned())
@@ -519,7 +521,7 @@ fn shading_tab(ui: &mut Ui, app: &App, st: &mut State, uid: u64, patterns: &[Str
             let mut pick = current;
             let list: Vec<&str> = names.iter().map(String::as_str).collect();
             if common::combo(ui, ("bs-fill", uid), &mut pick, &list, 120.0) {
-                st.fill = mailcraft_engine::cmd::format::STANDARD_COLORS
+                st.fill = iridium_mail_engine::cmd::format::STANDARD_COLORS
                     .iter()
                     .find(|(n, _)| *n == pick)
                     .map_or_else(String::new, |(_, h)| (*h).to_owned());
@@ -541,9 +543,9 @@ fn shading_tab(ui: &mut Ui, app: &App, st: &mut State, uid: u64, patterns: &[Str
         ui.end_row();
         ui.label("Preview:");
         let fill = if st.fill.trim().is_empty() {
-            mailcraft_geom::Color::WHITE
+            iridium_mail_geom::Color::WHITE
         } else {
-            mailcraft_html::parse_css_color(st.fill.trim()).unwrap_or(mailcraft_geom::Color::WHITE)
+            iridium_mail_html::parse_css_color(st.fill.trim()).unwrap_or(iridium_mail_geom::Color::WHITE)
         };
         let pct = st
             .pattern
@@ -552,9 +554,10 @@ fn shading_tab(ui: &mut Ui, app: &App, st: &mut State, uid: u64, patterns: &[Str
             .ok()
             .map_or(if st.pattern == "solid" { 1.0 } else { 0.0 }, |v| v / 100.0);
         let pc = if st.pattern_color.trim().eq_ignore_ascii_case("auto") {
-            mailcraft_geom::Color::BLACK
+            iridium_mail_geom::Color::BLACK
         } else {
-            mailcraft_html::parse_css_color(st.pattern_color.trim()).unwrap_or(mailcraft_geom::Color::BLACK)
+            iridium_mail_html::parse_css_color(st.pattern_color.trim())
+                .unwrap_or(iridium_mail_geom::Color::BLACK)
         };
         let c = fill.lerp(pc, pct);
         let (rect, _) = ui.allocate_exact_size(Vec2::new(160.0, 40.0), Sense::hover());

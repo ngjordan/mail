@@ -1,4 +1,4 @@
-use mailcraft_model::Contact;
+use iridium_mail_model::Contact;
 use proptest::prelude::*;
 
 use crate::vcf::{self, Version};
@@ -56,7 +56,7 @@ BEGIN:VCARD\nVERSION:4.0\nFN:Just A Name\nEND:VCARD\n";
 fn writes_and_reads_back_both_versions() {
     let mut c = super::csv::sample_contact();
     c.phones.push(("Assistant".into(), "+1 555 0109".into()));
-    c.addresses.push(mailcraft_model::contact::PostalAddress {
+    c.addresses.push(iridium_mail_model::contact::PostalAddress {
         kind: "Other".into(),
         city: "Paris".into(),
         ..Default::default()
@@ -108,7 +108,7 @@ fn detailed_contact() -> Contact {
     c.assistant = "Bob Stone".into();
     c.spouse = "Sam Lee".into();
     c.anniversary = Some("2010-06-19".into());
-    c.picture = mailcraft_model::contact::ContactPicture::sniff(&jpeg_64x48());
+    c.picture = iridium_mail_model::contact::ContactPicture::sniff(&jpeg_64x48());
     c
 }
 
@@ -130,14 +130,14 @@ fn details_fields_and_photo_round_trip() {
     assert!(v4.contains("\r\nROLE:Engineer\\; civil\r\n"), "{v4}");
     assert!(v4.contains("\r\nANNIVERSARY:20100619\r\n"), "{v4}");
     assert!(v4.contains("\r\nRELATED;VALUE=text;TYPE=spouse:Sam Lee\r\n"), "{v4}");
-    assert!(v4.contains("\r\nX-MAILCRAFT-MANAGER:Rivera\\, Alice\r\n"), "{v4}");
+    assert!(v4.contains("\r\nX-IRIDIUM_MAIL-MANAGER:Rivera\\, Alice\r\n"), "{v4}");
     let v3 = vcf::write(std::slice::from_ref(&c), Version::V3);
     assert!(v3.contains("\r\nPHOTO;ENCODING=b;TYPE=JPEG:/9j/"), "{v3}");
     assert!(v3.contains("\r\nX-ANNIVERSARY:2010-06-19\r\n"), "{v3}");
-    assert!(v3.contains("\r\nX-MAILCRAFT-SPOUSE:Sam Lee\r\n"), "{v3}");
+    assert!(v3.contains("\r\nX-IRIDIUM_MAIL-SPOUSE:Sam Lee\r\n"), "{v3}");
     // A PNG picture keeps its type.
     let mut p = c.clone();
-    p.picture = mailcraft_model::contact::ContactPicture::sniff(&png_2x1());
+    p.picture = iridium_mail_model::contact::ContactPicture::sniff(&png_2x1());
     for v in [Version::V3, Version::V4] {
         let back = vcf::read_str(&vcf::write(std::slice::from_ref(&p), v));
         assert_eq!(back[0].picture, p.picture, "{v:?}");
@@ -146,8 +146,8 @@ fn details_fields_and_photo_round_trip() {
 
 #[test]
 fn reads_photos_in_every_encoding() {
-    let b64 = mailcraft_mime::transfer::encode_base64_flat(&png_2x1());
-    let jpeg = mailcraft_mime::transfer::encode_base64_flat(&jpeg_64x48());
+    let b64 = iridium_mail_mime::transfer::encode_base64_flat(&png_2x1());
+    let jpeg = iridium_mail_mime::transfer::encode_base64_flat(&jpeg_64x48());
     // vCard 2.1: bare TYPE, ENCODING=BASE64, value folded onto indented lines.
     let folded: String =
         jpeg.as_bytes().chunks(60).map(|c| format!("  {}\r\n", String::from_utf8_lossy(c))).collect();
@@ -171,14 +171,14 @@ BEGIN:VCARD\r\nVERSION:4.0\r\nFN:F\r\nPHOTO:data:text/plain;base64,{b64}\r\nEND:
     assert_eq!(mime(4), None, "not a picture");
     assert_eq!(mime(5), None, "not an image type");
     // Too big a picture (by bytes or by pixels) is dropped.
-    let big = mailcraft_mime::transfer::encode_base64_flat(&vec![
+    let big = iridium_mail_mime::transfer::encode_base64_flat(&vec![
         0x89;
-        mailcraft_model::contact::MAX_PICTURE_BYTES
+        iridium_mail_model::contact::MAX_PICTURE_BYTES
             + 10
     ]);
     let mut wide = png_2x1();
     wide.splice(16..20, [0, 0, 0x20, 0]);
-    let wide = mailcraft_mime::transfer::encode_base64_flat(&wide);
+    let wide = iridium_mail_mime::transfer::encode_base64_flat(&wide);
     for v in [big, wide] {
         let t = format!("BEGIN:VCARD\nFN:G\nPHOTO;ENCODING=b:{v}\nEND:VCARD\n");
         assert!(vcf::read_str(&t)[0].picture.is_none());
@@ -190,7 +190,7 @@ fn certificates_in_key_round_trip() {
     // A stand-in certificate: any DER SEQUENCE longer than 64 bytes is kept (the engine checks it).
     let mut der = vec![0x30, 0x81, 100];
     der.extend((0..100u8).map(|i| i.wrapping_mul(7)));
-    let b64 = mailcraft_mime::transfer::encode_base64_flat(&der);
+    let b64 = iridium_mail_mime::transfer::encode_base64_flat(&der);
     for (version, key) in [
         ("4.0", format!("KEY:data:application/pkix-cert;base64,{b64}")),
         ("3.0", format!("KEY;ENCODING=b;TYPE=X509:{b64}")),

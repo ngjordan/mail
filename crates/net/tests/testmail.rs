@@ -1,16 +1,16 @@
-//! End-to-end tests against the in-process servers from `mailcraft-testmail` (127.0.0.1 only).
+//! End-to-end tests against the in-process servers from `iridium-mail-testmail` (127.0.0.1 only).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
-use mailcraft_model::FolderRole;
-use mailcraft_net::imap::{IdleEvent, ImapClient, SeqSet, StoreMode};
-use mailcraft_net::smtp::{SmtpClient, SmtpSettings};
-use mailcraft_net::sync::{FolderState, ImapAccount, ImapSettings};
-use mailcraft_net::{ConnectOptions, Credentials, NetError, Security, TlsOptions};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_model::FolderRole;
+use iridium_mail_net::imap::{IdleEvent, ImapClient, SeqSet, StoreMode};
+use iridium_mail_net::smtp::{SmtpClient, SmtpSettings};
+use iridium_mail_net::sync::{FolderState, ImapAccount, ImapSettings};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError, Security, TlsOptions};
+use iridium_mail_testmail::{Config, TestServers};
 
 const USER: &str = "alice@example.com";
 const PASS: &str = "correct horse";
@@ -212,7 +212,7 @@ fn write_back_operations() {
     acc.create_folder("Clients/Acme", None).unwrap();
     // RFC 6154 CREATE-SPECIAL-USE.
     acc.create_folder("Saved", Some("\\Archive")).unwrap();
-    assert_eq!(s.special_use(USER, "Saved"), Some(mailcraft_testmail::SpecialUse::Archive));
+    assert_eq!(s.special_use(USER, "Saved"), Some(iridium_mail_testmail::SpecialUse::Archive));
     acc.delete_folder("Saved").unwrap();
     acc.rename_folder("Clients/Acme", "Clients/Acme Ltd").unwrap();
     let names = s.mailboxes(USER).unwrap();
@@ -283,7 +283,7 @@ fn idle_reports_new_mail() {
     let ev = c.idle(Duration::from_secs(10), None).unwrap();
     t.join().unwrap();
     let IdleEvent::Changed(changes) = ev else { panic!("expected a change, got {ev:?}") };
-    assert!(changes.iter().any(|u| matches!(u, mailcraft_net::imap::Untagged::Exists(1))));
+    assert!(changes.iter().any(|u| matches!(u, iridium_mail_net::imap::Untagged::Exists(1))));
     assert_eq!(c.selected().unwrap().exists, 1);
     // The session is still in sync afterwards.
     assert_eq!(c.uid_search("ALL").unwrap().len(), 1);
@@ -423,7 +423,7 @@ fn idle_once_reports_new_mail_and_stops_on_request() {
 
 #[test]
 fn sync_reports_download_progress_per_batch() {
-    use mailcraft_net::sync::FetchProgress;
+    use iridium_mail_net::sync::FetchProgress;
     let s = servers(Config::default());
     for i in 0..7 {
         s.seed_message(USER, "INBOX", &msg(&format!("p{i}"), "x"), &[]).unwrap();

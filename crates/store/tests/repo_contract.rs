@@ -8,8 +8,8 @@
 use std::collections::BTreeSet;
 use std::ops::ControlFlow;
 
-use mailcraft_model::{DateTime, FolderCounts, FolderId, ItemId, MailItem, ScanFilter};
-use mailcraft_store::{Db, MailRepo, MemRepo, SqlRepo, StoreError};
+use iridium_mail_model::{DateTime, FolderCounts, FolderId, ItemId, MailItem, ScanFilter};
+use iridium_mail_store::{Db, MailRepo, MemRepo, SqlRepo, StoreError};
 use proptest::prelude::*;
 
 fn item(id: u64, folder: u64, read: bool) -> MailItem {

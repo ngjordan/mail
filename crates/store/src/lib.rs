@@ -1,7 +1,7 @@
 //! Local mailbox storage (layer L2).
 //!
 //! A profile uses one of two storages ([`StoreKind`]); an existing profile always opens in the one it has, a
-//! new one gets the legacy storage unless asked for SQLite (`--store sqlite` or `MAILCRAFT_STORE=sqlite`; the
+//! new one gets the legacy storage unless asked for SQLite (`--store sqlite` or `IRIDIUM_MAIL_STORE=sqlite`; the
 //! default until storage stage S9 migrates profiles).
 //!
 //! **SQLite** (storage stage S6, native builds, [`sql`]): `store.db` (WAL, `synchronous=FULL`) holds the
@@ -11,9 +11,9 @@
 //! as below. [`SqlRepo`] is the [`MailRepo`] over the mail table; [`MemRepo`] the in-memory one.
 //!
 //! **Legacy** on-disk layout under the profile directory:
-//! - `mailbox.json`: full [`mailcraft_model::Mailbox`] snapshot without message bodies or sources (written
+//! - `mailbox.json`: full [`iridium_mail_model::Mailbox`] snapshot without message bodies or sources (written
 //!   atomically: temp file + fsync + rename). Wrapped as
-//!   `{"mailcraft_snapshot":2,"generation":N,"bodies":2,"mailbox":{...}}` (format 1, written before storage
+//!   `{"iridium_mail_snapshot":2,"generation":N,"bodies":2,"mailbox":{...}}` (format 1, written before storage
 //!   stage S5, is still read).
 //! - `journal.jsonl`: append-only [`Op`] log since the snapshot (header line carries the snapshot generation it
 //!   applies to, and its format, [`journal::JOURNAL_VERSION`]); replayed on open; a torn last line is ignored
@@ -26,7 +26,7 @@
 //!   [`bodies::BodyStore`]). Items refer to both by key; files written before S5 that carry content inline are
 //!   moved out when they are read ([`legacy`]).
 //! - `recoverable.json`: items deleted for good, kept for Recover Deleted Items
-//!   ([`mailcraft_model::RecoverBin`], raw sources in blobs), written atomically by [`Store::save_recoverable`].
+//!   ([`iridium_mail_model::RecoverBin`], raw sources in blobs), written atomically by [`Store::save_recoverable`].
 //! - `lock`: single-writer lock file holding the owner's pid and a timestamp. A lock whose process is gone
 //!   (checked via `/proc/<pid>` on Linux) or, where liveness cannot be checked, whose timestamp is more than an
 //!   hour old, is taken over.
@@ -72,7 +72,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use mailcraft_model::{
+use iridium_mail_model::{
     Body, DateTime, DeletedItem, FolderId, Importance, ItemId, MailItem, Mailbox, RecoverBin,
 };
 use serde::{Deserialize, Serialize};
@@ -82,8 +82,8 @@ pub use blob::BlobKey;
 pub use bodies::{BodyStore, Content};
 pub use config::SmallState;
 pub use import::MaildirFlags;
+pub use iridium_mail_model::{ChangeToken, MailChanges};
 pub use journal::Repair;
-pub use mailcraft_model::{ChangeToken, MailChanges};
 pub use mem::MemRepo;
 pub use repo::{MailRepo, Shared};
 #[cfg(not(target_arch = "wasm32"))]
@@ -97,9 +97,9 @@ pub enum StoreError {
     Corrupt(String),
     #[error("store is locked by another process")]
     Locked,
-    /// The data folder was written by a newer MailCraft in a format this build cannot read (opening it anyway
+    /// The data folder was written by a newer Mail in a format this build cannot read (opening it anyway
     /// would lose what the newer build saved).
-    #[error("the data folder was written by a newer version of MailCraft: {0}")]
+    #[error("the data folder was written by a newer version of Mail: {0}")]
     TooNew(String),
     /// A write was refused because the file would pass the size cap its reader applies (the file on disk is
     /// left as it was).
@@ -123,7 +123,7 @@ pub const RECOVERABLE_FILE: &str = "recoverable.json";
 pub const MAX_RECOVERABLE_BYTES: u64 = 256 << 20;
 
 /// Largest single blob (raw message) accepted.
-pub const MAX_BLOB_BYTES: usize = mailcraft_mime::MAX_MESSAGE_BYTES;
+pub const MAX_BLOB_BYTES: usize = iridium_mail_mime::MAX_MESSAGE_BYTES;
 
 /// A journaled change. The engine emits these after each command; replay must be idempotent.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -132,19 +132,19 @@ pub enum Op {
     PutMail(Box<MailItem>),
     RemoveMail(ItemId),
     /// Upsert the whole folder table entry.
-    PutFolder(Box<mailcraft_model::Folder>),
+    PutFolder(Box<iridium_mail_model::Folder>),
     RemoveFolder(FolderId),
     /// Replace one account, matched by id (appended when it is missing). No longer written (storage stage S4
     /// journals an account's settings through `PutConfig` and its sync state through `PutSync`); still
     /// replayed from journals written before.
-    PutAccount(Box<mailcraft_model::Account>),
+    PutAccount(Box<iridium_mail_model::Account>),
     /// Replace the whole mailbox (a mailbox opened or replaced as a whole, and calendar, contact, task and
     /// note changes until storage stage S12).
     Replace(Box<Mailbox>),
     /// Replace one account's synchronisation bookkeeping (server folder states, the queue of server changes),
     /// matched by id; skipped when the account is missing. Every command on synchronised mail journals this
     /// next to its per-item ops.
-    PutSync(mailcraft_model::AccountId, Box<mailcraft_model::account::AccountSync>),
+    PutSync(iridium_mail_model::AccountId, Box<iridium_mail_model::account::AccountSync>),
     /// Replace the configuration parts that changed ([`SmallState`]: accounts without their sync state,
     /// categories, rules, quick steps, views, signatures, Auto-Complete, dictionary, junk lists).
     PutConfig(Box<SmallState>),
@@ -254,7 +254,7 @@ pub enum StoreKind {
 
 impl StoreKind {
     /// Environment variable choosing the storage of new profiles (`legacy` or `sqlite`).
-    pub const ENV: &'static str = "MAILCRAFT_STORE";
+    pub const ENV: &'static str = "IRIDIUM_MAIL_STORE";
 
     /// `legacy` or `sqlite` (ASCII case ignored).
     pub fn parse(s: &str) -> Option<StoreKind> {
@@ -381,7 +381,7 @@ impl Store {
 
     /// Opens (creating if missing) a store at `dir`, taking the lock. An existing profile opens in the
     /// storage it has ([`Store::kind`] tells which); a new one gets `new_kind`. A new SQLite profile also
-    /// gets a marker `mailbox.json` that older MailCraft versions refuse to open, instead of starting an
+    /// gets a marker `mailbox.json` that older Mail versions refuse to open, instead of starting an
     /// empty profile next to the database.
     pub fn open_with(dir: &Path, new_kind: StoreKind) -> Result<Store> {
         fs::create_dir_all(dir)?;
@@ -867,8 +867,9 @@ pub fn export_mbox(items: &[&MailItem], bodies: &BodyStore, file: &Path) -> Resu
 
 /// Rebuilds RFC 5322 bytes from an item's fields and its body (the message builder, with a minimal fallback).
 pub fn rebuild_message(item: &MailItem, body: Option<&Body>) -> Vec<u8> {
-    use mailcraft_mime::{Address, MessageBuilder};
-    let addrs = |v: &[mailcraft_mime::Mailbox]| v.iter().cloned().map(Address::Mailbox).collect::<Vec<_>>();
+    use iridium_mail_mime::{Address, MessageBuilder};
+    let addrs =
+        |v: &[iridium_mail_mime::Mailbox]| v.iter().cloned().map(Address::Mailbox).collect::<Vec<_>>();
     let builder = MessageBuilder {
         from: item.from.clone(),
         sender: item.sender.clone(),
@@ -901,7 +902,7 @@ fn header_safe(s: &str) -> String {
 
 /// Plain UTF-8 message (RFC 6532 headers, 8bit body) used when the builder produced nothing.
 fn minimal_message(item: &MailItem, body: Option<&Body>) -> Vec<u8> {
-    let list = |v: &[mailcraft_mime::Mailbox]| {
+    let list = |v: &[iridium_mail_mime::Mailbox]| {
         v.iter().map(|m| header_safe(&m.to_display_string())).collect::<Vec<_>>().join(", ")
     };
     let mut out = String::new();

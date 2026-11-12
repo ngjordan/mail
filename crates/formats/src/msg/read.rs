@@ -3,8 +3,8 @@
 use std::io::{Cursor, Read};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::{BodyFormat, DateTime, Importance, Sensitivity};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::{BodyFormat, DateTime, Importance, Sensitivity};
 
 use super::props::*;
 use super::{
@@ -299,10 +299,10 @@ pub(crate) fn assemble(
     m.created = time(p, PID_CREATION_TIME).or_else(|| time(p, PID_LAST_MODIFICATION_TIME));
     m.message_id = p.text(PID_INTERNET_MESSAGE_ID).map(|s| clean_id(&s)).filter(|s| !s.is_empty());
     m.in_reply_to =
-        p.text(PID_IN_REPLY_TO).map(|s| mailcraft_mime::message::parse_msg_ids(&s)).unwrap_or_default();
+        p.text(PID_IN_REPLY_TO).map(|s| iridium_mail_mime::message::parse_msg_ids(&s)).unwrap_or_default();
     m.references = p
         .text(PID_INTERNET_REFERENCES)
-        .map(|s| mailcraft_mime::message::parse_msg_ids(&s))
+        .map(|s| iridium_mail_mime::message::parse_msg_ids(&s))
         .unwrap_or_default();
     m.in_reply_to = m.in_reply_to.iter().map(|s| clean_id(s)).filter(|s| !s.is_empty()).collect();
     m.references = m.references.iter().map(|s| clean_id(s)).filter(|s| !s.is_empty()).collect();
@@ -374,12 +374,12 @@ pub(crate) fn assemble(
     if let Some(h) = &m.transport_headers {
         let mut raw = h.clone().into_bytes();
         raw.extend_from_slice(b"\r\n\r\n");
-        if let Ok(msg) = mailcraft_mime::parse(&raw) {
+        if let Ok(msg) = iridium_mail_mime::parse(&raw) {
             if m.from.as_ref().is_none_or(|f| f.addr.is_empty()) {
                 m.from = msg.from().or(m.from.take());
             }
-            let flat = |v: Vec<mailcraft_mime::Address>| {
-                v.iter().flat_map(mailcraft_mime::Address::mailboxes).collect::<Vec<_>>()
+            let flat = |v: Vec<iridium_mail_mime::Address>| {
+                v.iter().flat_map(iridium_mail_mime::Address::mailboxes).collect::<Vec<_>>()
             };
             if m.to.is_empty() {
                 m.to = flat(msg.to());

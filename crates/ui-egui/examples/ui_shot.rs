@@ -1,7 +1,7 @@
 //! Headless screenshot of the main window with the sample mailbox (egui_kittest + wgpu, no window).
 //!
 //! ```text
-//! cargo run -p mailcraft-ui-egui --example ui_shot -- <out.png> [WIDTHxHEIGHT] [--dark] [--module NAME]
+//! cargo run -p iridium-mail-ui-egui --example ui_shot -- <out.png> [WIDTHxHEIGHT] [--dark] [--module NAME]
 //!     [--reading right|bottom|off] [--select] [--classic] [--scale F] [--calendar VIEW] [--run ID[=JSON]]...
 //!     [--backstage PAGE] [--tab NAME]
 //! ```
@@ -21,9 +21,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
 
 use egui_kittest::Harness;
-use mailcraft_engine::queries::{self, ListRow};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_ui_egui::{App, Surface};
+use iridium_mail_engine::queries::{self, ListRow};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_ui_egui::{App, Surface};
 use serde_json::json;
 
 struct Opts {

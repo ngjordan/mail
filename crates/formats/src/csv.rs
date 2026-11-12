@@ -4,13 +4,13 @@
 //! comma, semicolon or tab delimiters (detected from the header line). The writer quotes fields that need it
 //! and ends records with CRLF.
 //!
-//! Contacts export uses MailCraft's own column names ([`CONTACT_COLUMNS`]); import recognises those plus the
+//! Contacts export uses Mail's own column names ([`CONTACT_COLUMNS`]); import recognises those plus the
 //! common spellings found in address-book exports (given/family name, "E-mail 2 Address", "Work Phone",
 //! "Phone 1 - Type" / "Phone 1 - Value" pairs, "Address 1 - City", …), matched case- and punctuation-
 //! insensitively.
 
-use mailcraft_model::Contact;
-use mailcraft_model::contact::PostalAddress;
+use iridium_mail_model::Contact;
+use iridium_mail_model::contact::PostalAddress;
 
 use crate::{Result, check_size};
 
@@ -235,7 +235,7 @@ const ADDR_PARTS: &[(AddrPart, &str)] = &[
     (AddrPart::Country, "Country"),
 ];
 
-/// MailCraft's contact export columns, in order.
+/// Mail's contact export columns, in order.
 pub const CONTACT_COLUMNS: &[&str] = &[
     "First Name",
     "Middle Name",
@@ -441,7 +441,7 @@ pub(crate) fn normalize_date(s: &str) -> Option<String> {
 }
 
 fn days_in(y: i64, m: u8) -> u8 {
-    mailcraft_model::dates::days_in_month(y, m)
+    iridium_mail_model::dates::days_in_month(y, m)
 }
 
 /// Default "File as": "Last, First", else the name part present, else company, else the first email.

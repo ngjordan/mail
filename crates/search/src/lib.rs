@@ -1,4 +1,4 @@
-//! MailCraft instant search (layer L3).
+//! Mail instant search (layer L3).
 //!
 //! - [`query`]: the search-box query language (free text, `from:`, `subject:`, `hasattachments:yes`,
 //!   `received:"last week"`, `size:>1MB`, AND/OR/NOT, parentheses, quoted phrases…) parsed into a

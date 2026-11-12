@@ -8,10 +8,10 @@ use std::net::TcpListener;
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use mailcraft_net::imap::{ImapClient, Limits, SeqSet};
-use mailcraft_net::smtp::{SmtpClient, SmtpSettings};
-use mailcraft_net::sync::{FolderState, ImapAccount, ImapSettings};
-use mailcraft_net::{ConnectOptions, Credentials, NetError, Security};
+use iridium_mail_net::imap::{ImapClient, Limits, SeqSet};
+use iridium_mail_net::smtp::{SmtpClient, SmtpSettings};
+use iridium_mail_net::sync::{FolderState, ImapAccount, ImapSettings};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError, Security};
 
 /// Plays `steps`: for each (expected line prefix, reply), reads one client line (skipped when the prefix is
 /// `None`), checks it, and writes the reply (CRLF-separated lines; empty = no reply). Returns what the

@@ -12,7 +12,7 @@
 //!   unless the backend says the system's own tool shows its picker above every window
 //!   ([`ScreenCapture::clip_needs_window_hidden`]; the desktop portal on Wayland, where a minimised window
 //!   cannot be brought back by the program).
-//! - The menu lists every window but the one the compose is in (MailCraft's main window and other windows
+//! - The menu lists every window but the one the compose is in (Mail's main window and other windows
 //!   are listed, as other programs' are).
 //! - A window capture, or a clip the system already cut out ([`Captured::clipped`]), is inserted as a PNG
 //!   via `insert.screenshot`; a whole-screen capture opens the Screen Clipping dialog to drag the region.
@@ -89,7 +89,7 @@ pub fn capture_backend() -> Option<Arc<dyn ScreenCapture>> {
 }
 
 /// Reason given when no backend is installed.
-pub const NO_BACKEND: &str = "This version of MailCraft cannot capture the screen.";
+pub const NO_BACKEND: &str = "This version of Mail cannot capture the screen.";
 /// Seconds the window list stays cached.
 const WINDOW_CACHE: Duration = Duration::from_secs(1);
 /// Most windows listed in the menu.
@@ -154,7 +154,7 @@ type Jobs = Arc<Mutex<Vec<Job>>>;
 /// own).
 fn jobs(ctx: &egui::Context) -> Jobs {
     ctx.data_mut(|d| {
-        d.get_temp_mut_or_insert_with(egui::Id::unique("mailcraft-capture-jobs"), Jobs::default).clone()
+        d.get_temp_mut_or_insert_with(egui::Id::unique("iridium-mail-capture-jobs"), Jobs::default).clone()
     })
 }
 /// Whole-screen captures waiting in the Screen Clipping dialog, by token.
@@ -185,7 +185,7 @@ pub(crate) fn own_window_title(app: &App, cid: u64) -> Option<String> {
 }
 
 /// The main window's title (set by the desktop app).
-pub const MAIN_WINDOW_TITLE: &str = "MailCraft";
+pub const MAIN_WINDOW_TITLE: &str = "Mail";
 
 /// The viewport showing compose `cid` (its own window, or the main window for an inline response).
 fn viewport_of(app: &App, cid: u64) -> egui::ViewportId {
@@ -226,7 +226,7 @@ pub(crate) fn ribbon_screenshot(ctx: &egui::Context, app: &mut App, cid: u64, pa
     if minimized {
         ctx.send_viewport_cmd_to(viewport_of(app, cid), ViewportCommand::Minimized(true));
     }
-    let spawned = std::thread::Builder::new().name("mailcraft-capture".into()).spawn(move || {
+    let spawned = std::thread::Builder::new().name("iridium-mail-capture".into()).spawn(move || {
         if minimized {
             std::thread::sleep(MINIMIZE_WAIT);
         }
@@ -415,7 +415,7 @@ pub fn crop(shot: &Captured, x: u32, y: u32, w: u32, h: u32) -> Option<Captured>
 pub(crate) mod tests {
     use super::*;
 
-    /// A fake backend: windows (one blank, one titled like a new compose window, MailCraft's main window), a
+    /// A fake backend: windows (one blank, one titled like a new compose window, Mail's main window), a
     /// 4×3 screen. With [`PORTAL`] set it acts like the desktop portal (no need to minimise for clipping).
     pub(crate) struct Fake;
 

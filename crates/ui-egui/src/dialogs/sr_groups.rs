@@ -2,7 +2,7 @@
 //! Advanced › Send/Receive): the groups with New, Edit, Copy, Remove and Rename, the settings of the selected
 //! group (online: include in F9, schedule, run on exit; offline: include, schedule) and the group editor
 //! (accounts, what each one sends and receives, which folders). The engine command
-//! `sendReceive.defineGroups` keeps them (`mailcraft_engine::sync::groups`). The built-in All Accounts group
+//! `sendReceive.defineGroups` keeps them (`iridium_mail_engine::sync::groups`). The built-in All Accounts group
 //! shows the Options › Advanced send/receive settings, which it uses.
 
 use egui::{Context, RichText};
@@ -208,7 +208,7 @@ fn settings(ui: &mut egui::Ui, app: &mut App, st: &mut GroupsState, sel: &Value,
     heading(ui, app, &format!("Settings for group \"{name}\""));
     let mut g = sel.clone();
     let mut changed = false;
-    ui.label(RichText::new("When MailCraft is online").strong());
+    ui.label(RichText::new("When Mail is online").strong());
     ui.add_enabled_ui(!built_in, |ui| {
         let mut include = b_of(&g, "include");
         if ui.checkbox(&mut include, "Include this group in send/receive (F9)").changed() {

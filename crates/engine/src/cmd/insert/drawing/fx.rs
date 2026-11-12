@@ -5,8 +5,8 @@
 //! Everything works on the coverage masks and premultiplied images of [`super::super`] at
 //! [`super::super::RASTER_SCALE`] device pixels per px.
 
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Gradient, Reflection, ShadowKind, ShapeEffects};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Gradient, Reflection, ShadowKind, ShapeEffects};
 
 use super::super::{Img, Mask, RASTER_SCALE, darken, lighten};
 use super::P;
@@ -76,7 +76,7 @@ pub fn stops_gradient(g: &Gradient, (x0, y0, x1, y1): (f32, f32, f32, f32), x: f
 }
 
 /// The colour at `t` (0..=1) of `stops` (sorted or not).
-pub fn stop_color(stops: &[mailcraft_model::rich::GradientStop], t: f32) -> Color {
+pub fn stop_color(stops: &[iridium_mail_model::rich::GradientStop], t: f32) -> Color {
     let mut s: Vec<_> = stops.iter().filter(|s| s.pos.is_finite()).take(16).copied().collect();
     s.sort_by(|a, b| a.pos.total_cmp(&b.pos));
     let (Some(first), Some(last)) = (s.first(), s.last()) else { return Color::TRANSPARENT };
@@ -111,7 +111,7 @@ impl Picture {
     pub fn decode(b64: &str) -> Option<Picture> {
         use base64::Engine as _;
         let data = base64::engine::general_purpose::STANDARD.decode(b64.trim()).ok()?;
-        let canvas = mailcraft_render::svg::decode_png(&data)?;
+        let canvas = iridium_mail_render::svg::decode_png(&data)?;
         let (w, h) = (usize::try_from(canvas.width).ok()?, usize::try_from(canvas.height).ok()?);
         if w == 0 || h == 0 || canvas.pixels.len() != w.checked_mul(h)?.checked_mul(4)? {
             return None;
@@ -140,7 +140,7 @@ impl Picture {
 /// scaled down to at most `max` px a side, base64.
 pub fn store_picture(data: &[u8], max: u32) -> Option<String> {
     use base64::Engine as _;
-    let canvas = mailcraft_render::svg::decode_png(data)?;
+    let canvas = iridium_mail_render::svg::decode_png(data)?;
     let (w, h) = (canvas.width, canvas.height);
     if w == 0 || h == 0 {
         return None;
@@ -160,7 +160,7 @@ pub fn store_picture(data: &[u8], max: u32) -> Option<String> {
                 }
             }
         }
-        mailcraft_render::Canvas { width: nw, height: nh, pixels: px }
+        iridium_mail_render::Canvas { width: nw, height: nh, pixels: px }
     } else {
         canvas
     };
@@ -606,7 +606,7 @@ pub(in crate::cmd::insert) fn warp(mask: &Mask, kind: &str) -> Mask {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::rich::{GradientStop, Shadow};
+    use iridium_mail_model::rich::{GradientStop, Shadow};
 
     fn square(n: usize, inset: usize) -> Mask {
         let mut m = Mask::new(n, n);

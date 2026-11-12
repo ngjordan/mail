@@ -5,8 +5,8 @@ use serde_json::json;
 use crate::Session;
 use crate::cmd::compose::tests::{open, session};
 use crate::cmd::insert::tests::last_dialog;
-use mailcraft_model::Block;
-use mailcraft_model::rich::ListKind;
+use iridium_mail_model::Block;
+use iridium_mail_model::rich::ListKind;
 
 fn with_text(text: &str) -> (Session, u64) {
     let mut s = session();
@@ -53,7 +53,7 @@ fn continue_from_the_previous_list() {
     s.run("format.numbering", &json!({"start": 7})).unwrap();
     assert_eq!(starts(&s, id), vec![1, 7]);
     // The HTML numbers on from there.
-    assert!(mailcraft_html::doc_to_html(&s.composes[&id].body).contains("<ol start=\"7\">"));
+    assert!(iridium_mail_html::doc_to_html(&s.composes[&id].body).contains("<ol start=\"7\">"));
 }
 
 #[test]

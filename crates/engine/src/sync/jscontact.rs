@@ -3,7 +3,7 @@
 //! Mapping: `name` components (given, given2, surname, title, credential / generation) → name parts, else
 //! `name.full` → first name; the first `organizations` entry → company and its first unit → department;
 //! `titles` (kind title → job title, role → profession); `emails` (preferred first); `phones` (features
-//! mobile, pager, fax and contexts work / private → the phone kinds MailCraft shows: Business, Home, Mobile,
+//! mobile, pager, fax and contexts work / private → the phone kinds Mail shows: Business, Home, Mobile,
 //! Business Fax, Home Fax, Pager, Car, Other; another kind travels as the phone's `label`); `addresses`
 //! (contexts work / private → Business / Home, components → street, city, region, postal code, country);
 //! the first `links` URI → web page; the first `onlineServices` entry → IM address; `anniversaries` (birth,
@@ -11,14 +11,14 @@
 //! a `media` photo given as a `data:` URI → picture.
 //!
 //! Writing produces the same properties; an update replaces only those of them the edit changed (see
-//! `jmap_pim.rs`; a property MailCraft does not map stays on the server as it is). Server data is
+//! `jmap_pim.rs`; a property Mail does not map stays on the server as it is). Server data is
 //! untrusted: every list is capped and nothing panics on odd input.
 
-use mailcraft_model::Contact;
-use mailcraft_model::contact::{ContactPicture, PostalAddress};
+use iridium_mail_model::Contact;
+use iridium_mail_model::contact::{ContactPicture, PostalAddress};
 use serde_json::{Map, Value, json};
 
-/// The card properties MailCraft writes (an update sets those the edit changed, `null` when the contact has
+/// The card properties Mail writes (an update sets those the edit changed, `null` when the contact has
 /// none any more).
 pub(super) const MAPPED: [&str; 14] = [
     "name",

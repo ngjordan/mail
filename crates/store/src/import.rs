@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::io::{BufReader, ErrorKind};
 use std::path::{Path, PathBuf};
 
-use mailcraft_model::{DateTime, FlagState, FolderId, ItemId, MailItem, Mailbox, ResponseState};
+use iridium_mail_model::{DateTime, FlagState, FolderId, ItemId, MailItem, Mailbox, ResponseState};
 
 use crate::bodies::{BodyStore, Content};
 use crate::journal::read_capped;
@@ -22,7 +22,7 @@ pub const FOLLOW_UP_LABEL: &str = "Follow up";
 /// minimal header scan so no message is ever lost on import. The source itself is not kept on the item: the
 /// caller stores it ([`store_source`]).
 pub fn item_from_raw(raw: &[u8], folder: FolderId, now: DateTime) -> MailItem {
-    let mut item = match mailcraft_mime::parse(raw) {
+    let mut item = match iridium_mail_mime::parse(raw) {
         Ok(msg) => MailItem::from_message(&msg, raw, now),
         Err(e) => {
             log::debug!("import: MIME parse failed ({e}); using minimal header scan");

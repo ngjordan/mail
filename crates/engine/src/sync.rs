@@ -1,7 +1,7 @@
 //! Send/receive (`plan/reference/ribbon-mail.md` Send / Receive, `reading-pane.md` sending, `folders.md`).
 //!
 //! **Threads.** Each server account gets a worker thread (native builds only) that owns its IMAP connection
-//! (`mailcraft_net::sync::ImapAccount`) and opens SMTP sessions for sending. The session talks to workers
+//! (`iridium_mail_net::sync::ImapAccount`) and opens SMTP sessions for sending. The session talks to workers
 //! through channels: [`Session::send_receive`] hands a worker one job (queued server changes, Outbox
 //! messages, folders to update), and [`Session::poll_sync`] — called by the UI every frame, or by
 //! [`Session::wait_for_sync`] — applies what came back. Every change to the mailbox is made on the session's
@@ -37,16 +37,16 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::{CmdError, Notice, Session};
-use mailcraft_model::account::{PendingOp, RemoteOp};
-use mailcraft_model::{
+use iridium_mail_model::account::{PendingOp, RemoteOp};
+use iridium_mail_model::{
     AccountId, AccountKind, FlagState, Folder, FolderId, FolderKind, ItemId, MailChanges, MailItem, Mailbox,
     ResponseState, ScanFilter,
 };
 /// Settings for `accounts.discover` and the server connections (for front ends and tests that configure them).
 #[cfg(not(target_arch = "wasm32"))]
-pub use mailcraft_net::ConnectOptions;
+pub use iridium_mail_net::ConnectOptions;
 #[cfg(not(target_arch = "wasm32"))]
-pub use mailcraft_net::discover::{DiscoverOptions, ResolverChoice};
+pub use iridium_mail_net::discover::{DiscoverOptions, ResolverChoice};
 
 /// Default automatic send/receive interval (Options › Advanced › Send/Receive: every 30 minutes).
 pub const DEFAULT_AUTO_MINUTES: u32 = 30;
@@ -456,11 +456,11 @@ pub struct SyncState {
     pub oauth: BTreeMap<AccountId, OAuthFlow>,
     /// HTTP options for OAuth endpoints (`None` = defaults). Tests use it to trust a local server.
     #[cfg(not(target_arch = "wasm32"))]
-    pub oauth_http: Option<mailcraft_net::ConnectOptions>,
+    pub oauth_http: Option<iridium_mail_net::ConnectOptions>,
     /// How `accounts.discover` looks addresses up (system resolver and the autoconfig locations by
     /// default; tests point it at local servers).
     #[cfg(not(target_arch = "wasm32"))]
-    pub discovery: mailcraft_net::discover::DiscoverOptions,
+    pub discovery: iridium_mail_net::discover::DiscoverOptions,
     /// Address lookups started by `accounts.discover`.
     #[cfg(not(target_arch = "wasm32"))]
     discoveries: BTreeMap<String, Discovering>,
@@ -823,7 +823,7 @@ fn refresh_status(s: &mut Session) {
         let run = s.sync.runs.get(&a.id);
         let outbox = s
             .mailbox
-            .role_folder(a.id, mailcraft_model::FolderRole::Outbox)
+            .role_folder(a.id, iridium_mail_model::FolderRole::Outbox)
             .map_or(0, |f| s.mailbox.total_count(f));
         let busy = run.is_some_and(|r| r.busy.is_some());
         let row = AccountStatus {
@@ -956,7 +956,7 @@ fn tick(s: &mut Session) {
         let plan = if auto {
             Plan { send: true, receive: true, folders: None, user: false }
         } else if poll {
-            let inbox = s.mailbox.role_folder(id, mailcraft_model::FolderRole::Inbox);
+            let inbox = s.mailbox.role_folder(id, iridium_mail_model::FolderRole::Inbox);
             Plan { send: false, receive: true, folders: inbox.map(|f| vec![f]), user: false }
         } else if due {
             Plan::default()
@@ -1049,7 +1049,7 @@ fn manage_push(s: &mut Session) {
                 // A shared mailbox's Inbox has its own server name.
                 let inbox = s
                     .mailbox
-                    .role_folder(id, mailcraft_model::FolderRole::Inbox)
+                    .role_folder(id, iridium_mail_model::FolderRole::Inbox)
                     .and_then(|f| s.mailbox.folder(f))
                     .and_then(|f| f.remote_name.clone())
                     .unwrap_or_else(|| "INBOX".to_owned());
@@ -1101,7 +1101,7 @@ fn stale(mb: &Mailbox, op: &RemoteOp) -> bool {
 
 /// True when the next queued server change of `a` is due at `now`. Changes run in queue order, so one waiting
 /// out a retry delay holds back the ones after it (a later upload must not overtake the folder it goes into).
-fn has_due_ops(mb: &Mailbox, a: &mailcraft_model::Account, now: i64) -> bool {
+fn has_due_ops(mb: &Mailbox, a: &iridium_mail_model::Account, now: i64) -> bool {
     a.sync.pending.iter().find(|p| !stale(mb, &p.op)).is_some_and(|p| p.not_before <= now)
 }
 
@@ -1109,7 +1109,7 @@ fn has_due_ops(mb: &Mailbox, a: &mailcraft_model::Account, now: i64) -> bool {
 /// runs stop at the first change still waiting out a retry delay; user-started ones take everything.
 fn job_ops(
     s: &Session,
-    a: &mailcraft_model::Account,
+    a: &iridium_mail_model::Account,
     plan: &Plan,
     now: i64,
 ) -> Vec<(u64, RemoteOp, Option<Vec<u8>>)> {
@@ -1244,7 +1244,7 @@ pub(crate) fn keeps_server_copy(mb: &Mailbox, account: AccountId, folder: Folder
     if f.account != account || f.kind != FolderKind::Mail {
         return false;
     }
-    let Some(outbox) = mb.role_folder(account, mailcraft_model::FolderRole::Outbox) else { return true };
+    let Some(outbox) = mb.role_folder(account, iridium_mail_model::FolderRole::Outbox) else { return true };
     let mut cur = Some(folder);
     let mut steps = 0usize;
     while let Some(id) = cur {
@@ -1713,7 +1713,7 @@ fn server_default_folder(
     account: AccountId,
     q: &mut Vec<(AccountId, RemoteOp)>,
 ) -> Option<(AccountId, String)> {
-    use mailcraft_model::FolderRole as R;
+    use iridium_mail_model::FolderRole as R;
     let f = after.folders.get(&folder)?;
     let special_use = match f.role {
         Some(R::Archive) => "\\Archive",
@@ -1768,11 +1768,11 @@ fn server_folder_below_default(
     if top.role.is_none_or(|r| {
         !matches!(
             r,
-            mailcraft_model::FolderRole::Archive
-                | mailcraft_model::FolderRole::DeletedItems
-                | mailcraft_model::FolderRole::JunkEmail
-                | mailcraft_model::FolderRole::SentItems
-                | mailcraft_model::FolderRole::Drafts
+            iridium_mail_model::FolderRole::Archive
+                | iridium_mail_model::FolderRole::DeletedItems
+                | iridium_mail_model::FolderRole::JunkEmail
+                | iridium_mail_model::FolderRole::SentItems
+                | iridium_mail_model::FolderRole::Drafts
         )
     }) {
         return None;
@@ -1939,7 +1939,7 @@ fn carry_over(live: &Mailbox, live_mail: &MailChanges, restored: &mut Mailbox, t
 // =======================================================================================================
 
 /// Applies server flags to an item (the server wins). Returns true when something changed.
-fn apply_server_flags(m: &mut MailItem, flags: &[String], now: mailcraft_model::DateTime) -> bool {
+fn apply_server_flags(m: &mut MailItem, flags: &[String], now: iridium_mail_model::DateTime) -> bool {
     let has = |f: &str| flags.iter().any(|x| x.eq_ignore_ascii_case(f));
     let mut changed = false;
     let read = has("\\Seen");
@@ -1971,7 +1971,7 @@ fn apply_server_flags(m: &mut MailItem, flags: &[String], now: mailcraft_model::
 fn local_folder_name(name: &str) -> String {
     let cleaned: String =
         name.chars().filter(|c| !c.is_control()).map(|c| if c == '\\' { '_' } else { c }).collect();
-    let t: String = cleaned.trim().chars().take(mailcraft_model::mailbox::MAX_FOLDER_NAME_CHARS).collect();
+    let t: String = cleaned.trim().chars().take(iridium_mail_model::mailbox::MAX_FOLDER_NAME_CHARS).collect();
     if t.trim().is_empty() { "Folder".to_owned() } else { t.trim().to_owned() }
 }
 
@@ -1990,7 +1990,7 @@ fn remove_folders(mb: &mut Mailbox, ids: &[FolderId]) -> Vec<ItemId> {
     }
     for rule in &mut mb.rules {
         if rule.actions.iter().any(|a| {
-            matches!(a, mailcraft_model::RuleAction::MoveTo(f) | mailcraft_model::RuleAction::CopyTo(f) if all.contains(f))
+            matches!(a, iridium_mail_model::RuleAction::MoveTo(f) | iridium_mail_model::RuleAction::CopyTo(f) if all.contains(f))
         }) {
             rule.enabled = false;
         }
@@ -2033,7 +2033,7 @@ fn item_source(s: &Session, m: &MailItem) -> Vec<u8> {
     crate::cmd::file::raw_source(s, m)
 }
 
-/// IMAP folder results made up without a server, for benchmarks (`apps/mailcraft-bench`) and tests: queued
+/// IMAP folder results made up without a server, for benchmarks (`apps/iridium-mail-bench`) and tests: queued
 /// with [`Session::queue_imap_results`], they are applied by the next [`Session::poll_sync`] exactly like
 /// results a send/receive worker downloaded (rules, the Junk Email filter, journaling, undo tracking). Only
 /// in tests and with the `synthetic-sync` feature, which only the benchmark tool turns on.
@@ -2042,9 +2042,9 @@ fn item_source(s: &Session, m: &MailItem) -> Vec<u8> {
 pub enum SyntheticImap {
     /// One sync round of the folder whose server name is `folder` (new messages, flag changes, vanished
     /// UIDs, folder state).
-    Delta { folder: String, delta: mailcraft_net::sync::SyncDelta },
+    Delta { folder: String, delta: iridium_mail_net::sync::SyncDelta },
     /// Whole messages for items of `folder` first downloaded as headers only.
-    Bodies { folder: String, msgs: Vec<mailcraft_net::sync::NewMessage> },
+    Bodies { folder: String, msgs: Vec<iridium_mail_net::sync::NewMessage> },
 }
 
 #[cfg(all(not(target_arch = "wasm32"), any(test, feature = "synthetic-sync")))]
@@ -2219,10 +2219,10 @@ pub(crate) fn automatic_replies(s: &mut Session, p: &Value) -> Result<Value, Cmd
             let Some(v) = p.get(k).and_then(Value::as_str) else { return Ok(None) };
             let has_zone =
                 v.trim().ends_with('Z') || v.trim().get(16..).is_some_and(|t| t.contains(['+', '-']));
-            let d = mailcraft_model::DateTime::parse_rfc5322(v.trim())
+            let d = iridium_mail_model::DateTime::parse_rfc5322(v.trim())
                 .map_err(|_| CmdError::Params(format!("`{k}` must be a date and time (YYYY-MM-DDTHH:MM)")))?;
             let unix = if has_zone { d.unix } else { d.unix.saturating_sub(offset.saturating_mul(60)) };
-            Ok(Some(mailcraft_model::DateTime::from_unix(unix, 0).to_rfc3339()))
+            Ok(Some(iridium_mail_model::DateTime::from_unix(unix, 0).to_rfc3339()))
         };
         let (inside, outside_text, start, end) =
             (text("insideReply")?, text("outsideReply")?, time("start")?, time("end")?);
@@ -2280,7 +2280,7 @@ pub(crate) fn automatic_replies(s: &mut Session, p: &Value) -> Result<Value, Cmd
         // Times as local "YYYY-MM-DDTHH:MM", like the params.
         let local = |t: &Option<String>| {
             let unix = ews::parse_time(t.as_deref()?)?.saturating_add(offset.saturating_mul(60));
-            mailcraft_model::DateTime::from_unix(unix, 0).to_rfc3339().get(..16).map(str::to_owned)
+            iridium_mail_model::DateTime::from_unix(unix, 0).to_rfc3339().get(..16).map(str::to_owned)
         };
         let mut v = json!({
             "account": account.0,
@@ -2380,7 +2380,7 @@ impl AvailabilityLookup {
         let (from, to) = (self.from, self.to);
         let list = self.addresses;
         let fmt = |t: i64| {
-            let d = mailcraft_model::DateTime::from_unix(t, 0).to_rfc3339();
+            let d = iridium_mail_model::DateTime::from_unix(t, 0).to_rfc3339();
             d.trim_end_matches('Z').to_owned()
         };
         let r = match self.conn.and_then(|c| ews_extra::availability(&c, &list, &fmt(from), &fmt(to))) {
@@ -2429,9 +2429,9 @@ pub(crate) fn exchange_meeting_reply(
             return Ok(false);
         }
         let reply = match response {
-            "accepted" => mailcraft_net::ews::MeetingReply::Accept,
-            "tentative" => mailcraft_net::ews::MeetingReply::Tentative,
-            "declined" => mailcraft_net::ews::MeetingReply::Decline,
+            "accepted" => iridium_mail_net::ews::MeetingReply::Accept,
+            "tentative" => iridium_mail_net::ews::MeetingReply::Tentative,
+            "declined" => iridium_mail_net::ews::MeetingReply::Decline,
             _ => return Ok(false),
         };
         ews_extra::reply_to_meeting(s, account, &remote, reply, send, comment).map(|()| true)
@@ -2455,17 +2455,17 @@ enum Discovering {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn discovery_json(d: &mailcraft_net::discover::Discovery) -> Value {
-    use mailcraft_net::autoconfig::ServerConfig;
+fn discovery_json(d: &iridium_mail_net::discover::Discovery) -> Value {
+    use iridium_mail_net::autoconfig::ServerConfig;
     let server = |c: &Option<ServerConfig>| {
         c.as_ref().map(|c| {
             json!({
                 "host": c.host,
                 "port": c.port,
                 "security": match c.security {
-                    mailcraft_model::Security::None => "none",
-                    mailcraft_model::Security::StartTls => "starttls",
-                    mailcraft_model::Security::Tls => "tls",
+                    iridium_mail_model::Security::None => "none",
+                    iridium_mail_model::Security::StartTls => "starttls",
+                    iridium_mail_model::Security::Tls => "tls",
                 },
                 "username": c.username,
                 "verified": c.verified,
@@ -2507,7 +2507,7 @@ fn discovery_json(d: &mailcraft_net::discover::Discovery) -> Value {
 }
 
 /// Finds the server settings of `address` (a consumer domain's well-known provider; otherwise autoconfig on
-/// the mail domain, then DNS SRV and MX records and the Microsoft 365 tenant; see `mailcraft_net::discover`).
+/// the mail domain, then DNS SRV and MX records and the Microsoft 365 tenant; see `iridium_mail_net::discover`).
 /// The lookup runs on its own thread: the first call starts it and reports `"status": "running"`, later calls
 /// with the same address report the result (`wait` blocks for it, at most a minute). Results are remembered
 /// for the session; `refresh` looks up again. Lookups that need no network (reserved example domains, the big
@@ -2515,7 +2515,7 @@ fn discovery_json(d: &mailcraft_net::discover::Discovery) -> Value {
 pub(crate) fn discover(s: &mut Session, address: &str, wait: bool, refresh: bool) -> Result<Value, CmdError> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        use mailcraft_net::discover as nd;
+        use iridium_mail_net::discover as nd;
         let key = address.trim().to_ascii_lowercase();
         let domain = nd::address_domain(&key).map_err(|e| CmdError::Params(e.to_string()))?;
         if refresh {
@@ -2524,7 +2524,7 @@ pub(crate) fn discover(s: &mut Session, address: &str, wait: bool, refresh: bool
         if !s.sync.discoveries.contains_key(&key) {
             let opts = s.sync.discovery.clone();
             let offline = (nd::is_reserved_domain(&domain) && !opts.allow_reserved)
-                || mailcraft_net::providers::by_domain(&domain).is_some()
+                || iridium_mail_net::providers::by_domain(&domain).is_some()
                 || opts.is_offline();
             let slot = if offline {
                 let d = nd::discover(address, &opts).map_err(|e| CmdError::Params(e.to_string()))?;
@@ -2533,7 +2533,7 @@ pub(crate) fn discover(s: &mut Session, address: &str, wait: bool, refresh: bool
                 let (tx, rx) = std::sync::mpsc::channel();
                 let addr = address.trim().to_owned();
                 std::thread::Builder::new()
-                    .name("mailcraft-discover".into())
+                    .name("iridium-mail-discover".into())
                     .spawn(move || {
                         let r = std::panic::catch_unwind(|| nd::discover(&addr, &opts));
                         let v = match r {
@@ -2591,7 +2591,7 @@ pub(crate) fn discover(s: &mut Session, address: &str, wait: bool, refresh: bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Account, FolderRole};
+    use iridium_mail_model::{Account, FolderRole};
 
     fn imap_mailbox() -> (Mailbox, AccountId, FolderId, FolderId) {
         let mut mb = Mailbox::new_local("Local");
@@ -2850,7 +2850,7 @@ mod tests {
         let mut s = Session::new(mb);
         s.view.work_offline = true;
         let msg = |uid: u32, headers_only: bool| {
-            mailcraft_net::sync::NewMessage {
+            iridium_mail_net::sync::NewMessage {
             uid,
             raw: format!(
                 "From: a@example.com\r\nSubject: Synthetic {uid}\r\nMessage-ID: <syn{uid}@example.com>\r\n\r\n\
@@ -2863,9 +2863,9 @@ mod tests {
             headers_only,
         }
         };
-        let delta = mailcraft_net::sync::SyncDelta {
+        let delta = iridium_mail_net::sync::SyncDelta {
             new: vec![msg(1, false), msg(2, true)],
-            state: mailcraft_net::sync::FolderState { uidvalidity: 7, uidnext: 3, ..Default::default() },
+            state: iridium_mail_net::sync::FolderState { uidvalidity: 7, uidnext: 3, ..Default::default() },
             ..Default::default()
         };
         assert!(!s.queue_imap_results(
@@ -2902,9 +2902,9 @@ mod tests {
         assert_eq!(pending(&s.mailbox, a).len(), 3);
         let raw = b"From: a@example.com\r\nSubject: Fresh\r\nMessage-ID: <fresh@example.com>\r\n\r\nHi\r\n"
             .to_vec();
-        let delta = mailcraft_net::sync::SyncDelta {
+        let delta = iridium_mail_net::sync::SyncDelta {
             reset: true,
-            new: vec![mailcraft_net::sync::NewMessage {
+            new: vec![iridium_mail_net::sync::NewMessage {
                 uid: 1,
                 raw,
                 flags: vec![],
@@ -2912,7 +2912,7 @@ mod tests {
                 size: None,
                 headers_only: false,
             }],
-            state: mailcraft_net::sync::FolderState { uidvalidity: 99, uidnext: 2, ..Default::default() },
+            state: iridium_mail_net::sync::FolderState { uidvalidity: 99, uidnext: 2, ..Default::default() },
             ..Default::default()
         };
         let mut new_inbox = Vec::new();
@@ -3004,7 +3004,7 @@ mod tests {
     #[test]
     fn server_flags_win() {
         let mut m = MailItem { read: true, ..Default::default() };
-        let now = mailcraft_model::DateTime::from_unix(0, 0);
+        let now = iridium_mail_model::DateTime::from_unix(0, 0);
         assert!(apply_server_flags(&mut m, &["\\Flagged".into(), "\\Answered".into()], now));
         assert!(!m.read && m.is_flagged() && matches!(m.response, ResponseState::Replied(_)));
         assert!(!apply_server_flags(&mut m, &["\\Flagged".into()], now));
@@ -3017,9 +3017,9 @@ mod tests {
         let v = discover(&mut s, "kim@example.com", false, false).unwrap();
         assert_eq!((v["status"].as_str(), v["found"].as_bool()), (Some("done"), Some(false)));
         assert!(v["notes"][0].as_str().unwrap().contains("reserved"));
-        s.sync.discovery = mailcraft_net::discover::DiscoverOptions {
+        s.sync.discovery = iridium_mail_net::discover::DiscoverOptions {
             allow_reserved: true,
-            ..mailcraft_net::discover::DiscoverOptions::offline()
+            ..iridium_mail_net::discover::DiscoverOptions::offline()
         };
         for i in 0..(MAX_DISCOVERIES + 5) {
             let v = discover(&mut s, &format!("u{i}@x{i}.example"), false, true).unwrap();
@@ -3028,7 +3028,7 @@ mod tests {
         assert_eq!(s.sync.discoveries.len(), MAX_DISCOVERIES);
         assert!(matches!(discover(&mut s, "no-domain", false, false), Err(CmdError::Params(_))));
         // The big consumer domains are known without any lookup, even with the default (network) options.
-        s.sync.discovery = mailcraft_net::discover::DiscoverOptions::default();
+        s.sync.discovery = iridium_mail_net::discover::DiscoverOptions::default();
         let v = discover(&mut s, "kim@outlook.com", false, true).unwrap();
         assert_eq!((v["status"].as_str(), v["found"].as_bool()), (Some("done"), Some(true)), "{v}");
         assert_eq!(v["provider"]["id"], "outlook.com");

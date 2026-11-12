@@ -4,7 +4,7 @@
 use super::*;
 use crate::model::{FolderRole, Mailbox};
 use crate::search_index;
-use mailcraft_search::{DocKind, Filter};
+use iridium_mail_search::{DocKind, Filter};
 use serde_json::json;
 
 fn inbox(s: &Session) -> crate::model::FolderId {
@@ -80,17 +80,18 @@ fn a_profile_with_inline_bodies_opens_with_its_messages() {
     v["mail"][with_source.0.to_string()]["raw"] = json!(raw.as_bytes());
     v["mail"][typed.0.to_string()]["body"] =
         json!({"format": "PlainText", "text": "Written here", "html": null});
-    let snapshot = format!("{{\"mailcraft_snapshot\":1,\"generation\":1,\"mailbox\":{v}}}");
-    std::fs::write(dir.path().join(mailcraft_store::journal::SNAPSHOT_FILE), snapshot).unwrap();
+    let snapshot = format!("{{\"iridium_mail_snapshot\":1,\"generation\":1,\"mailbox\":{v}}}");
+    std::fs::write(dir.path().join(iridium_mail_store::journal::SNAPSHOT_FILE), snapshot).unwrap();
     {
         let s = Session::open(dir.path()).unwrap();
         assert_eq!(s.source(with_source).unwrap().as_deref(), Some(raw.as_bytes()));
         assert!(s.body_text(s.mailbox.mail.get(with_source).unwrap()).contains("Kept in the snapshot"));
         assert_eq!(s.body(typed).unwrap().unwrap().text.as_deref(), Some("Written here"));
     }
-    let written = std::fs::read_to_string(dir.path().join(mailcraft_store::journal::SNAPSHOT_FILE)).unwrap();
+    let written =
+        std::fs::read_to_string(dir.path().join(iridium_mail_store::journal::SNAPSHOT_FILE)).unwrap();
     assert!(written.contains("\"bodies\":2"), "rewritten in the new form");
-    assert!(!mailcraft_store::legacy::has_inline(written.as_bytes()), "no content inline any more");
+    assert!(!iridium_mail_store::legacy::has_inline(written.as_bytes()), "no content inline any more");
     let s = Session::open(dir.path()).unwrap();
     assert_eq!(s.body(typed).unwrap().unwrap().text.as_deref(), Some("Written here"), "and after a restart");
 }
@@ -121,7 +122,7 @@ fn data_files_carry_sources_and_edited_bodies() {
     let c = s
         .add_message(
             typed,
-            &Content::body(mailcraft_model::Body { text: Some("Only here".into()), ..Default::default() }),
+            &Content::body(iridium_mail_model::Body { text: Some("Only here".into()), ..Default::default() }),
         )
         .unwrap();
     let _ = (a, c);
@@ -159,7 +160,7 @@ fn body_records(dir: &std::path::Path) -> usize {
             let path = e.path();
             if path.is_dir() {
                 walk(&path, n);
-            } else if path.extension().is_some_and(|x| x == mailcraft_store::bodies::BODY_EXT) {
+            } else if path.extension().is_some_and(|x| x == iridium_mail_store::bodies::BODY_EXT) {
                 *n += 1;
             }
         }
@@ -173,11 +174,11 @@ fn body_records(dir: &std::path::Path) -> usize {
 /// left its old record forever). Opening the profile now removes it.
 #[test]
 fn opening_a_profile_collects_content_nothing_refers_to() {
-    opening_a_profile_collects_content_nothing_refers_to_in(mailcraft_store::StoreKind::Legacy);
-    opening_a_profile_collects_content_nothing_refers_to_in(mailcraft_store::StoreKind::Sqlite);
+    opening_a_profile_collects_content_nothing_refers_to_in(iridium_mail_store::StoreKind::Legacy);
+    opening_a_profile_collects_content_nothing_refers_to_in(iridium_mail_store::StoreKind::Sqlite);
 }
 
-fn opening_a_profile_collects_content_nothing_refers_to_in(kind: mailcraft_store::StoreKind) {
+fn opening_a_profile_collects_content_nothing_refers_to_in(kind: iridium_mail_store::StoreKind) {
     let dir = tempfile::tempdir().unwrap();
     let id = {
         let mut s = Session::open_with(dir.path(), kind).unwrap();
@@ -185,10 +186,10 @@ fn opening_a_profile_collects_content_nothing_refers_to_in(kind: mailcraft_store
         let id = s
             .add_message(
                 MailItem { folder, subject: "Draft".into(), ..Default::default() },
-                &Content::body(mailcraft_model::Body { text: Some("v0".into()), ..Default::default() }),
+                &Content::body(iridium_mail_model::Body { text: Some("v0".into()), ..Default::default() }),
             )
             .unwrap();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         for i in 1..=5 {
             s.run("mail.editMessage", &json!({"ids": [id.0], "text": format!("version {i}")})).unwrap();
         }

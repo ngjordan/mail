@@ -16,9 +16,9 @@ use outlook_pst::messaging::store::{AnsiStore, EntryId, Store, UnicodeStore};
 use outlook_pst::ndb::node_id::{NodeId, NodeIdType};
 use outlook_pst::{AnsiPstFile, PstReader, UnicodePstFile};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{ItemAttachment, MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS};
-use mailcraft_model::{FlagState, FolderId, FolderKind};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{ItemAttachment, MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS};
+use iridium_mail_model::{FlagState, FolderId, FolderKind};
 
 use super::pim::{self, Item, Names};
 use super::{
@@ -496,7 +496,7 @@ impl Walker<'_> {
             let kind = kind_for_class(&info.class);
             let role = if p.parent.is_none() {
                 if Some(p.nid) == self.wastebasket && kind == FolderKind::Mail {
-                    Some(mailcraft_model::FolderRole::DeletedItems)
+                    Some(iridium_mail_model::FolderRole::DeletedItems)
                 } else {
                     role_for_name(&name, kind)
                 }
@@ -614,7 +614,7 @@ impl Walker<'_> {
     /// A UID for a calendar item that carries none of its own: unique to this import (the same file read
     /// twice gives other UIDs; the engine tells repeats apart by their content), never one of another file.
     fn fallback_uid(&self, nid: u32) -> String {
-        format!("pst-{:016x}-{nid:08x}@mailcraft.invalid", self.uid_seed)
+        format!("pst-{:016x}-{nid:08x}@iridium-mail.invalid", self.uid_seed)
     }
 
     fn folder_info(&self, nid: u32) -> std::result::Result<FolderInfo, String> {
@@ -824,7 +824,7 @@ fn flag(it: &Item<'_>) -> FlagState {
                 label: if label.trim().is_empty() {
                     "Follow up".to_owned()
                 } else {
-                    crate::text::clip(label.trim(), mailcraft_model::item::MAX_FLAG_LABEL_CHARS)
+                    crate::text::clip(label.trim(), iridium_mail_model::item::MAX_FLAG_LABEL_CHARS)
                 },
                 start: it.named_time(pim::PSETID_TASK, pim::LID_TASK_START),
                 due: it.named_time(pim::PSETID_TASK, pim::LID_TASK_DUE),
@@ -836,7 +836,7 @@ fn flag(it: &Item<'_>) -> FlagState {
     }
 }
 
-/// A folder name MailCraft accepts: no control characters or path separators, trimmed, capped.
+/// A folder name Mail accepts: no control characters or path separators, trimmed, capped.
 /// Queues `children` (in file order) unless queued before; past [`MAX_FOLDERS`] queued folders the rest
 /// are dropped and `dropped` is set.
 fn queue(

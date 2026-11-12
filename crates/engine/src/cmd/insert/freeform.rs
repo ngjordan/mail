@@ -3,7 +3,7 @@
 //! fitting curved segments to a preset shape's drawn outline, so that its curves stay curves (an oval
 //! becomes four curved segments, a rounded rectangle four straight sides and four curved corners).
 
-use mailcraft_model::rich::{PointHandles, PointKind};
+use iridium_mail_model::rich::{PointHandles, PointKind};
 
 use super::shapes::P;
 

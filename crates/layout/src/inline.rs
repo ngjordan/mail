@@ -4,7 +4,7 @@
 //! Offsets: the flattened text of a block is the concatenation of its `Text` contents; a `LineBreak` counts
 //! as one char (`'\n'`) and an `Image` as one char (U+FFFC). [`crate::TextPos::offset`] counts chars of this text.
 
-use mailcraft_model::{Inline, TextStyle};
+use iridium_mail_model::{Inline, TextStyle};
 use unicode_linebreak::{BreakOpportunity, linebreaks};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -498,7 +498,7 @@ pub(crate) fn min_max(flat: &Flat, glyphs: &[Glyph]) -> (f32, f32) {
 mod tests {
     use super::*;
     use crate::LayoutOptions;
-    use mailcraft_fonts::FontDb;
+    use iridium_mail_fonts::FontDb;
 
     fn with_ctx<R>(f: impl FnOnce(&Ctx<'_>) -> R) -> R {
         let fonts = FontDb::bundled();
@@ -604,7 +604,8 @@ mod tests {
     fn styles_are_interned() {
         with_ctx(|ctx| {
             let mut flat = Flat::new(ctx, &TextStyle::default());
-            let red = TextStyle { color: Some(mailcraft_geom::Color::rgb(255, 0, 0)), ..Default::default() };
+            let red =
+                TextStyle { color: Some(iridium_mail_geom::Color::rgb(255, 0, 0)), ..Default::default() };
             let inl = vec![
                 Inline::Text { text: "a".into(), style: TextStyle::default() },
                 Inline::Text { text: "b".into(), style: red },

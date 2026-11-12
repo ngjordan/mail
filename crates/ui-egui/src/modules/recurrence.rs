@@ -5,9 +5,9 @@
 
 use egui::{ComboBox, Id, RichText, TextEdit, Ui, vec2};
 
-use mailcraft_engine::cmd::calendar::recurrence::{ORDINALS, Pattern, RangeEnd, RecurrenceForm, WEEKDAYS};
-use mailcraft_engine::cmd::calendar::{describe_recurrence, occurrences, sync_series_start};
-use mailcraft_model::{Appointment, DateTime, Recurrence};
+use iridium_mail_engine::cmd::calendar::recurrence::{ORDINALS, Pattern, RangeEnd, RecurrenceForm, WEEKDAYS};
+use iridium_mail_engine::cmd::calendar::{describe_recurrence, occurrences, sync_series_start};
+use iridium_mail_model::{Appointment, DateTime, Recurrence};
 
 use super::common::{DAY, MONTHS, clock, day_string, local_secs, long_date, parse_day};
 use crate::App;
@@ -202,7 +202,11 @@ pub(crate) fn show(ctx: &egui::Context, app: &App, d: &mut RecurrenceDialog, has
                     ui.radio_value(&mut d.form.end, RangeEnd::NoEnd, "No end date");
                     ui.horizontal(|ui| {
                         ui.radio_value(&mut d.form.end, RangeEnd::After, "End after");
-                        number(ui, &mut d.form.count, mailcraft_engine::cmd::calendar::recurrence::MAX_COUNT);
+                        number(
+                            ui,
+                            &mut d.form.count,
+                            iridium_mail_engine::cmd::calendar::recurrence::MAX_COUNT,
+                        );
                         ui.label("occurrences");
                     });
                     ui.horizontal(|ui| {
@@ -283,7 +287,7 @@ pub(crate) fn show(ctx: &egui::Context, app: &App, d: &mut RecurrenceDialog, has
 
 fn pattern_detail(ui: &mut Ui, d: &mut RecurrenceDialog) {
     let f = &mut d.form;
-    let max = mailcraft_engine::cmd::calendar::recurrence::MAX_INTERVAL;
+    let max = iridium_mail_engine::cmd::calendar::recurrence::MAX_INTERVAL;
     match f.pattern {
         Pattern::Daily => {
             ui.horizontal(|ui| {
@@ -356,7 +360,7 @@ fn pattern_detail(ui: &mut Ui, d: &mut RecurrenceDialog) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     #[test]
     fn dialog_reads_and_writes_rules() {

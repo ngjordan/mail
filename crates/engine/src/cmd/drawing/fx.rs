@@ -2,8 +2,8 @@
 //! `drawing.textEffect` (`shadow`, `reflection`, `glow`, `softEdges`, `bevel`, `rotation3d`, `preset`) and
 //! the named variants the ribbon galleries offer.
 
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Drawing, Glow, Reflection, Shadow, ShadowKind, ShapeEffects};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Drawing, Glow, Reflection, Shadow, ShadowKind, ShapeEffects};
 use serde_json::Value;
 
 use crate::CmdError;
@@ -176,7 +176,7 @@ fn option_color(c: &ComposeState, o: &Value) -> Result<Option<Option<Color>>, Cm
     match o.get("color") {
         None => Ok(None),
         Some(Value::Null) => Ok(Some(None)),
-        Some(Value::String(t)) => mailcraft_html::parse_css_color(t)
+        Some(Value::String(t)) => iridium_mail_html::parse_css_color(t)
             .map(|col| Some(Some(col)))
             .ok_or_else(|| CmdError::Params(format!("`{t}` is not a colour"))),
         Some(_) => Err(CmdError::Params("`color` must be a colour".into())),

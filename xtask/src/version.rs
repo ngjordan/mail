@@ -180,7 +180,7 @@ mod tests {
     use super::*;
 
     const MANIFEST: &str = "[workspace]\nmembers = []\n\n[workspace.package]\nedition = \"2024\"\nversion = \"0.1.0\" # x\n\n[workspace.dependencies]\nfoo = { version = \"0.1.0\" }\n";
-    const LOCK: &str = "version = 4\n\n[[package]]\nname = \"foo\"\nversion = \"0.1.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n\n[[package]]\nname = \"mailcraft-geom\"\nversion = \"0.1.0\"\ndependencies = [\n \"foo\",\n]\n\n[[package]]\nname = \"xtask\"\nversion = \"0.1.0\"\n";
+    const LOCK: &str = "version = 4\n\n[[package]]\nname = \"foo\"\nversion = \"0.1.0\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n\n[[package]]\nname = \"iridium-mail-geom\"\nversion = \"0.1.0\"\ndependencies = [\n \"foo\",\n]\n\n[[package]]\nname = \"xtask\"\nversion = \"0.1.0\"\n";
 
     #[test]
     fn versions() {
@@ -200,7 +200,7 @@ mod tests {
         assert!(m.contains("foo = { version = \"0.1.0\" }"), "other sections untouched");
         assert!(m.contains("version = \"0.2.0\" # x"));
         let (l, changed) = bump_lock(LOCK, "0.1.0", "0.2.0");
-        assert_eq!(changed, vec!["mailcraft-geom", "xtask"]);
+        assert_eq!(changed, vec!["iridium-mail-geom", "xtask"]);
         assert!(l.contains("name = \"foo\"\nversion = \"0.1.0\"\nsource"), "registry packages untouched");
         assert!(l.contains("name = \"xtask\"\nversion = \"0.2.0\"\n"));
         assert!(workspace_version("[package]\nversion = \"1.0.0\"\n").is_err());

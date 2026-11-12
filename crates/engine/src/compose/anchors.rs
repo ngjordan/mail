@@ -16,7 +16,7 @@ pub(crate) type LeafTexts = Vec<(Vec<usize>, Vec<char>)>;
 /// is compared as a whole, so a stray one only makes the comparison a little less precise).
 const SEP: char = '\u{2029}';
 
-pub(crate) fn leaf_texts(blocks: &[mailcraft_model::Block]) -> LeafTexts {
+pub(crate) fn leaf_texts(blocks: &[iridium_mail_model::Block]) -> LeafTexts {
     leaves(blocks)
         .into_iter()
         .filter_map(|p| leaf(blocks, &p).map(|(_, f)| (p, f.text().chars().collect())))

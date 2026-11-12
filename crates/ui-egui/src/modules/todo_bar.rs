@@ -11,8 +11,8 @@
 use egui::{Align2, CornerRadius, FontId, Id, Rect, RichText, ScrollArea, Sense, TextEdit, Ui, pos2, vec2};
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::people::{display_name, find_contacts, is_group};
-use mailcraft_model::{FolderKind, ItemId};
+use iridium_mail_engine::cmd::people::{display_name, find_contacts, is_group};
+use iridium_mail_model::{FolderKind, ItemId};
 
 use super::common::{
     DAY, a11y, add_months, day_of, day_string, load as load_mod, month_name, store as store_mod, today, tz,
@@ -43,22 +43,22 @@ pub(crate) const PREF_KEY: &str = "todoBar.parts";
 
 /// The parts an older profile kept in the dialog settings, once those are loaded (`None` before, or when
 /// there are none).
-pub fn saved_todo_bar(ctx: &egui::Context) -> Option<mailcraft_engine::TodoBar> {
+pub fn saved_todo_bar(ctx: &egui::Context) -> Option<iridium_mail_engine::TodoBar> {
     let Some(Value::Array(saved)) = crate::dialogs::ui_pref(ctx, PREF_KEY) else { return None };
     let on = |k: &str| saved.iter().any(|v| v.as_str() == Some(k));
-    Some(mailcraft_engine::TodoBar { calendar: on("calendar"), people: on("people"), tasks: on("tasks") })
+    Some(iridium_mail_engine::TodoBar { calendar: on("calendar"), people: on("people"), tasks: on("tasks") })
 }
 
 /// Takes over the parts an older profile kept in the dialog settings, once: the old key is removed (and the
 /// dialog settings saved without it), so a bar turned off later stays off after a restart.
-pub fn take_saved_todo_bar(ctx: &egui::Context) -> Option<mailcraft_engine::TodoBar> {
+pub fn take_saved_todo_bar(ctx: &egui::Context) -> Option<iridium_mail_engine::TodoBar> {
     let parts = saved_todo_bar(ctx);
     crate::dialogs::take_ui_pref(ctx, PREF_KEY);
     parts
 }
 
 fn state_id() -> Id {
-    Id::unique("mailcraft.modules.todo-bar")
+    Id::unique("iridium-mail.modules.todo-bar")
 }
 
 pub(crate) fn load(ctx: &egui::Context) -> TodoBarState {
@@ -258,16 +258,16 @@ fn tasks_part(ui: &mut Ui, app: &mut App, st: &mut TodoBarState) {
         let mut p = json!({ "subject": subject.trim(), "due": day_string(today(app)) });
         if let (Some(o), Some(f)) = (
             p.as_object_mut(),
-            mailcraft_engine::cmd::calendar::pim::default_folder(
+            iridium_mail_engine::cmd::calendar::pim::default_folder(
                 &app.s,
-                mailcraft_engine::cmd::calendar::pim::Kind::Task,
+                iridium_mail_engine::cmd::calendar::pim::Kind::Task,
             ),
         ) {
             o.insert("folder".into(), json!(f.0));
         }
         app.run("tasks.new", p);
     }
-    let items = mailcraft_engine::cmd::tasks::todo_list(&app.s);
+    let items = iridium_mail_engine::cmd::tasks::todo_list(&app.s);
     if items.is_empty() {
         ui.label(RichText::new("Nothing to do.").color(app.theme.text_muted));
     }
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn parts_toggle_and_off() {
-        let mut app = crate::App::new(mailcraft_engine::sample::sample_session());
+        let mut app = crate::App::new(iridium_mail_engine::sample::sample_session());
         assert!(!todo_bar_shown(&app));
         set_todo_bar(&mut app, "calendar");
         set_todo_bar(&mut app, "tasks");
@@ -351,7 +351,7 @@ mod tests {
     fn older_profile_parts_are_taken_over_once_and_off_stays_off() {
         // Regression: the old key stayed in the saved dialog settings, so a bar turned off came back on at
         // every start.
-        let mut s = mailcraft_engine::sample::sample_session();
+        let mut s = iridium_mail_engine::sample::sample_session();
         s.set_option("state.uiPrefs", &json!({ "todoBar.parts": ["calendar"], "columns.7": ["from"] }))
             .unwrap();
         let mut app = crate::App::new(s);
@@ -377,7 +377,7 @@ mod tests {
     #[test]
     fn scripts_change_the_bar_the_window_shows() {
         // The control channel, MCP and the CLI run the same command: the window follows the session.
-        let mut app = crate::App::new(mailcraft_engine::sample::sample_session());
+        let mut app = crate::App::new(iridium_mail_engine::sample::sample_session());
         app.s.run("view.todoBar", &json!({"part": "people"})).unwrap();
         assert_eq!(todo_bar_parts(&app), (false, true, false));
         assert_eq!(app.s.run("view.todoBar", &json!({})).unwrap()["parts"]["people"], true);

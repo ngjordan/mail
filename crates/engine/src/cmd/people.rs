@@ -7,7 +7,7 @@
 //!
 //! `people.new` / `people.newGroup` / `people.newFromSameCompany` create the item when field params are
 //! given and otherwise ask the UI to open the contact / contact group window. `people.forward` attaches
-//! vCards (RFC 6350, `mailcraft-formats`).
+//! vCards (RFC 6350, `iridium-mail-formats`).
 //!
 //! **Details and picture.** Besides the General fields a contact holds the Details page (office,
 //! profession, manager, assistant, nickname, spouse/partner, anniversary) and a picture (`picture`: base64
@@ -25,7 +25,7 @@
 //! filter and the People search applied, in view order) or the selected ones. The text can come from an
 //! existing document (plain text, HTML or a saved message). E-mail puts one message per contact with an
 //! address in the Outbox; Form Letters, Mailing Labels, Envelopes and Catalog (every record one after the
-//! other) are laid out by `mailcraft_render::print` and written as a new PDF document or sent to a printer.
+//! other) are laid out by `iridium_mail_render::print` and written as a new PDF document or sent to a printer.
 //! The merged contacts' fields (all contact fields, or the fields of the current view) can also be saved as
 //! a contact data file (CSV).
 //!
@@ -41,9 +41,9 @@ use crate::cmd::calendar::{self, pim, pim::Kind};
 use crate::cmd::util::{opt_bool, opt_str};
 use crate::cmd::view::modules::{self, ModuleKind, RowKind, ViewRow};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::contact::{ContactPicture, MAX_PICTURE_BYTES, PostalAddress};
-use mailcraft_model::text::contains_ci;
-use mailcraft_model::{Contact, DateTime, FlagState, FolderId, ItemId, dates};
+use iridium_mail_model::contact::{ContactPicture, MAX_PICTURE_BYTES, PostalAddress};
+use iridium_mail_model::text::contains_ci;
+use iridium_mail_model::{Contact, DateTime, FlagState, FolderId, ItemId, dates};
 
 /// First line of `notes` marking a contact item as a contact group.
 pub const CONTACT_GROUP_MARKER: &str = "Contact Group";
@@ -93,7 +93,7 @@ pub struct PeekPerson {
 /// unless "Show only names in the People peek" is on.
 pub fn peek_people(s: &Session) -> Vec<PeekPerson> {
     let names_only = s.settings.bool("people.namesOnlyInPeek");
-    let mut recent: Vec<&mailcraft_model::RecentRecipient> =
+    let mut recent: Vec<&iridium_mail_model::RecentRecipient> =
         s.mailbox.recent_recipients.iter().filter(|r| !r.address.trim().is_empty()).collect();
     recent.sort_by(|a, b| {
         b.uses.cmp(&a.uses).then(b.last_used.map(|t| t.unix).cmp(&a.last_used.map(|t| t.unix)))
@@ -595,7 +595,7 @@ fn group_members(s: &Session, v: &Value) -> Result<Vec<String>, CmdError> {
             _ => return Err(CmdError::Params("`members` must be a list of addresses or contact ids".into())),
         }
     }
-    Ok(pim::parse_addresses(&strings).iter().map(mailcraft_model::Address::to_display_string).collect())
+    Ok(pim::parse_addresses(&strings).iter().map(iridium_mail_model::Address::to_display_string).collect())
 }
 
 /// Addresses to use when mailing a contact: its first address with its name, or every member of a group.
@@ -973,10 +973,10 @@ pub fn business_card_lines(c: &Contact) -> Vec<String> {
 /// File name for a contact's vCard ("Ann Lee.vcf").
 /// Forward › As a Business Card: the message body shows each card as a bordered box (the contact's picture,
 /// or a coloured band, beside the name in bold and the card lines); the .vcf files go with it.
-pub fn business_card_doc(cards: &[Contact]) -> mailcraft_model::Doc {
+pub fn business_card_doc(cards: &[Contact]) -> iridium_mail_model::Doc {
     use base64::Engine as _;
-    use mailcraft_geom::Color;
-    use mailcraft_model::rich::{Block, Inline, ParaStyle, TableCell, TextStyle};
+    use iridium_mail_geom::Color;
+    use iridium_mail_model::rich::{Block, Inline, ParaStyle, TableCell, TextStyle};
     let accent = Color::hex(0x000f_6cbd);
     let muted = Color::hex(0x0060_5e5c);
     let para = |inlines: Vec<Inline>| Block::Paragraph {
@@ -1025,7 +1025,7 @@ pub fn business_card_doc(cards: &[Contact]) -> mailcraft_model::Doc {
         });
         blocks.push(para(Vec::new()));
     }
-    mailcraft_model::Doc { blocks, ..mailcraft_model::Doc::default() }
+    iridium_mail_model::Doc { blocks, ..iridium_mail_model::Doc::default() }
 }
 
 fn vcard_name(c: &Contact) -> String {
@@ -1033,7 +1033,7 @@ fn vcard_name(c: &Contact) -> String {
 }
 
 /// Forward Contact › As a Business Card / As a Contact: a new message with each contact attached as
-/// a vCard (`text/vcard`, RFC 6350 via `mailcraft-formats`); a business card also puts the card text in the
+/// a vCard (`text/vcard`, RFC 6350 via `iridium-mail-formats`); a business card also puts the card text in the
 /// body. Contact groups are skipped (a vCard has no member list).
 fn run_forward(s: &mut Session, p: &Value) -> CmdResult {
     let as_kind = match opt_str(p, "as") {
@@ -1056,15 +1056,18 @@ fn run_forward(s: &mut Session, p: &Value) -> CmdResult {
     let body = if as_kind == "businessCard" {
         business_card_doc(&contacts)
     } else {
-        mailcraft_model::Doc::default()
+        iridium_mail_model::Doc::default()
     };
     let attachments = contacts
         .iter()
         .map(|c| crate::compose::ComposeAttachment {
             filename: vcard_name(c),
             mime_type: "text/vcard".into(),
-            data: mailcraft_formats::vcf::write(std::slice::from_ref(c), mailcraft_formats::vcf::Version::V3)
-                .into_bytes(),
+            data: iridium_mail_formats::vcf::write(
+                std::slice::from_ref(c),
+                iridium_mail_formats::vcf::Version::V3,
+            )
+            .into_bytes(),
         })
         .collect();
     let mut compose =
@@ -1294,7 +1297,7 @@ pub fn merge_data_csv(contacts: &[Contact], fields: &[&str]) -> String {
     for c in contacts {
         rows.push(fields.iter().map(|f| merge_field(c, f).unwrap_or_default()).collect());
     }
-    mailcraft_formats::csv::write(&rows, ',')
+    iridium_mail_formats::csv::write(&rows, ',')
 }
 
 /// Largest existing document Mail Merge reads its text from (bytes).
@@ -1317,14 +1320,14 @@ pub fn merge_template(path: &str) -> Result<(String, String), CmdError> {
         std::fs::read(path).map_err(|e| CmdError::Failed(format!("cannot read {}: {e}", path.display())))?;
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or_default().to_ascii_lowercase();
     let (subject, text) = match ext.as_str() {
-        "htm" | "html" => (String::new(), mailcraft_html::html_to_text(&String::from_utf8_lossy(&data))),
+        "htm" | "html" => (String::new(), iridium_mail_html::html_to_text(&String::from_utf8_lossy(&data))),
         "eml" => {
-            let item = mailcraft_store::import::item_from_raw(
+            let item = iridium_mail_store::import::item_from_raw(
                 &data,
                 FolderId(0),
-                mailcraft_model::DateTime::default(),
+                iridium_mail_model::DateTime::default(),
             );
-            let body = mailcraft_model::Body::from_source(&data).unwrap_or_default();
+            let body = iridium_mail_model::Body::from_source(&data).unwrap_or_default();
             (item.subject.clone(), body.plain_text())
         }
         _ => {
@@ -1401,7 +1404,7 @@ fn run_mail_merge(s: &mut Session, p: &Value) -> CmdResult {
         return Ok(json!({ "template": path, "subject": subject, "body": body }));
     }
     let Some(action) = action else {
-        let labels: Vec<Value> = mailcraft_render::print::LABEL_SHEETS
+        let labels: Vec<Value> = iridium_mail_render::print::LABEL_SHEETS
             .iter()
             .map(|(id, label, _)| json!({ "id": id, "label": label }))
             .collect();
@@ -1512,7 +1515,7 @@ fn run_mail_merge(s: &mut Session, p: &Value) -> CmdResult {
                 let mut compose = crate::compose::ComposeState {
                     to,
                     subject: subj,
-                    body: mailcraft_model::Doc::from_plain_text(&text),
+                    body: iridium_mail_model::Doc::from_plain_text(&text),
                     dirty: true,
                     ..Default::default()
                 };
@@ -1586,14 +1589,14 @@ struct MergeJob<'a> {
 }
 
 /// Page setup without the header and footer (merge documents print only the merged text).
-fn blank_setup() -> mailcraft_render::print::PageSetup {
-    mailcraft_render::print::PageSetup { footer: Default::default(), ..Default::default() }
+fn blank_setup() -> iridium_mail_render::print::PageSetup {
+    iridium_mail_render::print::PageSetup { footer: Default::default(), ..Default::default() }
 }
 
 /// Mail Merge to a document (`merge`): lays the merged records out as form letters, labels or envelopes and
 /// writes them as a PDF or sends them to a printer.
 fn merge_document(s: &mut Session, p: &Value, job: MergeJob<'_>) -> CmdResult {
-    use mailcraft_render::print::{
+    use iridium_mail_render::print::{
         LABEL_SHEETS, MAX_PAGES, MAX_RECORDS, Margins, MergeDoc, MergeStyle, Orientation, PageSetup, Paper,
         PrintContext, label_sheet, max_records, paginate_merge,
     };
@@ -1680,7 +1683,7 @@ fn merge_document(s: &mut Session, p: &Value, job: MergeJob<'_>) -> CmdResult {
         texts.push(t);
     }
     let doc = MergeDoc { style, records: texts, return_address: tidy_address(&return_address) };
-    let fonts = mailcraft_fonts::FontDb::with_installed();
+    let fonts = iridium_mail_fonts::FontDb::with_installed();
     let ctx = PrintContext { title: title.to_owned(), ..Default::default() };
     let (pages, placed) = paginate_merge(&doc, &setup, &ctx, &fonts);
     // Long letters can fill the pages before every contact has one: nothing is written then.
@@ -1748,7 +1751,7 @@ pub fn address_books(s: &Session) -> Vec<(FolderId, String)> {
         .mailbox
         .folders
         .values()
-        .filter(|f| f.kind == mailcraft_model::FolderKind::Contacts)
+        .filter(|f| f.kind == iridium_mail_model::FolderKind::Contacts)
         .filter_map(|f| {
             let b = address_book(s, f.id);
             b.show.then(|| (f.id, if b.name.is_empty() { f.name.clone() } else { b.name }))
@@ -1815,7 +1818,7 @@ fn run_address_book(s: &mut Session, p: &Value) -> CmdResult {
             k.parse::<u64>()
                 .ok()
                 .and_then(|id| s.mailbox.folder(FolderId(id)))
-                .is_some_and(|f| f.kind == mailcraft_model::FolderKind::Contacts)
+                .is_some_and(|f| f.kind == iridium_mail_model::FolderKind::Contacts)
         });
         if b.show && (b.name.is_empty() || b.name == folder_name) {
             all.remove(&folder.0.to_string());
@@ -1986,7 +1989,7 @@ pub struct ContactReminder {
 fn in_deleted(s: &Session, folder: FolderId) -> bool {
     s.mailbox
         .folder_account(folder)
-        .and_then(|a| s.mailbox.role_folder(a, mailcraft_model::FolderRole::DeletedItems))
+        .and_then(|a| s.mailbox.role_folder(a, iridium_mail_model::FolderRole::DeletedItems))
         .is_some_and(|d| s.mailbox.is_in_subtree(folder, d))
 }
 
@@ -2467,7 +2470,7 @@ mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
     use crate::{Notice, Selection};
-    use mailcraft_model::FolderRole;
+    use iridium_mail_model::FolderRole;
 
     fn select(s: &mut Session, ids: &[u64]) {
         let folder = role(s, FolderRole::Contacts);
@@ -2758,7 +2761,7 @@ mod tests {
         let card = String::from_utf8(c.attachments[0].data.clone()).unwrap();
         assert!(card.starts_with("BEGIN:VCARD"), "{card}");
         assert!(card.contains("ann@example.com"));
-        let back = mailcraft_formats::vcf::read_str(&card);
+        let back = iridium_mail_formats::vcf::read_str(&card);
         assert_eq!(back[0].emails, vec!["ann@example.com".to_string()]);
         let text = c.body.to_plain_text();
         assert!(
@@ -2766,12 +2769,12 @@ mod tests {
             "{text}"
         );
         // The body shows the card as a box: a bordered table with the name in bold.
-        let table = c.body.blocks.iter().find(|b| matches!(b, mailcraft_model::Block::Table { .. }));
-        let Some(mailcraft_model::Block::Table { rows, border: true, .. }) = table else {
+        let table = c.body.blocks.iter().find(|b| matches!(b, iridium_mail_model::Block::Table { .. }));
+        let Some(iridium_mail_model::Block::Table { rows, border: true, .. }) = table else {
             panic!("no card box: {:?}", c.body.blocks)
         };
         assert_eq!(rows[0].len(), 2);
-        let html = mailcraft_html::doc_to_html(&c.body);
+        let html = iridium_mail_html::doc_to_html(&c.body);
         assert!(html.contains("<table") && html.contains("Ann Lee"), "{html}");
         // As a contact: the vCard alone.
         let r = s.run("people.forward", &json!({"as": "contact", "ids": [a]})).unwrap();
@@ -2900,7 +2903,7 @@ mod tests {
         // A local-only profile cannot send.
         assert!(matches!(s.run("people.mailMerge", &send), Err(CmdError::Failed(_))));
         if let Some(acct) = s.mailbox.accounts.first_mut() {
-            acct.kind = mailcraft_model::AccountKind::Jmap;
+            acct.kind = iridium_mail_model::AccountKind::Jmap;
         }
         // All contacts of the folder: the one without an address is skipped.
         send["contacts"] = json!("all");
@@ -2924,7 +2927,7 @@ mod tests {
         let contacts = role(&s, FolderRole::Contacts);
         let club = s.mailbox.create_folder(contacts, "Club").unwrap();
         if let Some(f) = s.mailbox.folders.get_mut(&club) {
-            f.kind = mailcraft_model::FolderKind::Contacts;
+            f.kind = iridium_mail_model::FolderKind::Contacts;
         }
         let ab = |s: &mut Session, p: Value| s.run("people.addressBook", &p).unwrap();
         s.run("people.new", &json!({"fullName": "Zed Quill", "email": "zed@example.net", "folder": club.0}))
@@ -3004,7 +3007,7 @@ mod tests {
         let pdf = std::fs::read(dir.path().join("letters.pdf")).unwrap();
         assert!(pdf.starts_with(b"%PDF"));
         let csv = std::fs::read_to_string(dir.path().join("data.csv")).unwrap();
-        let rows = mailcraft_formats::csv::parse(&csv, ',');
+        let rows = iridium_mail_formats::csv::parse(&csv, ',');
         assert_eq!(rows.len(), 3, "header + two contacts: {csv}");
         assert_eq!(rows[0][0], "Full Name");
         assert!(
@@ -3122,7 +3125,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(r["records"], 1);
-        let rows = mailcraft_formats::csv::parse(&std::fs::read_to_string(path("v.csv")).unwrap(), ',');
+        let rows = iridium_mail_formats::csv::parse(&std::fs::read_to_string(path("v.csv")).unwrap(), ',');
         assert_eq!(rows[0].len(), 8, "the view's columns only");
         assert_eq!(rows[1][1], "Buyer");
         s.run(
@@ -3130,7 +3133,7 @@ mod tests {
             &json!({"contacts": "selected", "action": "dataFile", "dataFile": path("a.csv")}),
         )
         .unwrap();
-        let rows = mailcraft_formats::csv::parse(&std::fs::read_to_string(path("a.csv")).unwrap(), ',');
+        let rows = iridium_mail_formats::csv::parse(&std::fs::read_to_string(path("a.csv")).unwrap(), ',');
         assert_eq!(rows[0].len(), all_merge_fields().len());
         let nick = rows[0].iter().position(|h| h == "Nickname").unwrap();
         assert_eq!(rows[1][nick], "Annie");
@@ -3177,7 +3180,7 @@ mod tests {
     /// is bounded (a long template times many contacts used to be merged in full before anything else).
     #[test]
     fn mail_merge_refuses_documents_its_pages_cannot_hold() {
-        use mailcraft_render::print::MAX_PAGES;
+        use iridium_mail_render::print::MAX_PAGES;
         let mut s = session();
         let folder = role(&s, FolderRole::Contacts);
         let many = |s: &mut Session, n: usize| {

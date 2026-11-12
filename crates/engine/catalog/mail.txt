@@ -11,7 +11,7 @@ Mail|Home › Respond|Reply All|mail.replyAll
 Mail|Home › Respond|Forward|mail.forward
 Mail|Home › Respond|Meeting|mail.replyWithMeeting
 Mail|Home › Respond|More|mail.forwardAsAttachment
-Mail|Home › Teams|Share to Teams|-|Microsoft Teams integration; cloud service not provided by MailCraft
+Mail|Home › Teams|Share to Teams|-|Microsoft Teams integration; cloud service not provided by Mail
 Mail|Home › Quick Steps|Move to: ?|quicksteps.run
 Mail|Home › Quick Steps|To Manager|quicksteps.run
 Mail|Home › Quick Steps|Team Email|quicksteps.run
@@ -22,7 +22,7 @@ Mail|Home › Quick Steps|Quick Steps|quicksteps.run
 Mail|Home › Quick Steps|Manage Quick Steps...|quicksteps.manage
 Mail|Home › Move|Move|mail.move
 Mail|Home › Move|Rules|rules.createFromMessage
-Mail|Home › Move|Send to OneNote|-|OneNote integration; Microsoft service not provided by MailCraft
+Mail|Home › Move|Send to OneNote|-|OneNote integration; Microsoft service not provided by Mail
 Mail|Home › Tags|Assign Policy|-|Retention policies require a Microsoft 365/Exchange tenant
 Mail|Home › Tags|Unread/ Read|mail.toggleRead
 Mail|Home › Tags|Categorize|mail.categorize
@@ -181,7 +181,7 @@ Mail|Folder › Clean Up|Clean Up Folder|mail.cleanUpFolder
 Mail|Folder › Clean Up|Delete All|folder.deleteAll
 Mail|Folder › Clean Up|Recover Deleted Items...|folder.recoverDeleted
 Mail|Folder › Favorites|Add to Favorites|folder.addFavorite
-Mail|Folder › Online View|View on Server|-|Exchange cached-mode online view of a server mailbox; MailCraft keeps a local store
+Mail|Folder › Online View|View on Server|-|Exchange cached-mode online view of a server mailbox; Mail keeps a local store
 Mail|Folder › Properties|Policy|-|Retention policies require a Microsoft 365/Exchange tenant
 Mail|Folder › Properties|AutoArchive Settings|folder.autoArchiveSettings
 Mail|Folder › Properties|Folder Permissions|-|Exchange folder delegate permissions require an Exchange server

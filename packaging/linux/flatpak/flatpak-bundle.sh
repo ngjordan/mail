@@ -3,11 +3,11 @@
 #
 #     packaging/linux/flatpak/flatpak-bundle.sh (--bin-dir DIR | --tarball FILE) [--arch ARCH] [--out DIR]
 #
-#   --bin-dir  folder with mailcraft and mailcraft-cli (e.g. target/release)
-#   --tarball  the mailcraft-VERSION-linux-ARCH.tar.gz from package.sh (what the release job passes)
+#   --bin-dir  folder with iridium-mail and iridium-mail-cli (e.g. target/release)
+#   --tarball  the iridium-mail-VERSION-linux-ARCH.tar.gz from package.sh (what the release job passes)
 #   --arch     x86_64 (default: host) or aarch64; must match the binaries
 #
-# Output: mailcraft-VERSION-ARCH.flatpak; install with `flatpak install --user mailcraft-….flatpak`
+# Output: iridium-mail-VERSION-ARCH.flatpak; install with `flatpak install --user iridium-mail-….flatpak`
 # (the Freedesktop runtime comes from Flathub, recorded in the bundle).
 #
 # Needs flatpak and flatpak-builder. The Freedesktop runtime and SDK are installed per user from Flathub on
@@ -53,13 +53,13 @@ if [ -n "$tarball" ]; then
 else
 	"$MC_ROOT/packaging/stage-unix.sh" "$bin_dir" "$work/stage"
 fi
-[ -x "$work/stage/bin/mailcraft" ] || mc_die "no bin/mailcraft in the staged files"
+[ -x "$work/stage/bin/iridium-mail" ] || mc_die "no bin/iridium-mail in the staged files"
 cp "$manifest" "$work/$APP_ID.yml"
 
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 (cd "$work" && flatpak-builder --user --arch="$arch" --install-deps-from=flathub --force-clean \
 	--disable-rofiles-fuse --repo=repo build "$APP_ID.yml")
-bundle="$out/mailcraft-$MC_VERSION-$arch.flatpak"
+bundle="$out/iridium-mail-$MC_VERSION-$arch.flatpak"
 flatpak build-bundle --arch="$arch" --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
 	"$work/repo" "$bundle" "$APP_ID"
 mc_log "wrote $bundle"

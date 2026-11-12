@@ -172,7 +172,7 @@ pub fn percent_encode(s: &str) -> String {
     out
 }
 
-pub use mailcraft_model::account::normalize_url_path as normalize_path;
+pub use iridium_mail_model::account::normalize_url_path as normalize_path;
 
 /// Decodes `%XX` escapes (and `+` as space when `plus` is set); invalid escapes are kept.
 pub fn percent_decode(s: &str, plus: bool) -> String {
@@ -289,7 +289,7 @@ impl HttpClient {
             options,
             max_body: 64 * 1024 * 1024,
             max_redirects: 5,
-            user_agent: format!("MailCraft/{}", env!("CARGO_PKG_VERSION")),
+            user_agent: format!("Mail/{}", env!("CARGO_PKG_VERSION")),
         }
     }
 

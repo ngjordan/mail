@@ -1,5 +1,5 @@
 [package]
-name = "mailcraft-mime"
+name = "iridium-mail-mime"
 description = "Internet message parsing and building: RFC 5322, MIME (RFC 2045-2049), RFC 2047, RFC 2231"
 version.workspace = true
 edition.workspace = true

@@ -5,7 +5,7 @@
 //! through an upload session).
 
 use base64::Engine;
-use mailcraft_model::{DateTime, FolderRole};
+use iridium_mail_model::{DateTime, FolderRole};
 use serde_json::{Value, json};
 
 use super::{GraphClient, seg};
@@ -29,7 +29,7 @@ const MAX_LIST: usize = 500;
 /// Longest text kept from one property of a message.
 const MAX_TEXT: usize = 4 * 1024;
 
-/// Graph's well-known folder names and the MailCraft default folders they are.
+/// Graph's well-known folder names and the Mail default folders they are.
 pub const WELL_KNOWN: [(&str, FolderRole); 6] = [
     ("inbox", FolderRole::Inbox),
     ("drafts", FolderRole::Drafts),

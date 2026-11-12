@@ -1,7 +1,7 @@
-<h1 align="center">MailCraft</h1>
+<h1 align="center">Mail</h1>
 
 <p align="center">
-  <img src="assets/app-icon/hicolor/128x128/apps/mailcraft.png" alt="MailCraft app icon: a white envelope with a shaded flap on a teal tile" width="96">
+  <img src="assets/app-icon/hicolor/128x128/apps/iridium-mail.png" alt="Mail app icon: a white envelope with a shaded flap on a teal tile" width="96">
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/hero.png" alt="MailCraft main window: module rail, ribbon, Favorites and mailbox folders with unread counts, a date-grouped message list with unread and flagged messages, and a message open in the reading pane." width="100%">
+  <img src="docs/images/hero.png" alt="Mail main window: module rail, ribbon, Favorites and mailbox folders with unread counts, a date-grouped message list with unread and flagged messages, and a message open in the reading pane." width="100%">
   <br><sub>The sample mailbox: folder pane with unread and [total] counts, date groups, unread bars, flags and categories, and the reading pane.</sub>
 </p>
 
@@ -33,12 +33,12 @@
 
 | | |
 |---|---|
-| <img src="docs/images/dark.png" alt="MailCraft in the dark theme" width="100%"> | <img src="docs/images/classic-ribbon.png" alt="The Classic ribbon with groups and large buttons" width="100%"> |
+| <img src="docs/images/dark.png" alt="Mail in the dark theme" width="100%"> | <img src="docs/images/classic-ribbon.png" alt="The Classic ribbon with groups and large buttons" width="100%"> |
 | Dark theme | Classic ribbon (Simplified is the default) |
 | <img src="docs/images/calendar.png" alt="Calendar month view with a mini-month navigator" width="100%"> | <img src="docs/images/narrow.png" alt="A narrow window in single-pane mode" width="100%"> |
 | Calendar | Narrow windows: the folder pane minimises and the list and reading pane take turns |
 
-## Why MailCraft
+## Why Mail
 
 - **The workflow you know.** Behaviour, layout and feature names follow careful black-box observation of the
   classic desktop client: default folder order, unread and total badges, date groups, RE:/FW: handling, the
@@ -69,41 +69,41 @@ where passwords are kept: [docs/accounts.md](docs/accounts.md).
 ## Quick start
 
 Packages for Linux, Windows, macOS, FreeBSD and the web are published on the
-[releases page](https://github.com/MonkeySaint/mailcraft/releases) (see [docs/releasing.md](docs/releasing.md)).
+[releases page](https://github.com/MonkeySaint/iridium-mail/releases) (see [docs/releasing.md](docs/releasing.md)).
 To build from source:
 
 ```sh
-git clone https://github.com/MonkeySaint/mailcraft.git && cd mailcraft
+git clone https://github.com/MonkeySaint/iridium-mail.git && cd iridium-mail
 
 # Desktop app with the built-in sample mailbox
-cargo run --release -p mailcraft -- --sample
+cargo run --release -p iridium-mail -- --sample
 
-# Your own local profile (data in ~/.local/share/MailCraft by default)
-cargo run --release -p mailcraft
+# Your own local profile (data in ~/.local/share/Mail by default)
+cargo run --release -p iridium-mail
 
 # A new profile on the SQLite storage (opt-in preview; an existing profile keeps its storage)
-cargo run --release -p mailcraft -- --profile /path/to/new-profile --store sqlite
+cargo run --release -p iridium-mail -- --profile /path/to/new-profile --store sqlite
 
 # Local test mail servers for trying accounts without a real mailbox
-cargo run -p mailcraft-testmail-app -- --help
+cargo run -p iridium-mail-testmail-app -- --help
 
 # Storage benchmarks on a synthetic profile (JSON report in target/scratch/bench/)
 cargo xtask bench --size 10k
 ```
 
-Web build: see [apps/mailcraft-web/README.md](apps/mailcraft-web/README.md).
+Web build: see [apps/iridium-mail-web/README.md](apps/iridium-mail-web/README.md).
 
 ## For agents: CLI and MCP
 
 ```sh
-mailcraft-cli commands                 # every command id, label, location, shortcut
-mailcraft-cli parity                   # catalog coverage summary
-mailcraft-cli run --sample --cmd 'mail.reply' --query list
-mailcraft-cli mcp --sample             # MCP server over stdio (see docs/mcp.md)
+iridium-mail-cli commands                 # every command id, label, location, shortcut
+iridium-mail-cli parity                   # catalog coverage summary
+iridium-mail-cli run --sample --cmd 'mail.reply' --query list
+iridium-mail-cli mcp --sample             # MCP server over stdio (see docs/mcp.md)
 ```
 
 A running app can be driven over a local JSON control channel (`--control-port N`, see
-[docs/control-protocol.md](docs/control-protocol.md)); `mailcraft-cli mcp --connect 127.0.0.1:N` bridges MCP to it.
+[docs/control-protocol.md](docs/control-protocol.md)); `iridium-mail-cli mcp --connect 127.0.0.1:N` bridges MCP to it.
 
 ## Architecture
 
@@ -116,7 +116,7 @@ A running app can be driven over a local JSON control channel (`--control-port N
 | L4 | `engine` | session, undo, command registry, feature catalog, sync |
 | L5 | `mcp` | MCP server |
 | L6 | `ui-egui` | the Outlook-style user interface |
-| apps | `mailcraft`, `mailcraft-cli`, `mailcraft-web`, `mailcraft-testmail-app`, `mailcraft-bench` | binaries (the last two are dev tools) |
+| apps | `iridium-mail`, `iridium-mail-cli`, `iridium-mail-web`, `iridium-mail-testmail-app`, `iridium-mail-bench` | binaries (the last two are dev tools) |
 
 `cargo xtask ci` runs fmt, clippy, tests, the layer check, asset attribution, the licence allowlist, the parity
 floor and the wasm build. CI runs on GitHub Actions (`.github/workflows/`).
@@ -124,12 +124,12 @@ floor and the wasm build. CI runs on GitHub Actions (`.github/workflows/`).
 ## Roadmap
 
 [ROADMAP.md](ROADMAP.md) lists milestones, honest parity per area and what needs the project owner. Bugs and
-ideas go to the [issue tracker](https://github.com/MonkeySaint/mailcraft/issues).
+ideas go to the [issue tracker](https://github.com/MonkeySaint/iridium-mail/issues).
 
 ## License
 
 MIT OR Apache-2.0, at your option ([LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE)). Bundled fonts
 are under the SIL Open Font License; see [NOTICE](NOTICE) and [ATTRIBUTION.md](ATTRIBUTION.md).
 
-MailCraft is an independent project, not affiliated with or endorsed by Microsoft. Outlook is a trademark of
-Microsoft Corporation, used here only to describe the workflow MailCraft is modelled on.
+Mail is an independent project, not affiliated with or endorsed by Microsoft. Outlook is a trademark of
+Microsoft Corporation, used here only to describe the workflow Mail is modelled on.

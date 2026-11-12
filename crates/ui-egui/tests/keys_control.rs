@@ -6,9 +6,9 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpStream;
 use std::time::{Duration, Instant};
 
-use mailcraft_engine::sample::sample_session;
-use mailcraft_ui_egui::App;
-use mailcraft_ui_egui::control::{Control, encode_png};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_ui_egui::App;
+use iridium_mail_ui_egui::control::{Control, encode_png};
 use serde_json::{Value, json};
 
 /// Sends each request line and collects the response lines (client side, on its own thread).

@@ -1,12 +1,12 @@
-//! Message-body rendering: lays out a rich-text Doc with mailcraft-layout and paints the display list with
+//! Message-body rendering: lays out a rich-text Doc with iridium-mail-layout and paints the display list with
 //! egui (reading area owns; compose area uses). Remote images blocked unless allowed.
 //!
 //! - Layout is cached in [`BodyView`] by (content hash, width, zoom); text runs are painted with the exact
 //!   bundled face the layout measured with (each face is registered with egui on first use as the named family
-//!   `mailcraft-body:<family>:<weight>:<n|i>`, plus egui's own fallback fonts for emoji and symbols).
+//!   `iridium-mail-body:<family>:<weight>:<n|i>`, plus egui's own fallback fonts for emoji and symbols).
 //! - Only items inside the clip rect are painted, so long bodies in a scroll area stay cheap.
 //! - Links: pointing-hand cursor and the target as a tooltip; a click returns the target.
-//! - Selection: drag to select (by [`mailcraft_layout::Layout::hit_pos`]), double-click selects a word, Ctrl+A
+//! - Selection: drag to select (by [`iridium_mail_layout::Layout::hit_pos`]), double-click selects a word, Ctrl+A
 //!   selects all while the body has focus, Ctrl+C copies the selected text. Extra ranges
 //!   ([`BodyView::extra`], Select Text With Similar Formatting) are painted and copied with the selection;
 //!   find hits ([`BodyView::marks`], from [`find_all`]) are painted on a highlight colour.
@@ -31,16 +31,16 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use egui::{Color32, CursorIcon, FontFamily, Id, Pos2, Rect, Sense, Stroke, StrokeKind, Ui, Vec2};
-use mailcraft_fonts::{FontDb, FontId as McFontId};
-use mailcraft_geom::Color;
-use mailcraft_layout::{DisplayItem, Layout, LayoutOptions, LineBox, TextPos, layout_doc};
-use mailcraft_model::{Block, Doc, Inline};
+use iridium_mail_fonts::{FontDb, FontId as McFontId};
+use iridium_mail_geom::Color;
+use iridium_mail_layout::{DisplayItem, Layout, LayoutOptions, LineBox, TextPos, layout_doc};
+use iridium_mail_model::{Block, Doc, Inline};
 
 /// Cached layout of one body at one width.
 #[derive(Clone, Debug, Default)]
 pub struct BodyView {
     pub width: f32,
-    pub layout: Option<mailcraft_layout::Layout>,
+    pub layout: Option<iridium_mail_layout::Layout>,
     /// Cache key of `layout` (content hash, width, zoom).
     pub key: u64,
     /// Content hash of the doc the selection belongs to.
@@ -282,7 +282,7 @@ fn paint_and_interact(
     let origin = rect.min;
     view.origin = Some(origin);
     view.widget = Some(resp.id);
-    let to_doc = |p: Pos2| mailcraft_geom::Point::new(p.x - origin.x, p.y - origin.y);
+    let to_doc = |p: Pos2| iridium_mail_geom::Point::new(p.x - origin.x, p.y - origin.y);
 
     // --- interaction -------------------------------------------------------------------------------
     let mut clicked_link = None;
@@ -380,7 +380,7 @@ fn paint_and_interact(
     paint_ranges(&painter, layout, &view.extra, origin, clip, selection_fill(dark));
     let ctx = ui.ctx().clone();
     let mut families = FamilyCache::default();
-    let rect_of = |r: &mailcraft_geom::Rect| {
+    let rect_of = |r: &iridium_mail_geom::Rect| {
         Rect::from_min_size(Pos2::new(origin.x + r.x, origin.y + r.y), Vec2::new(r.w.max(0.0), r.h.max(0.0)))
     };
     for item in &layout.display.items {
@@ -451,7 +451,7 @@ fn paint_and_interact(
             DisplayItem::Image { rect: r, src, alt } => {
                 let rr = rect_of(r);
                 // The place of a drawing in line with the text: the compose editor paints the drawing.
-                if mailcraft_model::rich::inline_drawing_id(src).is_some() {
+                if iridium_mail_model::rich::inline_drawing_id(src).is_some() {
                     continue;
                 }
                 if rr.intersects(clip) {
@@ -732,7 +732,7 @@ fn context_menu(
     if resp.secondary_clicked()
         && let Some(p) = resp.interact_pointer_pos()
     {
-        let at = layout.hit_pos(mailcraft_geom::Point::new(p.x - origin.x, p.y - origin.y));
+        let at = layout.hit_pos(iridium_mail_geom::Point::new(p.x - origin.x, p.y - origin.y));
         // A right-click outside the selection drops it (the menu then works on the clicked spot).
         let inside = match (view.ordered_selection(), &at) {
             (Some((a, b)), Some(t)) => a <= *t && *t <= b,
@@ -889,12 +889,12 @@ pub fn find_all(doc: &Doc, needle: &str, match_case: bool) -> Vec<(TextPos, Text
 }
 
 /// Character runs of a leaf: `(start, end, style, in a link)`; line breaks and pictures are left out.
-fn leaf_runs(doc: &Doc, path: &[usize]) -> Vec<(usize, usize, mailcraft_model::TextStyle, bool)> {
+fn leaf_runs(doc: &Doc, path: &[usize]) -> Vec<(usize, usize, iridium_mail_model::TextStyle, bool)> {
     fn walk(
         inlines: &[Inline],
         link: bool,
         at: &mut usize,
-        out: &mut Vec<(usize, usize, mailcraft_model::TextStyle, bool)>,
+        out: &mut Vec<(usize, usize, iridium_mail_model::TextStyle, bool)>,
         depth: usize,
     ) {
         if depth > MAX_LEAF_DEPTH {
@@ -923,7 +923,7 @@ fn leaf_runs(doc: &Doc, path: &[usize]) -> Vec<(usize, usize, mailcraft_model::T
         Some(Block::Pre { text }) => {
             let n = text.chars().count();
             if n > 0 {
-                let mono = mailcraft_model::TextStyle { monospace: Some(true), ..Default::default() };
+                let mono = iridium_mail_model::TextStyle { monospace: Some(true), ..Default::default() };
                 out.push((0, n, mono, false));
             }
         }
@@ -934,7 +934,7 @@ fn leaf_runs(doc: &Doc, path: &[usize]) -> Vec<(usize, usize, mailcraft_model::T
 
 /// The formatting at `at` (of the char after it, or before it at the end of a paragraph): its style, link
 /// state and heading level.
-fn format_at(doc: &Doc, at: &TextPos) -> Option<(mailcraft_model::TextStyle, bool, u8)> {
+fn format_at(doc: &Doc, at: &TextPos) -> Option<(iridium_mail_model::TextStyle, bool, u8)> {
     let runs = leaf_runs(doc, &at.block_path);
     let run = runs
         .iter()
@@ -1015,7 +1015,7 @@ pub fn range_rect(view: &BodyView, range: &(TextPos, TextPos)) -> Option<Rect> {
 // ---------------------------------------------------------------------------------------------------------
 // Doc helpers
 
-/// Block at a layout block path (see `mailcraft_layout` docs for the path scheme).
+/// Block at a layout block path (see `iridium_mail_layout` docs for the path scheme).
 fn block_at<'a>(blocks: &'a [Block], path: &[usize]) -> Option<&'a Block> {
     let (&first, rest) = path.split_first()?;
     let b = blocks.get(first)?;
@@ -1195,7 +1195,7 @@ fn decode_limited(data: &[u8], format: image::ImageFormat) -> Option<egui::Color
 }
 
 /// Decodes a contact's picture (PNG, JPEG or GIF) for the cards and the contact window.
-pub fn decode_contact_picture(pic: &mailcraft_model::contact::ContactPicture) -> Option<egui::ColorImage> {
+pub fn decode_contact_picture(pic: &iridium_mail_model::contact::ContactPicture) -> Option<egui::ColorImage> {
     decode_image(&pic.data)
 }
 
@@ -1212,7 +1212,7 @@ pub fn data_image_bytes(src: &str) -> Option<Vec<u8>> {
     if !parts.any(|x| x.eq_ignore_ascii_case("base64")) || payload.len() / 4 * 3 > MAX_IMAGE_BYTES {
         return None;
     }
-    let data = mailcraft_mime::transfer::decode_base64(payload.as_bytes());
+    let data = iridium_mail_mime::transfer::decode_base64(payload.as_bytes());
     (!data.is_empty() && data.len() <= MAX_IMAGE_BYTES).then_some(data)
 }
 
@@ -1257,12 +1257,12 @@ impl ImageCache {
 }
 
 fn image_cache_id() -> Id {
-    Id::unique("mailcraft-body-images")
+    Id::unique("iridium-mail-body-images")
 }
 
 fn load_picture(ctx: &egui::Context, key: u64, data: &[u8]) -> Option<egui::TextureHandle> {
     decode_image(data).or_else(|| decode_svg(data)).map(|img| {
-        ctx.load_texture(format!("mailcraft-body-image-{key:016x}"), img, egui::TextureOptions::LINEAR)
+        ctx.load_texture(format!("iridium-mail-body-image-{key:016x}"), img, egui::TextureOptions::LINEAR)
     })
 }
 
@@ -1390,7 +1390,7 @@ struct ImageSizes {
 }
 
 fn image_sizes_id() -> Id {
-    Id::unique("mailcraft-body-image-sizes")
+    Id::unique("iridium-mail-body-image-sizes")
 }
 
 /// Records the intrinsic size of the remote picture at `url` (a [`crate::remote_images::key`]).
@@ -1565,7 +1565,7 @@ fn paint_texture(painter: &egui::Painter, r: Rect, tex: &egui::TextureHandle) {
 /// The font database for message bodies (bundled faces plus the installed fonts once the platform shell has
 /// indexed them, see [`FontDb::with_installed`]), shared through egui's temp data (built once per context).
 pub fn font_db(ctx: &egui::Context) -> Arc<FontDb> {
-    let id = Id::unique("mailcraft.body.fontdb");
+    let id = Id::unique("iridium-mail.body.fontdb");
     if let Some(db) = ctx.data(|d| d.get_temp::<Arc<FontDb>>(id)) {
         return db;
     }
@@ -1602,7 +1602,7 @@ pub fn preview_family(ctx: &egui::Context, name: &str) -> Option<FontFamily> {
     if key.is_empty() {
         return None;
     }
-    let id = Id::unique("mailcraft.body.font-previews");
+    let id = Id::unique("iridium-mail.body.font-previews");
     let frame = ctx.cumulative_pass_nr();
     let mut st = ctx.data(|d| d.get_temp::<Arc<Previews>>(id)).map(|a| (*a).clone()).unwrap_or_default();
     if !st.names.contains(&key) {
@@ -1637,7 +1637,7 @@ pub fn sample_family(ctx: &egui::Context, name: &str, weight: u16) -> FontFamily
 
 /// egui family name used for one face.
 pub fn face_family_name(family: &str, weight: u16, italic: bool) -> String {
-    format!("mailcraft-body:{family}:{weight}:{}", if italic { "i" } else { "n" })
+    format!("iridium-mail-body:{family}:{weight}:{}", if italic { "i" } else { "n" })
 }
 
 /// Per-paint cache of FontId → egui family.
@@ -1688,7 +1688,7 @@ fn egui_family(ctx: &egui::Context, db: &FontDb, id: McFontId) -> FontFamily {
         return family;
     }
     // Register once per context (the insert is applied at the start of the next pass).
-    let flag = Id::unique(("mailcraft.body.font-requested", name.as_str()));
+    let flag = Id::unique(("iridium-mail.body.font-requested", name.as_str()));
     let requested = ctx.data(|d| d.get_temp::<bool>(flag)).unwrap_or(false);
     if !requested {
         ctx.data_mut(|d| d.insert_temp(flag, true));
@@ -1826,7 +1826,7 @@ mod tests {
 
     #[test]
     fn remote_detection_and_text_paths() {
-        let doc = mailcraft_html::html_to_doc(
+        let doc = iridium_mail_html::html_to_doc(
             "<p>Hello <b>big</b> world</p><ul><li>one</li></ul><p><img src=\"https://x.example/a.png\" alt=\"A\"></p>",
         );
         assert!(has_remote_images(&doc));
@@ -1843,7 +1843,7 @@ mod tests {
 
     #[test]
     fn find_all_matches_across_nested_blocks() {
-        let doc = mailcraft_html::html_to_doc(
+        let doc = iridium_mail_html::html_to_doc(
             "<p>Apple pie, apple tart</p><ul><li>green APPLE</li></ul><table><tr><td>apple</td></tr></table>",
         );
         let paths = leaf_paths(&doc);
@@ -1864,7 +1864,7 @@ mod tests {
 
     #[test]
     fn similar_formatting_selects_matching_runs() {
-        let doc = mailcraft_html::html_to_doc(
+        let doc = iridium_mail_html::html_to_doc(
             "<p>plain <b>bold one</b> plain <b>bold two</b></p><p><b>bold three</b> end</p><h1>head <b>bold</b></h1>",
         );
         let ranges = similar_ranges(&doc, &tp(&[0], 7));
@@ -1917,7 +1917,7 @@ mod tests {
     }
 
     fn data_url(mime: &str, data: &[u8]) -> String {
-        format!("data:{mime};base64,{}", mailcraft_mime::transfer::encode_base64(data))
+        format!("data:{mime};base64,{}", iridium_mail_mime::transfer::encode_base64(data))
     }
 
     #[test]
@@ -1926,12 +1926,13 @@ mod tests {
             let img = decode_image(&encoded(format, 5, 3)).unwrap_or_else(|| panic!("{format:?}"));
             assert_eq!(img.size, [5, 3], "{format:?}");
         }
-        let pic = mailcraft_model::contact::ContactPicture::sniff(&encoded(image::ImageFormat::Jpeg, 4, 4))
-            .unwrap();
+        let pic =
+            iridium_mail_model::contact::ContactPicture::sniff(&encoded(image::ImageFormat::Jpeg, 4, 4))
+                .unwrap();
         assert_eq!(pic.mime, "image/jpeg");
         assert_eq!(decode_contact_picture(&pic).map(|i| i.size), Some([4, 4]));
-        let gif =
-            mailcraft_model::contact::ContactPicture::sniff(&encoded(image::ImageFormat::Gif, 2, 6)).unwrap();
+        let gif = iridium_mail_model::contact::ContactPicture::sniff(&encoded(image::ImageFormat::Gif, 2, 6))
+            .unwrap();
         assert_eq!(decode_contact_picture(&gif).map(|i| i.size), Some([2, 6]));
     }
 
@@ -2024,7 +2025,7 @@ mod tests {
     #[test]
     fn inline_pictures_cached_tells_whether_a_doc_needs_its_pictures_again() {
         let ctx = egui::Context::default();
-        let doc = mailcraft_html::html_to_doc(
+        let doc = iridium_mail_html::html_to_doc(
             "<p><img src=\"cid:a@example.org\" width=2 height=2><img src=\"https://example.org/b.png\"></p>",
         );
         assert!(inline_pictures_cached(&ctx, &Doc::from_plain_text("no pictures")));
@@ -2087,7 +2088,7 @@ mod tests {
         assert_eq!(
             data_image_bytes(&format!(
                 "  DATA:Image/PNG;BASE64,{}",
-                mailcraft_mime::transfer::encode_base64_flat(&png)
+                iridium_mail_mime::transfer::encode_base64_flat(&png)
             )),
             Some(png)
         );
@@ -2128,7 +2129,7 @@ mod tests {
     #[test]
     fn body_with_a_data_picture_paints_it() {
         let png = encoded(image::ImageFormat::Png, 4, 4);
-        let doc = mailcraft_html::html_to_doc(&format!(
+        let doc = iridium_mail_html::html_to_doc(&format!(
             "<p>Logo <img src=\"{}\" width=40 height=40 alt=\"Logo\"></p>",
             data_url("image/png", &png)
         ));

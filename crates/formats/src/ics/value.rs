@@ -3,7 +3,7 @@
 //! Local ("wall clock") times are carried as seconds since 1970-01-01T00:00:00 of the local calendar
 //! (`local secs`); a time zone maps them to UTC instants.
 
-use mailcraft_model::dates::{civil_from_days, days_from_civil};
+use iridium_mail_model::dates::{civil_from_days, days_from_civil};
 
 pub const DAY: i64 = 86_400;
 

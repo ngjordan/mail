@@ -1,6 +1,6 @@
-//! MailCraft data model (layer L1).
+//! Mail data model (layer L1).
 //!
-//! Plain data plus pure operations. No I/O: persistence is `mailcraft-store`, networking is `mailcraft-net`.
+//! Plain data plus pure operations. No I/O: persistence is `iridium-mail-store`, networking is `iridium-mail-net`.
 //! Behaviour follows the black-box observations in `plan/reference/` (folder order, count badges, date groups,
 //! list time formats, subject prefixes).
 //!
@@ -61,7 +61,7 @@ pub use task::{Task, TaskPriority, TaskStatus};
 pub use thread::{Conversation, thread};
 pub use view::{ArrangeBy, FolderPaneState, ListFilter, ReadingPanePos, SortOrder, ViewLayout, ViewSettings};
 
-pub use mailcraft_mime::{DateTime, Mailbox as Address};
+pub use iridium_mail_mime::{DateTime, Mailbox as Address};
 
 #[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
 pub enum ModelError {

@@ -16,8 +16,8 @@ use std::sync::{Arc, Mutex};
 use egui::{Align2, Color32, CornerRadius, FontId, Rect, Sense, Stroke, StrokeKind, Ui, pos2, vec2};
 use serde_json::Value;
 
-use mailcraft_engine::cmd::calendar::{BusySlot, free_busy};
-use mailcraft_model::{DateTime, ItemId};
+use iridium_mail_engine::cmd::calendar::{BusySlot, free_busy};
+use iridium_mail_model::{DateTime, ItemId};
 
 use super::common::{DAY, a11y, blend, day_string, hour_label, long_date, parse_day};
 use super::editors::ApptEditor;
@@ -103,7 +103,7 @@ pub(crate) fn attendee_rows(
     if ed.attendee_fb.as_ref().is_none_or(|c| c.key != key) {
         let (from, to) = day_bounds(app, day);
         let mut c = AttendeeFreeBusy { key, ..Default::default() };
-        match mailcraft_engine::sync::availability_lookup(&app.s, &addresses, from.unix, to.unix) {
+        match iridium_mail_engine::sync::availability_lookup(&app.s, &addresses, from.unix, to.unix) {
             None => c.unavailable = true,
             Some(lookup) => {
                 let slot = Arc::clone(&c.slot);
@@ -415,7 +415,7 @@ pub(crate) fn show(ui: &mut Ui, app: &App, ed: &mut ApptEditor) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn editor(date: &str, start: i64, end: i64) -> ApptEditor {
         ApptEditor {
@@ -482,13 +482,14 @@ mod tests {
         use egui_kittest::kittest::Queryable;
         const PAT: &str = "pat@example.com";
         const BOB: &str = "bob@example.org";
-        let srv = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config {
+        let srv = iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config {
             users: vec![(PAT.into(), "pat-pw".into()), (BOB.into(), "bob-pw".into())],
-            ..mailcraft_testmail::Config::default()
+            ..iridium_mail_testmail::Config::default()
         })
         .unwrap();
         srv.ews_put_item(BOB, "calendar", "<CalendarItem><Subject>Private</Subject><Start>2026-11-05T15:00:00Z</Start><End>2026-11-05T16:00:00Z</End><LegacyFreeBusyStatus>Tentative</LegacyFreeBusyStatus></CalendarItem>").unwrap();
-        let mut s = mailcraft_engine::Session::new(mailcraft_model::Mailbox::new_local("Local Folders"));
+        let mut s =
+            iridium_mail_engine::Session::new(iridium_mail_model::Mailbox::new_local("Local Folders"));
         s.view.auto_send_receive_minutes = 0;
         s.tz_offset_min = 0;
         s.run(

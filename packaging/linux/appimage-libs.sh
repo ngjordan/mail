@@ -20,7 +20,7 @@
 # Libraries are taken from the build system: /usr/lib/<arch>-linux-gnu (Debian and Ubuntu, also for a
 # cross build with the foreign-architecture packages installed), then /usr/lib64 and /usr/lib. The release
 # job installs them with packaging/linux/ci-deps.sh. On Debian-based systems the copyright file of each
-# library's package goes to usr/share/doc/mailcraft/third-party/.
+# library's package goes to usr/share/doc/iridium-mail/third-party/.
 #
 # How the app finds them: patchelf gives every executable in usr/bin the DT_RPATH $ORIGIN/../lib. The
 # executable's DT_RPATH applies to every library loaded into the process that has no DT_RUNPATH of its own,
@@ -137,8 +137,8 @@ copy_copyright() {
 	[ -n "$pkg" ] || mc_die "no Debian package owns $path (needed for its copyright file)"
 	doc="/usr/share/doc/$pkg/copyright"
 	[ -f "$doc" ] || mc_die "missing $doc (the licence of bundled $(basename "$path"))"
-	mkdir -p "$appdir/usr/share/doc/mailcraft/third-party"
-	install -m 0644 "$doc" "$appdir/usr/share/doc/mailcraft/third-party/$pkg.copyright"
+	mkdir -p "$appdir/usr/share/doc/iridium-mail/third-party"
+	install -m 0644 "$doc" "$appdir/usr/share/doc/iridium-mail/third-party/$pkg.copyright"
 }
 
 if [ "$check_only" = 0 ]; then

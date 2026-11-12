@@ -8,7 +8,7 @@ const NOW: DateTime = DateTime { unix: 1_791_552_000, offset_min: 0 };
 
 /// Parses with the mime crate (a parse failure fails the test rather than skipping it).
 fn parse(raw: &str) -> MailItem {
-    let msg = mailcraft_mime::parse(raw.as_bytes()).expect("well-formed test message parses");
+    let msg = iridium_mail_mime::parse(raw.as_bytes()).expect("well-formed test message parses");
     MailItem::from_message(&msg, raw.as_bytes(), NOW)
 }
 
@@ -114,7 +114,7 @@ fn item_helpers() {
 proptest! {
     #[test]
     fn hostile_messages_never_panic(raw in prop::collection::vec(any::<u8>(), 0..2000)) {
-        if let Ok(msg) = mailcraft_mime::parse(&raw) {
+        if let Ok(msg) = iridium_mail_mime::parse(&raw) {
             let item = MailItem::from_message(&msg, &raw, NOW);
             prop_assert!(item.preview.chars().count() <= 255);
             prop_assert_eq!(item.size, raw.len() as u64);
@@ -124,7 +124,7 @@ proptest! {
     #[test]
     fn hostile_header_text_never_panics(subject in "[ -~]{0,200}", kw in "[ -~]{0,100}", date in "[ -~]{0,60}") {
         let raw = format!("Subject: {subject}\r\nKeywords: {kw}\r\nReceived: x; {date}\r\nDate: {date}\r\n\r\nbody");
-        if let Ok(msg) = mailcraft_mime::parse(raw.as_bytes()) {
+        if let Ok(msg) = iridium_mail_mime::parse(raw.as_bytes()) {
             let item = MailItem::from_message(&msg, raw.as_bytes(), NOW);
             prop_assert!(item.categories.iter().all(|c| !c.is_empty()));
         }

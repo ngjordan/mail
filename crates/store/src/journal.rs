@@ -1,6 +1,6 @@
 //! Snapshot and journal files.
 //!
-//! Snapshot (`mailbox.json`): `{"mailcraft_snapshot":2,"generation":N,"bodies":2,"mailbox":{...}}`, the
+//! Snapshot (`mailbox.json`): `{"iridium_mail_snapshot":2,"generation":N,"bodies":2,"mailbox":{...}}`, the
 //! prefix written byte-for-byte so the generation can be peeked without parsing the whole file. Format 2
 //! (and the `"bodies":2` marker) is a snapshot written since storage stage S5: its items carry no message
 //! content inline, they refer to the body store. Format 1 is still read; one without the marker may carry
@@ -8,7 +8,7 @@
 //! instead of opening the profile with every message empty and dropping the body keys on their next save. A
 //! bare [`Mailbox`] JSON object is also accepted (generation 0).
 //!
-//! Journal (`journal.jsonl`): first line `{"mailcraft_journal":2,"generation":N}`, then one [`Op`] per line.
+//! Journal (`journal.jsonl`): first line `{"iridium_mail_journal":2,"generation":N}`, then one [`Op`] per line.
 //! A journal whose generation is older than the snapshot's was already folded into that snapshot (a crash
 //! between the snapshot rename and the journal reset) and is ignored.
 //!
@@ -25,7 +25,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{BufWriter, ErrorKind, Read, Write};
 use std::path::Path;
 
-use mailcraft_model::Mailbox;
+use iridium_mail_model::Mailbox;
 use serde::{Deserialize, Serialize};
 
 use crate::{Op, Result, StoreError};
@@ -40,12 +40,18 @@ pub const SNAPSHOT_FORMAT: u32 = 2;
 /// The snapshot format written before storage stage S5.
 pub const SNAPSHOT_FORMAT_V1: u32 = 1;
 
-const SNAPSHOT_PREFIX: &str = "{\"mailcraft_snapshot\":2,\"generation\":";
-const SNAPSHOT_PREFIX_V1: &str = "{\"mailcraft_snapshot\":1,\"generation\":";
+const SNAPSHOT_PREFIX: &str = "{\"iridium_mail_snapshot\":2,\"generation\":";
+const SNAPSHOT_PREFIX_V1: &str = "{\"iridium_mail_snapshot\":1,\"generation\":";
+/// The key profiles were written with before the rename. It is read, never written: a
+/// profile is a mailbox, and refusing to open one because the key changed would lose
+/// the mail in it.
+const SNAPSHOT_PREFIX_LEGACY: &str = "{\"mailcraft_snapshot\":";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SnapshotFile {
-    mailcraft_snapshot: u32,
+    /// The format marker. The alias is the key older profiles carry.
+    #[serde(alias = "mailcraft_snapshot")]
+    iridium_mail_snapshot: u32,
     generation: u64,
     /// [`BODIES_OUT_OF_LINE`] since storage stage S5; missing (0) before.
     #[serde(default)]
@@ -72,21 +78,23 @@ pub const JOURNAL_VERSION: u32 = 2;
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct JournalHeader {
-    pub mailcraft_journal: u32,
+    /// The format marker. The alias is the key older journals carry.
+    #[serde(alias = "mailcraft_journal")]
+    pub iridium_mail_journal: u32,
     pub generation: u64,
 }
 
 impl JournalHeader {
     pub fn new(generation: u64) -> Self {
-        JournalHeader { mailcraft_journal: JOURNAL_VERSION, generation }
+        JournalHeader { iridium_mail_journal: JOURNAL_VERSION, generation }
     }
     pub fn parse(line: &[u8]) -> Option<JournalHeader> {
         serde_json::from_slice(line).ok()
     }
     fn line(&self) -> Vec<u8> {
         let mut v = format!(
-            "{{\"mailcraft_journal\":{},\"generation\":{}}}",
-            self.mailcraft_journal, self.generation
+            "{{\"iridium_mail_journal\":{},\"generation\":{}}}",
+            self.iridium_mail_journal, self.generation
         )
         .into_bytes();
         v.push(b'\n');
@@ -94,8 +102,8 @@ impl JournalHeader {
     }
     /// [`StoreError::TooNew`] when this build cannot read the journal's format.
     fn check_version(&self) -> Result<()> {
-        if self.mailcraft_journal > JOURNAL_VERSION {
-            return Err(too_new_error(self.mailcraft_journal));
+        if self.iridium_mail_journal > JOURNAL_VERSION {
+            return Err(too_new_error(self.iridium_mail_journal));
         }
         Ok(())
     }
@@ -104,7 +112,7 @@ impl JournalHeader {
 /// The error for a journal in format `version`, newer than [`JOURNAL_VERSION`].
 pub(crate) fn too_new_error(version: u32) -> StoreError {
     StoreError::TooNew(format!(
-        "its change journal is in format {version}, newer than this version of MailCraft reads \
+        "its change journal is in format {version}, newer than this version of Mail reads \
          ({JOURNAL_VERSION}); open it with the newer version, whose Exit saves everything into the snapshot"
     ))
 }
@@ -204,12 +212,17 @@ pub fn read_snapshot_full(dir: &Path) -> Result<SnapshotRead> {
     let Some(bytes) = read_capped(&dir.join(SNAPSHOT_FILE), MAX_STATE_BYTES)? else {
         return Ok(SnapshotRead::default());
     };
-    let (generation, mailbox, marked) = if bytes.starts_with(b"{\"mailcraft_snapshot\"") {
+    let (generation, mailbox, marked) = if bytes.starts_with(b"{\"iridium_mail_snapshot\"")
+        || bytes.starts_with(SNAPSHOT_PREFIX_LEGACY.as_bytes())
+    {
         let snap: SnapshotFile = serde_json::from_slice(&bytes).map_err(|e| corrupt("snapshot", e))?;
-        if snap.mailcraft_snapshot != SNAPSHOT_FORMAT && snap.mailcraft_snapshot != SNAPSHOT_FORMAT_V1 {
-            return Err(StoreError::Corrupt(format!("unknown snapshot format {}", snap.mailcraft_snapshot)));
+        if snap.iridium_mail_snapshot != SNAPSHOT_FORMAT && snap.iridium_mail_snapshot != SNAPSHOT_FORMAT_V1 {
+            return Err(StoreError::Corrupt(format!(
+                "unknown snapshot format {}",
+                snap.iridium_mail_snapshot
+            )));
         }
-        let marked = snap.mailcraft_snapshot >= SNAPSHOT_FORMAT || snap.bodies >= BODIES_OUT_OF_LINE;
+        let marked = snap.iridium_mail_snapshot >= SNAPSHOT_FORMAT || snap.bodies >= BODIES_OUT_OF_LINE;
         (snap.generation, snap.mailbox, marked)
     } else {
         let mb: Mailbox = serde_json::from_slice(&bytes).map_err(|e| corrupt("snapshot", e))?;
@@ -223,7 +236,7 @@ pub fn read_snapshot_full(dir: &Path) -> Result<SnapshotRead> {
 /// as a snapshot: older ones refuse it ("unknown snapshot format 3") instead of starting an empty profile
 /// beside the database, and this one opens `store.db`.
 pub const SQLITE_MARKER_FORMAT: u32 = 3;
-const SQLITE_MARKER_PREFIX: &str = "{\"mailcraft_snapshot\":3,";
+const SQLITE_MARKER_PREFIX: &str = "{\"iridium_mail_snapshot\":3,";
 
 /// Writes the marker `mailbox.json` of a SQLite profile.
 pub fn write_sqlite_marker(dir: &Path) -> Result<()> {
@@ -232,7 +245,7 @@ pub fn write_sqlite_marker(dir: &Path) -> Result<()> {
         write!(
             w,
             "{SQLITE_MARKER_PREFIX}\"generation\":0,\"store\":\"sqlite\",\"note\":\"This profile keeps its mail \
-             in store.db. Open it with a MailCraft version that has SQLite storage.\",\"mailbox\":{body}}}"
+             in store.db. Open it with a Mail version that has SQLite storage.\",\"mailbox\":{body}}}"
         )
     })
 }
@@ -406,10 +419,10 @@ pub fn prepare_journal(dir: &Path, snapshot_gen: u64) -> Result<(File, u64, Repa
         }
     }
     if let Some(h) = &header
-        && h.mailcraft_journal < JOURNAL_VERSION
+        && h.iridium_mail_journal < JOURNAL_VERSION
     {
         upgrade_header(&path, generation)?;
-        repair.upgraded_from = Some(h.mailcraft_journal);
+        repair.upgraded_from = Some(h.iridium_mail_journal);
     }
     Ok((OpenOptions::new().append(true).open(&path)?, generation, repair))
 }
@@ -456,10 +469,10 @@ pub fn scan_journal(bytes: &[u8]) -> JournalScan {
             && let Some(h) = JournalHeader::parse(line)
         {
             scan.generation = Some(h.generation);
-            scan.version = Some(h.mailcraft_journal);
+            scan.version = Some(h.iridium_mail_journal);
             if h.check_version().is_err() {
                 // Lines of an unknown format are not read at all (`load_report` refuses the journal).
-                log::warn!("journal format {} is newer than this build reads", h.mailcraft_journal);
+                log::warn!("journal format {} is newer than this build reads", h.iridium_mail_journal);
                 return scan;
             }
             continue;

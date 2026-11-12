@@ -7,7 +7,7 @@
 //! that do not touch the working hours (File › Options › Calendar › Work hours). The events come already cut
 //! down to the chosen detail level (`share_items`).
 
-use mailcraft_model::{Appointment, DateTime, ListTime};
+use iridium_mail_model::{Appointment, DateTime, ListTime};
 
 use super::pim::DAY_SECS;
 use super::{occurrences, tz};
@@ -277,7 +277,7 @@ fn daily_table(clock: &tz::Clock, day: i64, today: &[&Occ<'_>], opts: Options) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::ItemId;
+    use iridium_mail_model::ItemId;
 
     #[test]
     fn the_cut_keeps_the_earliest_events_whatever_the_item_order() {

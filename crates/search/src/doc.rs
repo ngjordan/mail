@@ -1,7 +1,7 @@
 //! What gets indexed: a flat, owned [`Doc`] per item (mail, appointment, contact, task, note), built from
 //! the mailbox model by [`Doc::from_mail`] and friends.
 
-use mailcraft_model::{Appointment, Contact, DateTime, FlagState, Importance, MailItem, Note, Task};
+use iridium_mail_model::{Appointment, Contact, DateTime, FlagState, Importance, MailItem, Note, Task};
 
 /// Item kind (the `kind:` key; All Items searches every kind).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -94,7 +94,7 @@ impl Person {
     pub fn new(name: impl Into<String>, addr: impl Into<String>) -> Person {
         Person { name: name.into(), addr: addr.into() }
     }
-    fn of(m: &mailcraft_model::Address) -> Person {
+    fn of(m: &iridium_mail_model::Address) -> Person {
         Person { name: m.name.clone().unwrap_or_default(), addr: m.addr.clone() }
     }
 }
@@ -155,12 +155,12 @@ fn date(name: &str, d: DateTime) -> (String, i64) {
     (prop_id(name), d.unix)
 }
 
-fn sensitivity_name(s: mailcraft_model::Sensitivity) -> &'static str {
+fn sensitivity_name(s: iridium_mail_model::Sensitivity) -> &'static str {
     match s {
-        mailcraft_model::Sensitivity::Normal => "Normal",
-        mailcraft_model::Sensitivity::Personal => "Personal",
-        mailcraft_model::Sensitivity::Private => "Private",
-        mailcraft_model::Sensitivity::Confidential => "Confidential",
+        iridium_mail_model::Sensitivity::Normal => "Normal",
+        iridium_mail_model::Sensitivity::Personal => "Personal",
+        iridium_mail_model::Sensitivity::Private => "Private",
+        iridium_mail_model::Sensitivity::Confidential => "Confidential",
     }
 }
 
@@ -227,7 +227,7 @@ impl Doc {
     /// A mail item whose body is `body` (body text from the text part, else the HTML with tags stripped;
     /// `None` when the body is not on this computer: only the header fields are indexed). Items hold no body
     /// since storage stage S5; the engine reads it from its body store when it (re)indexes the item.
-    pub fn from_mail(m: &MailItem, body: Option<&mailcraft_model::Body>) -> Doc {
+    pub fn from_mail(m: &MailItem, body: Option<&iridium_mail_model::Body>) -> Doc {
         let mut from: Vec<Person> = m.from.iter().map(Person::of).collect();
         if let Some(s) = &m.sender
             && !m.from.iter().any(|f| f.addr.eq_ignore_ascii_case(&s.addr))
@@ -242,7 +242,7 @@ impl Doc {
             from,
             to: m.to.iter().map(Person::of).collect(),
             cc: m.cc.iter().map(Person::of).collect(),
-            body: cap(body.map(mailcraft_model::Body::plain_text).unwrap_or_default()),
+            body: cap(body.map(iridium_mail_model::Body::plain_text).unwrap_or_default()),
             attachments: m
                 .attachments
                 .iter()
@@ -381,13 +381,13 @@ fn mail_props(m: &MailItem) -> Vec<(String, String)> {
         FlagState::Flagged { .. } => "Flagged",
         FlagState::Complete { .. } => "Completed",
     };
-    let names = |l: &[mailcraft_model::Address]| {
+    let names = |l: &[iridium_mail_model::Address]| {
         l.iter().map(|a| a.name.clone().unwrap_or_else(|| a.addr.clone())).collect::<Vec<_>>().join("; ")
     };
     vec![
         prop("messageClass", class),
         prop("subject", m.subject.clone()),
-        prop("conversation", mailcraft_model::subject::conversation_topic(&m.subject)),
+        prop("conversation", iridium_mail_model::subject::conversation_topic(&m.subject)),
         prop("from", m.from.as_ref().map(|f| f.addr.clone()).unwrap_or_default()),
         prop("to", names(&m.to)),
         prop("cc", names(&m.cc)),
@@ -440,7 +440,7 @@ fn contact_props(c: &Contact) -> Vec<(String, String)> {
 }
 
 fn task_props(t: &Task) -> Vec<(String, String)> {
-    use mailcraft_model::{TaskPriority, TaskStatus};
+    use iridium_mail_model::{TaskPriority, TaskStatus};
     let status = match t.status {
         TaskStatus::NotStarted => "Not Started",
         TaskStatus::InProgress => "In Progress",

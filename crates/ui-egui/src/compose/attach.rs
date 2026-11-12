@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use crate::App;
 
 /// Most entries kept in the recent-files list.
-pub const MAX_RECENT: usize = mailcraft_engine::cmd::compose::MAX_RECENT_FILES;
+pub const MAX_RECENT: usize = iridium_mail_engine::cmd::compose::MAX_RECENT_FILES;
 /// Drop hint text.
 pub const DROP_HINT: &str = "Drop files here to attach them";
 
@@ -58,12 +58,12 @@ pub fn file_hooks() -> FileHooks {
 
 /// Recently attached file paths that still exist, newest first.
 pub fn recent_files(app: &App) -> Vec<String> {
-    mailcraft_engine::cmd::compose::recent_files(&app.s)
+    iridium_mail_engine::cmd::compose::recent_files(&app.s)
 }
 
 /// Puts `path` at the top of the recent-files list.
 pub fn remember_file(app: &mut App, path: &str) {
-    mailcraft_engine::cmd::compose::remember_file(&mut app.s, path);
+    iridium_mail_engine::cmd::compose::remember_file(&mut app.s, path);
 }
 
 /// The file name part of a path (for menus and chips).
@@ -124,7 +124,7 @@ pub(super) fn take_dropped_files(ctx: &egui::Context, app: &mut App, cid: u64, a
             let name = file_name(&path.to_string_lossy());
             match f.bytes() {
                 Ok(data) => {
-                    let b64 = mailcraft_mime::transfer::encode_base64_flat(&data);
+                    let b64 = iridium_mail_mime::transfer::encode_base64_flat(&data);
                     app.run("compose.attachFile", json!({"compose": cid, "name": name, "data_base64": b64}));
                 }
                 Err(e) => app.ui.toast = Some((format!("Could not read {name}: {e}"), 0.0)),
@@ -136,7 +136,7 @@ pub(super) fn take_dropped_files(ctx: &egui::Context, app: &mut App, cid: u64, a
 
 fn paint_drop_hint(ctx: &egui::Context, app: &App, area: Rect) {
     let painter =
-        ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, Id::unique("mailcraft-drop-hint")));
+        ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, Id::unique("iridium-mail-drop-hint")));
     let r = area.shrink(8.0);
     painter.rect_filled(r, CornerRadius::same(6), app.theme.accent.gamma_multiply(0.12));
     painter.rect_stroke(
@@ -273,7 +273,7 @@ pub fn open_copies_dir() -> PathBuf {
             Some(if cfg!(target_os = "macos") { home.join("Library/Caches") } else { home.join(".cache") })
         })
         .unwrap_or_else(std::env::temp_dir);
-    base.join("mailcraft").join("open-attachments")
+    base.join("iridium-mail").join("open-attachments")
 }
 
 /// A copy of attachment `i` for Open (a private folder per compose).
@@ -349,7 +349,7 @@ struct SaveAs {
 }
 
 fn save_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-save-attachment", cid))
+    Id::unique(("iridium-mail-compose-save-attachment", cid))
 }
 
 /// Title of the fallback Save As box.
@@ -363,7 +363,7 @@ pub(super) fn save_as_dialog(ctx: &egui::Context, app: &mut App, cid: u64) {
     let theme = app.theme.clone();
     let mut done: Option<bool> = None;
     let modal =
-        egui::Modal::new(Id::unique(("mailcraft-compose-save-attachment-modal", cid))).show(ctx, |ui| {
+        egui::Modal::new(Id::unique(("iridium-mail-compose-save-attachment-modal", cid))).show(ctx, |ui| {
             crate::dialogs::form_visuals(ui, &theme);
             ui.set_width(460.0);
             ui.label(egui::RichText::new(SAVE_TITLE).strong().size(14.0));
@@ -416,10 +416,10 @@ mod tests {
 
     #[test]
     fn recent_files_keep_the_newest_first_and_survive_in_the_settings() {
-        let dir = std::env::temp_dir().join(format!("mailcraft-recent-ui-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("iridium-mail-recent-ui-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut app =
-            App::new(mailcraft_engine::Session::new(mailcraft_engine::model::Mailbox::new_local("L")));
+            App::new(iridium_mail_engine::Session::new(iridium_mail_engine::model::Mailbox::new_local("L")));
         let path = |i: usize| dir.join(format!("f{i}.txt")).to_string_lossy().into_owned();
         for i in 0..30 {
             std::fs::write(path(i), b"x").unwrap();
@@ -432,7 +432,7 @@ mod tests {
         assert_eq!(list.iter().filter(|p| **p == path(3)).count(), 1);
         // A file that is gone is left out.
         std::fs::remove_file(path(29)).unwrap();
-        mailcraft_engine::cmd::compose::recheck_recent_files(&app.s);
+        iridium_mail_engine::cmd::compose::recheck_recent_files(&app.s);
         assert!(!recent_files(&app).contains(&path(29)));
         remember_file(&mut app, "   ");
         assert_eq!(file_name("/a/b/report.pdf"), "report.pdf");

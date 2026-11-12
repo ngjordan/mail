@@ -232,7 +232,7 @@ impl QuickStep {
         ]
     }
 
-    /// The gallery's fixed "Create New" entry. Profiles made by MailCraft 0.1.x stored it as a step of its
+    /// The gallery's fixed "Create New" entry. Profiles made by Mail 0.1.x stored it as a step of its
     /// own (no actions); [`crate::Mailbox::drop_legacy_create_new_step`] removes that copy.
     pub const CREATE_NEW: &'static str = "Create New";
 
@@ -421,7 +421,7 @@ mod tests {
         let back: Vec<QuickStepAction> = serde_json::from_str(&json).unwrap();
         assert_eq!(back, all);
 
-        // What MailCraft 0.1 stored: a bare To list and a unit New Meeting.
+        // What Mail 0.1 stored: a bare To list and a unit New Meeting.
         let old = r#"[{"Forward":["a@example.com"]},"NewMeeting",{"NewMessageTo":[]},"MarkRead"]"#;
         let back: Vec<QuickStepAction> = serde_json::from_str(old).unwrap();
         assert_eq!(

@@ -14,7 +14,7 @@ use serde_json::{Value, json};
 use crate::dialogs::files;
 use crate::theme::size;
 use crate::{App, Surface};
-use mailcraft_model::{FolderRole, ItemId, MailItem};
+use iridium_mail_model::{FolderRole, ItemId, MailItem};
 
 pub fn backstage(ctx: &egui::Context, app: &mut App) {
     let Some((surface, page)) = app.ui.backstage.clone() else { return };
@@ -468,7 +468,7 @@ fn info(ui: &mut Ui, app: &mut App, st: &mut PageState) {
     // Replies the server sends while you are away: for the Exchange account chosen above.
     let exchange = acct
         .as_ref()
-        .filter(|a| a.kind == mailcraft_model::AccountKind::Exchange && a.incoming.is_some())
+        .filter(|a| a.kind == iridium_mail_model::AccountKind::Exchange && a.incoming.is_some())
         .map(|a| a.id.0);
     let replies_desc = if exchange.is_some() {
         "Let people know you're away: the Exchange server answers mail for you."
@@ -488,7 +488,7 @@ fn info(ui: &mut Ui, app: &mut App, st: &mut PageState) {
         app.run("file.automaticReplies", json!({"account": id}));
     }
     let (used, items, deleted) = mailbox_size(app, current);
-    let quota = acct.as_ref().and_then(|a| mailcraft_engine::sync::account_quota(&app.s, a.id));
+    let quota = acct.as_ref().and_then(|a| iridium_mail_engine::sync::account_quota(&app.s, a.id));
     let mut tools: Option<&str> = None;
     if tile_with(
         ui,
@@ -545,8 +545,8 @@ fn info(ui: &mut Ui, app: &mut App, st: &mut PageState) {
 }
 
 /// Account Settings ▾: Account Settings..., Account Name and Sync Settings, Server Settings, Test Account
-/// Settings... (email accounts), and the profile entries MailCraft does not have (shown disabled).
-fn account_settings_menu(ui: &mut Ui, app: &mut App, acct: Option<&mailcraft_model::Account>) {
+/// Settings... (email accounts), and the profile entries Mail does not have (shown disabled).
+fn account_settings_menu(ui: &mut Ui, app: &mut App, acct: Option<&iridium_mail_model::Account>) {
     let r = tile_full(
         ui,
         app,
@@ -557,7 +557,7 @@ fn account_settings_menu(ui: &mut Ui, app: &mut App, acct: Option<&mailcraft_mod
         |_, _| {},
     );
     let current = acct.map(|a| a.id.0);
-    let email = acct.filter(|a| a.kind != mailcraft_model::AccountKind::Local).map(|a| a.id.0);
+    let email = acct.filter(|a| a.kind != iridium_mail_model::AccountKind::Local).map(|a| a.id.0);
     let mut pick: Option<&str> = None;
     egui::Popup::menu(&r).show(|ui| {
         ui.set_min_width(240.0);
@@ -575,9 +575,9 @@ fn account_settings_menu(ui: &mut Ui, app: &mut App, acct: Option<&mailcraft_mod
         }
         ui.separator();
         ui.add_enabled(false, egui::Button::new("Change Profile"))
-            .on_disabled_hover_text("MailCraft keeps one profile per data folder (--profile).");
+            .on_disabled_hover_text("Mail keeps one profile per data folder (--profile).");
         ui.add_enabled(false, egui::Button::new("Manage Profiles"))
-            .on_disabled_hover_text("MailCraft keeps one profile per data folder (--profile).");
+            .on_disabled_hover_text("Mail keeps one profile per data folder (--profile).");
     });
     match pick {
         Some("settings") => {
@@ -598,21 +598,21 @@ fn account_settings_menu(ui: &mut Ui, app: &mut App, acct: Option<&mailcraft_mod
 }
 
 /// Account type shown under the account picker (POP3 accounts are stored as IMAP plus a POP3 option).
-fn kind_label(s: &mailcraft_engine::Session, a: &mailcraft_model::Account) -> &'static str {
-    if mailcraft_engine::accounts::kind_label(s, a) == "pop3" {
+fn kind_label(s: &iridium_mail_engine::Session, a: &iridium_mail_model::Account) -> &'static str {
+    if iridium_mail_engine::accounts::kind_label(s, a) == "pop3" {
         return "POP/SMTP";
     }
     match a.kind {
-        mailcraft_model::AccountKind::Local => "Local data file",
-        mailcraft_model::AccountKind::Imap => "IMAP/SMTP",
-        mailcraft_model::AccountKind::Jmap => "JMAP",
-        mailcraft_model::AccountKind::Exchange => "Exchange",
-        mailcraft_model::AccountKind::Graph => "Microsoft 365 (Graph)",
+        iridium_mail_model::AccountKind::Local => "Local data file",
+        iridium_mail_model::AccountKind::Imap => "IMAP/SMTP",
+        iridium_mail_model::AccountKind::Jmap => "JMAP",
+        iridium_mail_model::AccountKind::Exchange => "Exchange",
+        iridium_mail_model::AccountKind::Graph => "Microsoft 365 (Graph)",
     }
 }
 
 fn files_size(b: u64) -> String {
-    mailcraft_engine::queries::size_text(b)
+    iridium_mail_engine::queries::size_text(b)
 }
 
 /// (bytes used, items, bytes in Deleted Items) for an account.
@@ -621,7 +621,7 @@ fn mailbox_size(app: &App, account: Option<u32>) -> (u64, usize, u64) {
     let Some(acct) = account.and_then(|a| mb.accounts.iter().find(|x| x.id.0 == a)).map(|a| a.id) else {
         return (0, 0, 0);
     };
-    let deleted: Vec<mailcraft_model::FolderId> =
+    let deleted: Vec<iridium_mail_model::FolderId> =
         mb.role_folder(acct, FolderRole::DeletedItems).map(|d| mb.subtree(d)).unwrap_or_default();
     let mut used = 0u64;
     let mut items = 0usize;
@@ -643,7 +643,7 @@ const SIZE_BAR_W: f32 = 300.0;
 
 /// Share of the storage limit in use (0 to 1), or `None` when the server reported no size limit: the bar is then
 /// left out rather than drawn full (a full bar read as "mailbox full" for a mailbox of a few hundred KB).
-pub(crate) fn storage_fill(quota: Option<&mailcraft_engine::MailboxQuota>) -> Option<f32> {
+pub(crate) fn storage_fill(quota: Option<&iridium_mail_engine::MailboxQuota>) -> Option<f32> {
     let q = quota?;
     if q.limit == 0 {
         return None;
@@ -653,7 +653,7 @@ pub(crate) fn storage_fill(quota: Option<&mailcraft_engine::MailboxQuota>) -> Op
 
 /// The storage bar: a visible track, filled in proportion to the server's limit, and the free space; nothing
 /// when no limit is known.
-fn size_bar(ui: &mut Ui, app: &App, quota: Option<mailcraft_engine::MailboxQuota>) {
+fn size_bar(ui: &mut Ui, app: &App, quota: Option<iridium_mail_engine::MailboxQuota>) {
     let Some(frac) = storage_fill(quota.as_ref()) else { return };
     let (r, resp) = ui.allocate_exact_size(Vec2::new(SIZE_BAR_W, 8.0), Sense::hover());
     let limit = quota.map_or(0, |q| q.limit);
@@ -743,7 +743,7 @@ fn open_export(ui: &mut Ui, app: &mut App, st: &mut PageState) {
         app,
         "folder-open",
         "Open Data File...",
-        "Open a data file you removed earlier, a MailCraft data file from another profile, or a PST file (.pst).",
+        "Open a data file you removed earlier, a Mail data file from another profile, or a PST file (.pst).",
     ) {
         app.run("file.openDataFile", json!({}));
     }
@@ -757,11 +757,11 @@ fn open_export(ui: &mut Ui, app: &mut App, st: &mut PageState) {
         app.run("file.openExport", json!({}));
     }
     // The PST import that runs (its window may be hidden), or the report of the last one.
-    if let Some(st) = mailcraft_engine::pst::status(&app.s).filter(|st| st.get("job").is_some()) {
+    if let Some(st) = iridium_mail_engine::pst::status(&app.s).filter(|st| st.get("job").is_some()) {
         let desc = if st.get("running").and_then(Value::as_bool) == Some(true) {
             "A PST file is being imported. See how far it is, or stop it.".to_owned()
         } else {
-            format!("{} See what was left out, and why.", mailcraft_engine::pst::summary(&st))
+            format!("{} See what was left out, and why.", iridium_mail_engine::pst::summary(&st))
         };
         if tile(ui, app, "sync", "PST Import", &desc) {
             app.run("file.importProgress", json!({"show": true}));
@@ -1616,11 +1616,11 @@ fn account(ui: &mut Ui, app: &mut App) {
     });
     rule(ui, app);
     ui.label(RichText::new("Product Information").strong().size(15.0));
-    ui.label(RichText::new("MailCraft").size(20.0));
+    ui.label(RichText::new("Mail").size(20.0));
     muted(ui, app, &version_line());
     muted(ui, app, "Open source: MIT or Apache-2.0.");
     ui.add_space(6.0);
-    if tile(ui, app, "info", "About MailCraft", "Version, license and system details.") {
+    if tile(ui, app, "info", "About Mail", "Version, license and system details.") {
         app.run("help.about", json!({}));
     }
     if tile(ui, app, "help", "What's New", "See what changed in this version.") {
@@ -1631,18 +1631,18 @@ fn account(ui: &mut Ui, app: &mut App) {
 static BUILD_INFO: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 
 /// Sets the build details the Account page shows after the version (`git <hash>, <date>`). The desktop app
-/// calls this at start-up with the values from its build script, so the page matches `mailcraft --version`.
+/// calls this at start-up with the values from its build script, so the page matches `iridium-mail --version`.
 pub fn set_build_info(info: &str) {
     let _ = BUILD_INFO.set(info.to_owned());
 }
 
 /// `Version X.Y.Z (git <hash>, <date>)`; without build details (web, tests) just `Version X.Y.Z`, unless
-/// `MAILCRAFT_GIT_HASH` / `MAILCRAFT_BUILD_DATE` were in this crate's build environment.
+/// `IRIDIUM_MAIL_GIT_HASH` / `IRIDIUM_MAIL_BUILD_DATE` were in this crate's build environment.
 pub fn version_line() -> String {
-    let version = mailcraft_engine::cmd::help::VERSION;
+    let version = iridium_mail_engine::cmd::help::VERSION;
     let info = BUILD_INFO.get().cloned().or_else(|| {
-        let hash = option_env!("MAILCRAFT_GIT_HASH").filter(|h| !h.is_empty())?;
-        Some(match option_env!("MAILCRAFT_BUILD_DATE") {
+        let hash = option_env!("IRIDIUM_MAIL_GIT_HASH").filter(|h| !h.is_empty())?;
+        Some(match option_env!("IRIDIUM_MAIL_BUILD_DATE") {
             Some(date) => format!("git {hash}, {date}"),
             None => format!("git {hash}"),
         })
@@ -1659,7 +1659,7 @@ mod tests {
 
     #[test]
     fn account_kinds_are_labelled_with_pop_accounts_as_pop() {
-        let mut s = mailcraft_engine::sample::sample_session();
+        let mut s = iridium_mail_engine::sample::sample_session();
         s.run(
             "accounts.add",
             &json!({"kind": "pop3", "address": "pop@example.org", "incoming": {"host": "pop.example.org"}, "password": "x"}),
@@ -1668,7 +1668,7 @@ mod tests {
         let pop = s.mailbox.accounts.iter().find(|a| a.address == "pop@example.org").unwrap();
         assert_eq!(super::kind_label(&s, pop), "POP/SMTP");
         let local =
-            s.mailbox.accounts.iter().find(|a| a.kind == mailcraft_model::AccountKind::Local).unwrap();
+            s.mailbox.accounts.iter().find(|a| a.kind == iridium_mail_model::AccountKind::Local).unwrap();
         assert_eq!(super::kind_label(&s, local), "Local data file");
     }
 
@@ -1678,7 +1678,7 @@ mod tests {
     fn one_automatic_replies_tile_follows_the_chosen_account() {
         use egui_kittest::kittest::Queryable;
         let session = || {
-            let mut s = mailcraft_engine::sample::sample_session();
+            let mut s = iridium_mail_engine::sample::sample_session();
             let r = s
                 .run(
                     "accounts.add",
@@ -1691,7 +1691,7 @@ mod tests {
                 .mailbox
                 .accounts
                 .iter()
-                .find(|a| a.kind == mailcraft_model::AccountKind::Local)
+                .find(|a| a.kind == iridium_mail_model::AccountKind::Local)
                 .unwrap()
                 .id
                 .0;

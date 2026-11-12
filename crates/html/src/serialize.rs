@@ -6,8 +6,8 @@
 //! spaces that would collapse are written as `&nbsp;`.
 
 use crate::{css, sanitize};
-use mailcraft_model::rich::{Align, Block, Doc, Inline, ListKind, ParaStyle, TableCell, TextStyle};
-use mailcraft_model::{BorderEdge, BorderJoin, ParaBorders};
+use iridium_mail_model::rich::{Align, Block, Doc, Inline, ListKind, ParaStyle, TableCell, TextStyle};
+use iridium_mail_model::{BorderEdge, BorderJoin, ParaBorders};
 use std::fmt::Write as _;
 
 /// Blocks nested deeper than this are not written (documents from the importer never get close).
@@ -170,8 +170,8 @@ fn para_css(s: &ParaStyle, inherited: Align, join: BorderJoin) -> String {
         // Word-made mail marks fixed line heights this way; other programs read the plain line-height.
         Some((h, rule)) if h.is_finite() && h > 0.0 => {
             let rule = match rule {
-                mailcraft_model::LineRule::Exactly => "exactly",
-                mailcraft_model::LineRule::AtLeast => "at-least",
+                iridium_mail_model::LineRule::Exactly => "exactly",
+                iridium_mail_model::LineRule::AtLeast => "at-least",
             };
             let _ = write!(css, ";line-height:{}px;mso-line-height-rule:{rule}", num(h));
         }
@@ -251,7 +251,7 @@ pub(crate) fn text_css(s: &TextStyle) -> String {
 /// The `style` of the `<u>` tag for a styled or coloured underline ("" for a plain one).
 fn underline_css(s: &TextStyle) -> String {
     let mut parts: Vec<String> = Vec::new();
-    if let Some(k) = s.underline_kind.filter(|k| *k != mailcraft_model::UnderlineKind::Single) {
+    if let Some(k) = s.underline_kind.filter(|k| *k != iridium_mail_model::UnderlineKind::Single) {
         parts.push(format!("text-decoration-style:{}", k.name()));
     }
     if let Some(c) = s.underline_color {
@@ -489,7 +489,7 @@ impl Writer {
             }
             Inline::Anchor { name } => {
                 // A bookmark: `id` for current readers, `name` for older mail programs.
-                let Some(name) = mailcraft_model::rich::clean_anchor_name(name) else { return };
+                let Some(name) = iridium_mail_model::rich::clean_anchor_name(name) else { return };
                 self.out.push_str("<a id=");
                 self.attr_value(&name);
                 self.out.push_str(" name=");

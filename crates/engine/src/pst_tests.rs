@@ -1,5 +1,5 @@
 #![cfg(not(target_arch = "wasm32"))]
-//! PST import through the commands, against synthetic files (`mailcraft_testmail::pst`).
+//! PST import through the commands, against synthetic files (`iridium_mail_testmail::pst`).
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -8,8 +8,8 @@ use serde_json::{Value, json};
 
 use super::*;
 use crate::sample::sample_session;
-use mailcraft_model::FolderKind;
-use mailcraft_testmail::pst::{
+use iridium_mail_model::FolderKind;
+use iridium_mail_testmail::pst::{
     ItemDef, Key, PS_PUBLIC_STRINGS, PSETID_APPOINTMENT, PSETID_NOTE, PSETID_TASK, PstBuilder, Value as P,
 };
 
@@ -239,7 +239,7 @@ fn running_an_import_again_adds_nothing_twice() {
 
 /// An IMAP account with a synchronised Inbox (`INBOX`).
 fn imap_account(s: &mut Session) -> (AccountId, FolderId) {
-    use mailcraft_model::{Account, AccountKind, ServerSettings};
+    use iridium_mail_model::{Account, AccountKind, ServerSettings};
     let acct = s.mailbox.add_account(Account {
         kind: AccountKind::Imap,
         display_name: "user@example.com".into(),
@@ -254,7 +254,7 @@ fn imap_account(s: &mut Session) -> (AccountId, FolderId) {
 }
 
 fn server_ops(s: &Session, acct: AccountId) -> (usize, usize) {
-    use mailcraft_model::account::RemoteOp;
+    use iridium_mail_model::account::RemoteOp;
     let pending = &s.mailbox.account(acct).unwrap().sync.pending;
     let appends = pending.iter().filter(|p| matches!(p.op, RemoteOp::Append { .. })).count();
     let creates = pending.iter().filter(|p| matches!(p.op, RemoteOp::CreateFolder { .. })).count();
@@ -307,9 +307,10 @@ fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
 /// A job around a reader process started from `exe`.
 #[cfg(unix)]
 fn process_job(exe: &Path, pst: &Path) -> Job {
-    let control = std::sync::Arc::new(mailcraft_formats::pst::Control::default());
+    let control = std::sync::Arc::new(iridium_mail_formats::pst::Control::default());
     let child = std::sync::Arc::new(std::sync::Mutex::new(None));
-    let rx = spawn_process(exe, pst, mailcraft_formats::pst::Options::default(), &child, &control).unwrap();
+    let rx =
+        spawn_process(exe, pst, iridium_mail_formats::pst::Options::default(), &child, &control).unwrap();
     Job {
         id: 1,
         path: pst.to_path_buf(),
@@ -605,9 +606,9 @@ fn damaged_protected_and_foreign_files_never_crash_and_say_why() {
 
 #[test]
 fn reader_process_lines_round_trip() {
-    let item = mailcraft_formats::pst::PstItem::Mail(Box::new((
+    let item = iridium_mail_formats::pst::PstItem::Mail(Box::new((
         MailItem { subject: "Wire".into(), ..Default::default() },
-        mailcraft_store::Content { source: Some(b"Subject: Wire\r\n\r\nbody".to_vec()), body: None },
+        iridium_mail_store::Content { source: Some(b"Subject: Wire\r\n\r\nbody".to_vec()), body: None },
     )));
     let line = serde_json::to_string(&Wire::of_item(3, item.clone())).unwrap();
     let back: Wire = serde_json::from_str(&line).unwrap();
@@ -636,8 +637,8 @@ fn a_reader_process_that_dies_ends_the_import_with_a_report() {
     let dir = tempfile::tempdir().unwrap();
     let path = write(dir.path(), "x.pst", &fixture());
     let slot = std::sync::Arc::new(std::sync::Mutex::new(None));
-    let options = mailcraft_formats::pst::Options::default();
-    let control = std::sync::Arc::new(mailcraft_formats::pst::Control::default());
+    let options = iridium_mail_formats::pst::Options::default();
+    let control = std::sync::Arc::new(iridium_mail_formats::pst::Control::default());
     let rx = spawn_process(Path::new("/bin/false"), &path, options, &slot, &control).unwrap();
     match rx.recv_timeout(Duration::from_secs(30)).unwrap() {
         Event::Done(Err(e)) => assert!(e.contains("stopped"), "{e}"),

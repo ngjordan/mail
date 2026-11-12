@@ -14,7 +14,7 @@ use crate::compose::{
     multilevel_formats,
 };
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_geom::Color;
+use iridium_mail_geom::Color;
 
 mod borders;
 #[cfg(test)]
@@ -25,8 +25,8 @@ mod list_tests;
 mod style_set_tests;
 
 pub use borders::{BORDER_KINDS, SHADING_PATTERNS, edge_json, para_borders_json, shade, table_borders_json};
-use mailcraft_model::rich::ListKind;
-use mailcraft_model::{Doc, LineRule, ParaStyle, TextStyle, UnderlineKind};
+use iridium_mail_model::rich::ListKind;
+use iridium_mail_model::{Doc, LineRule, ParaStyle, TextStyle, UnderlineKind};
 
 /// Font sizes stepped through by Grow / Shrink Font.
 pub const FONT_SIZES: [f32; 16] =
@@ -68,7 +68,7 @@ fn pt_to_px(pt: f32) -> f32 {
 }
 
 fn base_size(c: &ComposeState) -> f32 {
-    c.body.base.size_pt.unwrap_or(mailcraft_fonts::BODY_SIZE_PT)
+    c.body.base.size_pt.unwrap_or(iridium_mail_fonts::BODY_SIZE_PT)
 }
 
 /// Runs a body edit on the target compose with an editor undo step.
@@ -201,7 +201,7 @@ fn shrink_font(s: &mut Session, p: &Value) -> CmdResult {
 }
 
 fn parse_color(t: &str) -> Result<Color, CmdError> {
-    mailcraft_html::parse_css_color(t).ok_or_else(|| CmdError::Params(format!("unknown colour `{t}`")))
+    iridium_mail_html::parse_css_color(t).ok_or_else(|| CmdError::Params(format!("unknown colour `{t}`")))
 }
 
 /// Theme colour columns of the Font Color and Shading galleries (plan/reference/ribbon-compose.md): key, palette
@@ -1278,10 +1278,10 @@ fn px_to_pt(px: f32) -> f64 {
 /// A paragraph's formatting as the Paragraph dialog shows it (points, named rules).
 pub fn paragraph_json(ps: &ParaStyle) -> Value {
     let align = match ps.align {
-        mailcraft_model::rich::Align::Start => "left",
-        mailcraft_model::rich::Align::Center => "center",
-        mailcraft_model::rich::Align::End => "right",
-        mailcraft_model::rich::Align::Justify => "justify",
+        iridium_mail_model::rich::Align::Start => "left",
+        iridium_mail_model::rich::Align::Center => "center",
+        iridium_mail_model::rich::Align::End => "right",
+        iridium_mail_model::rich::Align::Justify => "justify",
     };
     let (special, by) = match ps.first_line_px {
         v if v > 0.0 => ("firstLine", px_to_pt(v)),
@@ -1509,7 +1509,7 @@ fn apply_builtin_style(c: &mut ComposeState, name: &str) -> bool {
         }
         "quote" => {
             c.set_heading(None);
-            c.set_para_style(|ps| ps.align = mailcraft_model::rich::Align::Center);
+            c.set_para_style(|ps| ps.align = iridium_mail_model::rich::Align::Center);
             c.with_whole_paragraphs(|c| {
                 c.apply_text_style(|st| {
                     st.italic = Some(true);
@@ -1521,7 +1521,7 @@ fn apply_builtin_style(c: &mut ComposeState, name: &str) -> bool {
             let accent = accent(c);
             c.set_heading(None);
             c.set_para_style(|ps| {
-                ps.align = mailcraft_model::rich::Align::Center;
+                ps.align = iridium_mail_model::rich::Align::Center;
                 ps.indent_px = 48.0;
                 ps.right_indent_px = 48.0;
             });
@@ -1594,9 +1594,9 @@ fn themed_heading(c: &mut ComposeState, level: u8) {
     if let Some(set) = set {
         c.set_para_style(|ps| {
             ps.align = if set.centered {
-                mailcraft_model::rich::Align::Center
+                iridium_mail_model::rich::Align::Center
             } else {
-                mailcraft_model::rich::Align::Start
+                iridium_mail_model::rich::Align::Start
             };
             ps.background = (set.shaded && level == 1).then_some(accent);
         });
@@ -1654,7 +1654,7 @@ const MAX_CUSTOM_STYLES: usize = 200;
 /// Subtitle, List Paragraph, No Spacing; else Normal. Plain italic and bold read as Normal (they are
 /// direct formatting as often as Emphasis and Strong).
 pub fn current_style(c: &ComposeState) -> String {
-    use mailcraft_model::rich::Align;
+    use iridium_mail_model::rich::Align;
     let (st, para) = (c.style_at_caret(), c.para_at_caret());
     if let Some(x) = c.custom_styles.iter().rev().find(|x| x.style == st && x.para == para) {
         return x.name.clone();
@@ -1679,7 +1679,7 @@ pub fn current_style(c: &ComposeState) -> String {
         return name.to_owned();
     }
     let path = &c.selection.focus.path;
-    if let Some(mailcraft_model::Block::Heading { level, .. }) = block_at(&c.body.blocks, path) {
+    if let Some(iridium_mail_model::Block::Heading { level, .. }) = block_at(&c.body.blocks, path) {
         if *level == 1 && st.size_pt == Some(28.0) {
             return "Title".to_owned();
         }
@@ -1883,9 +1883,9 @@ pub fn style_definition(c: &ComposeState, name: &str) -> Option<(TextStyle, Para
 /// Modify Style's fields for a definition.
 fn style_definition_json(name: &str, st: &TextStyle, para: &ParaStyle) -> Value {
     let align = match para.align {
-        mailcraft_model::rich::Align::Center => "center",
-        mailcraft_model::rich::Align::End => "right",
-        mailcraft_model::rich::Align::Justify => "justify",
+        iridium_mail_model::rich::Align::Center => "center",
+        iridium_mail_model::rich::Align::End => "right",
+        iridium_mail_model::rich::Align::Justify => "justify",
         _ => "left",
     };
     json!({
@@ -1956,10 +1956,10 @@ fn define_style(c: &mut ComposeState, name: &str, new_name: Option<&str>, p: &Va
     }
     if let Some(a) = opt_str(p, "align") {
         para.align = match a {
-            "left" => mailcraft_model::rich::Align::Start,
-            "center" => mailcraft_model::rich::Align::Center,
-            "right" => mailcraft_model::rich::Align::End,
-            "justify" => mailcraft_model::rich::Align::Justify,
+            "left" => iridium_mail_model::rich::Align::Start,
+            "center" => iridium_mail_model::rich::Align::Center,
+            "right" => iridium_mail_model::rich::Align::End,
+            "justify" => iridium_mail_model::rich::Align::Justify,
             other => return Err(CmdError::Params(format!("unknown alignment `{other}`"))),
         };
     }
@@ -2397,7 +2397,7 @@ fn push_history(s: &mut Session, entry: ClipEntry) {
     }
 }
 
-/// Adds a copy made outside a message body (another program while MailCraft runs, or the reading pane) to
+/// Adds a copy made outside a message body (another program while Mail runs, or the reading pane) to
 /// the Clipboard history, following the pane's options: copies from other programs only with
 /// `state.clipboard.collectOther`, and with every Clipboard pane closed only with
 /// `state.clipboard.collectHidden`. The same text as the newest item is not added again. Returns whether
@@ -2419,7 +2419,7 @@ pub fn collect_clip(s: &mut Session, text: &str, html: Option<&str>, other_progr
         return (false, false);
     }
     let doc = match html.filter(|h| !h.trim().is_empty() && h.len() <= MAX_COLLECT_CHARS.saturating_mul(4)) {
-        Some(h) => mailcraft_html::html_to_doc(h),
+        Some(h) => iridium_mail_html::html_to_doc(h),
         None => Doc::from_plain_text(&text),
     };
     let entry = ClipEntry { text, doc, source: 0 };
@@ -2456,7 +2456,7 @@ pub fn forget_clip(s: &mut Session, text: &str) -> bool {
     true
 }
 
-/// Clipboard pane: a copy made in another program (the UI watches the system clipboard while MailCraft
+/// Clipboard pane: a copy made in another program (the UI watches the system clipboard while Mail
 /// runs) or in the reading pane joins the history (`source`: "other" or "app"). `forget: true` instead takes
 /// the newest such item back out when it holds `text` (the other program cleared the clipboard).
 fn clipboard_collect(s: &mut Session, p: &Value) -> CmdResult {
@@ -2496,7 +2496,7 @@ fn clipboard_options(s: &mut Session, p: &Value) -> CmdResult {
 
 fn copy(s: &mut Session, p: &Value) -> CmdResult {
     let e = copy_selection(s, p)?;
-    Ok(json!({"text": e.text, "html": mailcraft_html::doc_to_html(&e.doc)}))
+    Ok(json!({"text": e.text, "html": iridium_mail_html::doc_to_html(&e.doc)}))
 }
 
 fn cut(s: &mut Session, p: &Value) -> CmdResult {
@@ -2504,14 +2504,14 @@ fn cut(s: &mut Session, p: &Value) -> CmdResult {
     let c = compose_mut(s, p)?;
     c.checkpoint();
     c.delete_selection();
-    Ok(json!({"text": e.text, "html": mailcraft_html::doc_to_html(&e.doc)}))
+    Ok(json!({"text": e.text, "html": iridium_mail_html::doc_to_html(&e.doc)}))
 }
 
 /// What Paste inserts: `params.html` / `params.text`, else the newest in-app entry (when it is still what
 /// the session clipboard holds), else the session's clipboard text.
 fn paste_source(s: &Session, p: &Value, cid: u64) -> Result<Doc, CmdError> {
     if let Some(h) = opt_str(p, "html") {
-        return Ok(mailcraft_html::html_to_doc(h));
+        return Ok(iridium_mail_html::html_to_doc(h));
     }
     if let Some(t) = opt_str(p, "text") {
         return Ok(Doc::from_plain_text(t));
@@ -2584,7 +2584,7 @@ fn image_ext(mime: &str) -> &str {
 /// the other composes' inline pictures) is brought along, so it is not sent as a dangling reference.
 fn embed_pasted_images(doc: &mut Doc, c: &mut ComposeState, others: &[crate::compose::InlineImage]) {
     fn inlines(
-        list: &mut Vec<mailcraft_model::Inline>,
+        list: &mut Vec<iridium_mail_model::Inline>,
         c: &mut ComposeState,
         others: &[crate::compose::InlineImage],
         n: &mut usize,
@@ -2594,7 +2594,7 @@ fn embed_pasted_images(doc: &mut Doc, c: &mut ComposeState, others: &[crate::com
             return;
         }
         list.retain_mut(|i| match i {
-            mailcraft_model::Inline::Image { src, .. }
+            iridium_mail_model::Inline::Image { src, .. }
                 if src.trim_start().get(..4).is_some_and(|p| p.eq_ignore_ascii_case("cid:")) =>
             {
                 let id = src.trim_start().get(4..).unwrap_or_default().trim();
@@ -2606,7 +2606,7 @@ fn embed_pasted_images(doc: &mut Doc, c: &mut ComposeState, others: &[crate::com
                 }
                 true
             }
-            mailcraft_model::Inline::Image { src, .. }
+            iridium_mail_model::Inline::Image { src, .. }
                 if src.trim_start().get(..5).is_some_and(|p| p.eq_ignore_ascii_case("data:")) =>
             {
                 let Some((mime, data)) = decode_data_image(src).filter(|_| *n < MAX_PASTED_IMAGES) else {
@@ -2625,7 +2625,7 @@ fn embed_pasted_images(doc: &mut Doc, c: &mut ComposeState, others: &[crate::com
                 *src = format!("cid:{cid}");
                 true
             }
-            mailcraft_model::Inline::Link { children, .. } => {
+            iridium_mail_model::Inline::Link { children, .. } => {
                 inlines(children, c, others, n, depth.saturating_add(1));
                 true
             }
@@ -2633,13 +2633,13 @@ fn embed_pasted_images(doc: &mut Doc, c: &mut ComposeState, others: &[crate::com
         });
     }
     fn blocks(
-        list: &mut [mailcraft_model::Block],
+        list: &mut [iridium_mail_model::Block],
         c: &mut ComposeState,
         others: &[crate::compose::InlineImage],
         n: &mut usize,
         depth: usize,
     ) {
-        use mailcraft_model::Block;
+        use iridium_mail_model::Block;
         if depth > MAX_PASTE_DEPTH {
             return;
         }
@@ -2690,7 +2690,7 @@ fn paste_doc(s: &mut Session, p: &Value, mut doc: Doc, mode: PasteMode) -> CmdRe
         .take(MAX_PASTED_IMAGES)
         .collect();
     let c = compose_mut(s, p)?;
-    let mode = if c.format == mailcraft_model::BodyFormat::PlainText { PasteMode::TextOnly } else { mode };
+    let mode = if c.format == iridium_mail_model::BodyFormat::PlainText { PasteMode::TextOnly } else { mode };
     if mode != PasteMode::TextOnly {
         embed_pasted_images(&mut doc, c, &others);
     }
@@ -2713,7 +2713,7 @@ fn paste_image(s: &mut Session, p: &Value) -> CmdResult {
         .or_else(|_| base64::engine::general_purpose::STANDARD_NO_PAD.decode(clean.as_bytes()))
         .map_err(|_| CmdError::Params("`image` is not valid base64".into()))?;
     let c = compose_mut(s, p)?;
-    if c.format == mailcraft_model::BodyFormat::PlainText {
+    if c.format == iridium_mail_model::BodyFormat::PlainText {
         return Err(CmdError::Disabled("pictures cannot be pasted into a plain-text message".into()));
     }
     let cid = super::insert::paste_picture(c, data)?;
@@ -2827,13 +2827,13 @@ fn clip_entries(c: &ComposeState) -> Vec<Value> {
         .map(|e| {
             let text: String = e.text.split_whitespace().collect::<Vec<_>>().join(" ");
             let preview: String = text.chars().take(CLIP_PREVIEW_CHARS).collect();
-            let pictures = mailcraft_html::doc_to_html(&e.doc).matches("<img").count();
+            let pictures = iridium_mail_html::doc_to_html(&e.doc).matches("<img").count();
             json!({"text": preview, "pictures": pictures})
         })
         .collect()
 }
 
-/// Office Clipboard pane: the last [`crate::compose::MAX_CLIPBOARD`] items copied or cut in MailCraft,
+/// Office Clipboard pane: the last [`crate::compose::MAX_CLIPBOARD`] items copied or cut in Mail,
 /// newest first. No params toggles the pane (`show` sets it); `paste: n` pastes item n, `pasteAll` pastes
 /// every item (oldest first), `delete: n` removes item n, `clear` empties the history.
 fn clipboard_pane(s: &mut Session, p: &Value) -> CmdResult {
@@ -2926,7 +2926,7 @@ fn message_target(s: &Session, p: &Value) -> Result<Option<u64>, CmdError> {
         }
         _ => return Ok(None),
     };
-    if !s.mailbox.mail.contains(mailcraft_model::ItemId(id)) {
+    if !s.mailbox.mail.contains(iridium_mail_model::ItemId(id)) {
         return Err(CmdError::Params(format!("no message with id {id}")));
     }
     Ok(Some(id))
@@ -2935,7 +2935,7 @@ fn message_target(s: &Session, p: &Value) -> Result<Option<u64>, CmdError> {
 /// How often `needle` occurs in message `id`'s text.
 fn message_matches(s: &Session, id: u64, needle: &str, match_case: bool) -> usize {
     const MAX_TEXT: usize = 4 * 1024 * 1024;
-    let Some(m) = s.mailbox.mail.get(mailcraft_model::ItemId(id)) else {
+    let Some(m) = s.mailbox.mail.get(iridium_mail_model::ItemId(id)) else {
         return 0;
     };
     if needle.is_empty() {
@@ -2943,7 +2943,7 @@ fn message_matches(s: &Session, id: u64, needle: &str, match_case: bool) -> usiz
     }
     let body = s.body_or_empty(m);
     let text = match (&body.html, &body.text) {
-        (Some(h), _) if h.len() <= MAX_TEXT => mailcraft_html::html_to_text(h),
+        (Some(h), _) if h.len() <= MAX_TEXT => iridium_mail_html::html_to_text(h),
         (_, Some(t)) => t.chars().take(MAX_TEXT).collect(),
         _ => String::new(),
     };
@@ -3205,8 +3205,11 @@ const MAX_OBJECTS: usize = 2_000;
 
 /// The block at a leaf path (lists `[item, block]`, quotes / containers `[child]`, tables
 /// `[row, cell, block]` under their block index).
-fn block_at<'a>(blocks: &'a [mailcraft_model::Block], path: &[usize]) -> Option<&'a mailcraft_model::Block> {
-    use mailcraft_model::Block;
+fn block_at<'a>(
+    blocks: &'a [iridium_mail_model::Block],
+    path: &[usize],
+) -> Option<&'a iridium_mail_model::Block> {
+    use iridium_mail_model::Block;
     if path.len() > MAX_OBJECT_DEPTH {
         return None;
     }
@@ -3233,12 +3236,12 @@ fn block_at<'a>(blocks: &'a [mailcraft_model::Block], path: &[usize]) -> Option<
 /// Pictures of a run of inlines with their char offsets (text chars, a line break and a picture count one
 /// each, as the editor counts them).
 fn inline_pictures(
-    inlines: &[mailcraft_model::Inline],
+    inlines: &[iridium_mail_model::Inline],
     at: &mut usize,
     out: &mut Vec<(usize, String, String)>,
     depth: usize,
 ) {
-    use mailcraft_model::Inline;
+    use iridium_mail_model::Inline;
     if depth > MAX_OBJECT_DEPTH {
         return;
     }
@@ -3272,7 +3275,7 @@ pub struct BodyObject {
 
 /// The objects of a compose body, in document order.
 pub fn body_objects(c: &ComposeState) -> Vec<BodyObject> {
-    use mailcraft_model::Block;
+    use iridium_mail_model::Block;
     let mut out = Vec::new();
     for path in c.leaf_paths() {
         let mut found = Vec::new();
@@ -3286,7 +3289,7 @@ pub fn body_objects(c: &ComposeState) -> Vec<BodyObject> {
                 return out;
             }
             // An In Line with Text drawing's place: the drawing itself is listed with the drawings.
-            if mailcraft_model::rich::inline_drawing_id(&src).is_some() {
+            if iridium_mail_model::rich::inline_drawing_id(&src).is_some() {
                 continue;
             }
             let n = out.len().saturating_add(1);
@@ -3301,7 +3304,7 @@ pub fn body_objects(c: &ComposeState) -> Vec<BodyObject> {
 /// The floating drawings of a compose body, front-most first (as the Selection pane lists them): named by
 /// the name given in the pane, else their alternative text, else their text, else their kind and number.
 pub fn drawing_objects(c: &ComposeState) -> Vec<BodyObject> {
-    use mailcraft_model::rich::DrawingKind;
+    use iridium_mail_model::rich::DrawingKind;
     c.body
         .drawings
         .iter()
@@ -3362,7 +3365,7 @@ fn selection_pane(s: &mut Session, p: &Value) -> CmdResult {
         let objects = s
             .mailbox
             .mail
-            .get(mailcraft_model::ItemId(id))
+            .get(iridium_mail_model::ItemId(id))
             .map(|m| doc_objects(&crate::cmd::mail::body_doc(&s.body_or_empty(m))))
             .unwrap_or_default();
         let names: Vec<&str> = objects.iter().map(|o| o.name.as_str()).collect();
@@ -4024,7 +4027,7 @@ pub fn specs() -> Vec<CommandSpec> {
 mod tests {
     use super::super::compose::tests::{open, session};
     use super::*;
-    use mailcraft_model::{Block, Inline};
+    use iridium_mail_model::{Block, Inline};
 
     fn with_text(text: &str) -> (Session, u64) {
         let mut s = session();
@@ -4134,7 +4137,7 @@ mod tests {
         s.run("format.shading", &json!({"color": "#eeeeee"})).unwrap();
         match &s.composes[&id].body.blocks[1] {
             Block::Paragraph { style, .. } => {
-                assert_eq!(style.align, mailcraft_model::rich::Align::Center);
+                assert_eq!(style.align, iridium_mail_model::rich::Align::Center);
                 assert_eq!(style.line_height, Some(1.5));
                 assert_eq!(style.space_before_px, 16.0);
                 assert_eq!(style.space_after_px, 8.0);
@@ -4351,7 +4354,7 @@ mod tests {
 
     #[test]
     fn style_sets_restyle_headings_and_spacing() {
-        use mailcraft_model::rich::Align;
+        use iridium_mail_model::rich::Align;
         let (mut s, id) = with_text("Head\nbody");
         sel(&mut s, (&[0], 1), (&[0], 1));
         s.run("format.style", &json!({"name": "Heading 1"})).unwrap();
@@ -4664,8 +4667,8 @@ mod range_tests {
 
     use super::super::compose::tests::{open, session};
     use super::*;
-    use mailcraft_model::rich::Align;
-    use mailcraft_model::{Block, Inline};
+    use iridium_mail_model::rich::Align;
+    use iridium_mail_model::{Block, Inline};
 
     const LINES: &str = "alpha beta\ngamma\ndelta epsilon";
 
@@ -4906,7 +4909,7 @@ mod range_tests {
         // Picture from a file path.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("p.png");
-        std::fs::write(&path, mailcraft_mime::transfer::decode_base64(png.as_bytes())).unwrap();
+        std::fs::write(&path, iridium_mail_mime::transfer::decode_base64(png.as_bytes())).unwrap();
         s.run("insert.picture", &json!({"path": path.to_string_lossy()})).unwrap();
         assert_eq!(s.composes[&id].inline_images.len(), 2);
         // Table 2x3, horizontal line, symbol, date & time.
@@ -4964,7 +4967,7 @@ mod pane_tests {
     use super::super::compose::tests::{open, session};
     use super::*;
     use crate::Notice;
-    use mailcraft_model::{Block, Inline};
+    use iridium_mail_model::{Block, Inline};
 
     fn with_text(text: &str) -> (Session, u64) {
         let mut s = session();
@@ -5020,7 +5023,7 @@ mod pane_tests {
         assert_eq!(s.run("format.clipboardCollect", &json!({"text": "secret"})).unwrap()["collected"], false);
         assert_eq!(s.clip_history.len(), 1);
         s.run("format.clipboardPane", &json!({"compose": id, "show": true})).unwrap();
-        // A copy made in another program while MailCraft runs.
+        // A copy made in another program while Mail runs.
         let r = s
             .run(
                 "format.clipboardCollect",
@@ -5267,13 +5270,13 @@ mod pane_tests {
             (Some("Georgia"), Some(18.0), Some(true))
         );
         let para = s.composes[&id].para_at_caret();
-        assert_eq!(para.align, mailcraft_model::rich::Align::Center);
+        assert_eq!(para.align, iridium_mail_model::rich::Align::Center);
         assert_eq!(para.line_height, Some(1.5));
         assert!((para.space_after_px - 16.0).abs() < 0.01);
         // Regression: a modified heading style still makes a heading (Navigation pane, contents, <h2>).
         assert!(matches!(
             block_at(&s.composes[&id].body.blocks, &[1]),
-            Some(mailcraft_model::Block::Heading { level: 2, .. })
+            Some(iridium_mail_model::Block::Heading { level: 2, .. })
         ));
         assert_eq!(current_style(&s.composes[&id]), "Heading 2");
         // A modified Normal makes it a plain paragraph again.
@@ -5281,7 +5284,7 @@ mod pane_tests {
         s.run("format.style", &json!({"name": "Normal"})).unwrap();
         assert!(matches!(
             block_at(&s.composes[&id].body.blocks, &[1]),
-            Some(mailcraft_model::Block::Paragraph { .. })
+            Some(iridium_mail_model::Block::Paragraph { .. })
         ));
         // The dialog now shows the changed definition.
         s.run("format.style", &json!({"name": "Heading 2", "action": "define"})).unwrap();
@@ -5637,7 +5640,7 @@ mod dialog_tests {
     use super::super::compose::tests::{open, session};
     use super::*;
     use crate::Notice;
-    use mailcraft_model::{Block, Inline};
+    use iridium_mail_model::{Block, Inline};
 
     fn with_text(text: &str) -> (Session, u64) {
         let mut s = session();
@@ -5894,7 +5897,7 @@ mod dialog_tests {
         assert_eq!(ps.len(), 2);
         assert_eq!((ps[0].space_before_px, ps[0].indent_px), (8.0, 0.0));
         assert_eq!((ps[1].space_before_px, ps[1].indent_px), (32.0, 24.0));
-        assert!(ps.iter().all(|p| p.align == mailcraft_model::rich::Align::Center));
+        assert!(ps.iter().all(|p| p.align == iridium_mail_model::rich::Align::Center));
         assert!(ps.iter().all(|p| p.line_height.is_none()), "an untouched line rule stays inherited");
     }
 

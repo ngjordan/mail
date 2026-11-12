@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::{DateTime, FolderId, Importance, ItemId, RemoteRef};
-use mailcraft_mime::Mailbox;
+use iridium_mail_mime::Mailbox;
 
 /// A file attached to an appointment or meeting (the item window's Attach File): kept with the item and sent
 /// with its invitation.
@@ -512,7 +512,7 @@ pub struct Withdrawal {
     pub url: String,
     /// Account whose DAV login removes it.
     pub account: crate::AccountId,
-    /// ETag of the file as MailCraft last wrote it (the removal is conditional on it, so a file someone else
+    /// ETag of the file as Mail last wrote it (the removal is conditional on it, so a file someone else
     /// put there meanwhile stays). Empty: never written, nothing is removed. `*`: written by a server that gave
     /// no ETag, or by an earlier version, which kept none (a stored entry without the field reads as `*`, so
     /// its file is still removed).
@@ -545,7 +545,7 @@ pub struct Publication {
     pub last_error: Option<String>,
     /// Publishing was stopped: the next send/receive removes the published file, then the publication.
     pub withdraw: bool,
-    /// ETag of the file as MailCraft last wrote it: the next upload replaces only that file (`If-Match`), the
+    /// ETag of the file as Mail last wrote it: the next upload replaces only that file (`If-Match`), the
     /// first one only creates a new file (`If-None-Match: *`). `*`: written by a server that gave no ETag.
     #[serde(skip_serializing_if = "String::is_empty")]
     pub etag: String,

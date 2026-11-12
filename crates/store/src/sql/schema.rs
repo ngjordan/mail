@@ -11,7 +11,7 @@
 //! - `mail`: one row per mail item. `meta` holds the whole item as JSON (what is read back); the other
 //!   columns are derived from it for the indexes: folder, received/sent (Unix seconds), size, flag bits
 //!   ([`super::rows::flags_of`]), conversation, folded sender and subject keys, the normalised Message-ID key
-//!   ([`mailcraft_model::message_id_key`]), server id, and the `bodies` rows of its source (`src`) and body
+//!   ([`iridium_mail_model::message_id_key`]), server id, and the `bodies` rows of its source (`src`) and body
 //!   record (`rec`).
 //! - `bodies`: the content index of the pack files: per entry its kind (0 source, 1 body record), key (the
 //!   item's `blob` / `body_key`), SHA-256 (de-duplication), lengths, place in a pack, codec and reference
@@ -30,7 +30,7 @@ use crate::{Result, StoreError};
 
 /// Schema version written now.
 pub const VERSION: i64 = 1;
-/// `PRAGMA application_id` of a MailCraft store ("MCST").
+/// `PRAGMA application_id` of a Mail store ("MCST").
 pub const APPLICATION_ID: i64 = 0x4D43_5354;
 
 const V1: &str = "
@@ -58,16 +58,16 @@ CREATE TABLE pim(kind INT NOT NULL, id INTEGER NOT NULL, folder INT NOT NULL, js
 ";
 
 /// Creates the schema in a new database, or checks an existing one: refused when it belongs to another
-/// application or was written by a newer MailCraft (schema past [`VERSION`]).
+/// application or was written by a newer Mail (schema past [`VERSION`]).
 pub fn migrate(conn: &Connection) -> Result<()> {
     let app: i64 = conn.query_row("PRAGMA application_id", [], |r| r.get(0))?;
     let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     if app != 0 && app != APPLICATION_ID {
-        return Err(StoreError::Corrupt("store.db is not a MailCraft store".into()));
+        return Err(StoreError::Corrupt("store.db is not a Mail store".into()));
     }
     if version > VERSION {
         return Err(StoreError::Corrupt(format!(
-            "store.db was written by a newer MailCraft (schema {version}; this version reads up to {VERSION})"
+            "store.db was written by a newer Mail (schema {version}; this version reads up to {VERSION})"
         )));
     }
     if version == VERSION {
@@ -77,13 +77,13 @@ pub fn migrate(conn: &Connection) -> Result<()> {
         let tables: i64 =
             conn.query_row("SELECT count(*) FROM sqlite_schema WHERE type = 'table'", [], |r| r.get(0))?;
         if tables != 0 {
-            return Err(StoreError::Corrupt("store.db holds tables but no MailCraft schema version".into()));
+            return Err(StoreError::Corrupt("store.db holds tables but no Mail schema version".into()));
         }
         super::in_savepoint(conn, "schema", |c| {
             c.execute_batch(V1)?;
             c.execute(
                 "INSERT INTO meta(key, value) VALUES ('created_by', ?1)",
-                [concat!("mailcraft ", env!("CARGO_PKG_VERSION"))],
+                [concat!("iridium-mail ", env!("CARGO_PKG_VERSION"))],
             )?;
             c.execute_batch(&format!(
                 "PRAGMA application_id={APPLICATION_ID}; PRAGMA user_version={VERSION}"

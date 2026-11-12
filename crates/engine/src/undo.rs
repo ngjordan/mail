@@ -8,7 +8,7 @@
 //! works even for a step larger than the byte cap (moving 100,000 messages); spilling such steps to disk is
 //! storage stage S10.
 
-use mailcraft_model::{MailChanges, Mailbox};
+use iridium_mail_model::{MailChanges, Mailbox};
 
 /// Default undo depth.
 pub const DEFAULT_LIMIT: usize = 100;
@@ -72,7 +72,7 @@ impl UndoStack {
     /// Every content key the item images of the undo and redo steps refer to (content collection keeps it, so
     /// undoing a step finds the body and source it puts back).
     pub fn content_keys(&self) -> std::collections::BTreeSet<String> {
-        mailcraft_store::bodies::keys_of(
+        iridium_mail_store::bodies::keys_of(
             self.undo.iter().chain(&self.redo).flat_map(|e| e.mail.iter().filter_map(|(_, m)| m)),
         )
     }
@@ -168,7 +168,7 @@ impl UndoStack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{ItemId, MailItem};
+    use iridium_mail_model::{ItemId, MailItem};
     use serde_json::json;
 
     fn entry(n: usize) -> UndoEntry {
@@ -345,7 +345,8 @@ mod tests {
         let cid = s.run("mail.newEmail", &json!({})).unwrap()["compose"].as_u64().unwrap();
         s.run("compose.insertText", &json!({"compose": cid, "text": "Unsent"})).unwrap();
         let now = s.now();
-        s.fixed_now = Some(mailcraft_model::DateTime { unix: now.unix + 3600, offset_min: now.offset_min });
+        s.fixed_now =
+            Some(iridium_mail_model::DateTime { unix: now.unix + 3600, offset_min: now.offset_min });
         let saved = s.run("compose.autoSaveTick", &json!({})).unwrap();
         let draft = ItemId(saved["saved"][0]["draft"].as_u64().unwrap());
         assert!(s.undo.can_redo(), "none of that cleared Redo");
@@ -363,7 +364,7 @@ mod tests {
         assert_eq!(s.mailbox.mail.get(copy).map(|m| m.folder), Some(target), "the copy is left alone");
     }
 
-    fn add_imap(s: &mut crate::Session) -> mailcraft_model::AccountId {
+    fn add_imap(s: &mut crate::Session) -> iridium_mail_model::AccountId {
         s.view.work_offline = true;
         let r = s
             .run(
@@ -377,7 +378,7 @@ mod tests {
                 }),
             )
             .unwrap();
-        mailcraft_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap())
+        iridium_mail_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap())
     }
 
     /// Every folder belongs to an account that exists, and the mailbox is consistent.
@@ -397,7 +398,7 @@ mod tests {
     fn undo_of_add_account_takes_mail_that_arrived_with_it() {
         let mut s = crate::sample::sample_session();
         let acct = add_imap(&mut s);
-        let inbox = s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Inbox).unwrap();
         let arrived =
             s.mailbox.add_mail(MailItem { folder: inbox, subject: "arrived".into(), ..Default::default() });
         let local_mail = s.mailbox.mail.items().filter(|m| m.folder != inbox).count();
@@ -419,7 +420,7 @@ mod tests {
         let acct = add_imap(&mut s);
         s.run("accounts.remove", &json!({"account": acct.0, "confirm": true})).unwrap();
         s.run("app.undo", &json!({})).unwrap();
-        let inbox = s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Inbox).unwrap();
         let arrived =
             s.mailbox.add_mail(MailItem { folder: inbox, subject: "arrived".into(), ..Default::default() });
         s.run("app.redo", &json!({})).unwrap();
@@ -474,15 +475,20 @@ mod tests {
     #[test]
     fn a_large_address_book_keeps_a_deep_history() {
         let mut s = crate::sample::sample_session();
-        let folder =
-            s.mailbox.folders.values().find(|f| f.kind == mailcraft_model::FolderKind::Contacts).unwrap().id;
+        let folder = s
+            .mailbox
+            .folders
+            .values()
+            .find(|f| f.kind == iridium_mail_model::FolderKind::Contacts)
+            .unwrap()
+            .id;
         for i in 0..96u64 {
             let id = ItemId(s.mailbox.alloc_id());
-            let contact = mailcraft_model::Contact {
+            let contact = iridium_mail_model::Contact {
                 id,
                 folder,
                 last_name: format!("Contact {i}"),
-                picture: Some(mailcraft_model::contact::ContactPicture {
+                picture: Some(iridium_mail_model::contact::ContactPicture {
                     mime: "image/png".into(),
                     data: vec![7; 64 * 1024],
                 }),

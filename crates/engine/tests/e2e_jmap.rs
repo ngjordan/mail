@@ -6,9 +6,9 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -52,7 +52,7 @@ fn subjects(srv: &TestServers, user: &str, mailbox: &str) -> Vec<String> {
     srv.messages(user, mailbox)
         .unwrap()
         .iter()
-        .filter_map(|m| mailcraft_mime::parse(&m.raw).ok().map(|x| x.subject()))
+        .filter_map(|m| iridium_mail_mime::parse(&m.raw).ok().map(|x| x.subject()))
         .collect()
 }
 
@@ -60,7 +60,7 @@ fn flags(srv: &TestServers, mailbox: &str, subject: &str) -> Vec<String> {
     srv.messages(ALICE, mailbox)
         .unwrap()
         .into_iter()
-        .find(|m| mailcraft_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
+        .find(|m| iridium_mail_mime::parse(&m.raw).map(|x| x.subject()).ok().as_deref() == Some(subject))
         .map(|m| m.flags)
         .unwrap_or_default()
 }
@@ -226,7 +226,7 @@ fn jmap_folders_made_here_reach_the_server() {
 }
 
 fn at(y: i32, mo: u8, d: u8, h: u8) -> i64 {
-    mailcraft_engine::model::DateTime::from_civil(y, mo, d, h, 0, 0, 0).unwrap().unix
+    iridium_mail_engine::model::DateTime::from_civil(y, mo, d, h, 0, 0, 0).unwrap().unix
 }
 
 fn objects_with(srv: &TestServers, kind: &str, text: &str) -> Vec<Value> {
@@ -248,7 +248,7 @@ fn jmap_contacts_and_calendars_synchronise_over_jmap() {
         "ContactCard",
         json!({"@type": "Card", "uid": "pat-1", "name": {"components": [{"kind": "given", "value": "Pat"},
                {"kind": "surname", "value": "Example"}]}, "emails": {"e": {"address": "pat@example.net"}},
-               "x-other:kept": "a property MailCraft does not map"}),
+               "x-other:kept": "a property Mail does not map"}),
     );
     let series = srv.put_jmap_object(
         ALICE,
@@ -322,7 +322,7 @@ fn jmap_contacts_and_calendars_synchronise_over_jmap() {
     assert_eq!(s.mailbox.contacts.values().filter(|c| c.folder == contacts).count(), 2);
     assert_eq!(s.mailbox.appointments.values().filter(|x| x.folder == calendar).count(), 3);
 
-    // Changed here: up (what MailCraft does not map stays). Changed there: down.
+    // Changed here: up (what Mail does not map stays). Changed there: down.
     run(&mut s, "people.update", json!({"id": pat_id.0, "jobTitle": "Engineer"}));
     run(&mut s, "calendar.update", json!({"id": series_id.0, "location": "Room 2"}));
     run(
@@ -339,7 +339,7 @@ fn jmap_contacts_and_calendars_synchronise_over_jmap() {
     sync(&mut s);
     let pat_there = objects_with(&srv, "ContactCard", "pat-1");
     assert!(pat_there[0].to_string().contains("Engineer"), "{:?}", pat_there[0]);
-    assert_eq!(pat_there[0]["x-other:kept"], "a property MailCraft does not map");
+    assert_eq!(pat_there[0]["x-other:kept"], "a property Mail does not map");
     let ev = objects_with(&srv, "CalendarEvent", "series-1");
     let ev = &ev[0];
     assert_eq!(ev["locations"].as_object().unwrap().values().next().unwrap()["name"], "Room 2");
@@ -399,7 +399,7 @@ fn jmap_archive_on_a_server_without_one_makes_it() {
     settle(&mut s);
     sync(&mut s);
     assert_eq!(subjects(&srv, ALICE, "Archive"), ["Keep me"], "moved into the new archive, not destroyed");
-    assert_eq!(srv.special_use(ALICE, "Archive"), Some(mailcraft_testmail::SpecialUse::Archive));
+    assert_eq!(srv.special_use(ALICE, "Archive"), Some(iridium_mail_testmail::SpecialUse::Archive));
     assert!(s.mailbox.folder(archive).unwrap().remote_name.is_some());
     assert_eq!(s.mailbox.folders.values().filter(|f| f.account == a && f.name == "Archive").count(), 1);
 
@@ -545,11 +545,11 @@ fn jmap_undo_and_redo_of_a_move_into_a_new_folder_keep_the_mail() {
     assert!(s.mailbox.validate().is_empty(), "{:?}", s.mailbox.validate());
 }
 
-/// Regression (review): an edit here rewrote every mapped property from MailCraft's model, so what it cannot
+/// Regression (review): an edit here rewrote every mapped property from Mail's model, so what it cannot
 /// show inside them (a second organization, a photo stored as a blob, a second alert) was removed on the
 /// server. Only the properties the edit changed are written now.
 #[test]
-fn jmap_edits_keep_what_mailcraft_does_not_show() {
+fn jmap_edits_keep_what_iridium_mail_does_not_show() {
     let srv = alice_only(Config { jmap_pim: true, ..Config::default() });
     srv.put_jmap_object(
         ALICE,
@@ -653,7 +653,7 @@ fn jmap_mail_moved_below_a_missing_archive_stays_on_the_server() {
     settle(&mut s);
     sync(&mut s);
     assert_eq!(subjects(&srv, ALICE, "Archive/2024"), ["Keep me"], "moved, not destroyed");
-    assert_eq!(srv.special_use(ALICE, "Archive"), Some(mailcraft_testmail::SpecialUse::Archive));
+    assert_eq!(srv.special_use(ALICE, "Archive"), Some(iridium_mail_testmail::SpecialUse::Archive));
     sync(&mut s);
     assert_eq!(s.mailbox.mail.get(keep).unwrap().folder, sub);
     assert_eq!(s.mailbox.folders.values().filter(|f| f.account == a && f.name == "2024").count(), 1);
@@ -667,7 +667,7 @@ fn jmap_name_guess_never_takes_the_place_of_a_server_role() {
     let srv = alice_only(Config::default());
     srv.delete_mailbox(ALICE, "Trash").unwrap();
     srv.create_mailbox(ALICE, "Deleted Items", None).unwrap();
-    srv.create_mailbox(ALICE, "Trash", Some(mailcraft_testmail::SpecialUse::Trash)).unwrap();
+    srv.create_mailbox(ALICE, "Trash", Some(iridium_mail_testmail::SpecialUse::Trash)).unwrap();
     srv.seed_message(ALICE, "INBOX", &message("Bin me", "bin"), &[]).unwrap();
     let mut s = jmap_session();
     let a = add_alice_jmap(&mut s, &srv);

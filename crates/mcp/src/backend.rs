@@ -1,4 +1,4 @@
-//! Where tool calls go: a headless [`Session`] owned by the server, or a running MailCraft app reached over
+//! Where tool calls go: a headless [`Session`] owned by the server, or a running Mail app reached over
 //! its control channel (`docs/control-protocol.md`).
 //!
 //! Both backends speak the control channel's vocabulary: [`Backend::run`] runs a registry command by id and
@@ -14,8 +14,8 @@ use std::time::Duration;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use mailcraft_engine::model::{FolderId, ItemId};
-use mailcraft_engine::{Session, queries};
+use iridium_mail_engine::model::{FolderId, ItemId};
+use iridium_mail_engine::{Session, queries};
 
 /// A folder as the tools see it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -69,19 +69,19 @@ impl HeadlessBackend {
         Self { session, label: label.into() }
     }
 
-    /// The deterministic sample mailbox (`mailcraft_engine::sample`), in memory.
+    /// The deterministic sample mailbox (`iridium_mail_engine::sample`), in memory.
     pub fn sample() -> Self {
-        Self::new(mailcraft_engine::sample::sample_session(), "sample mailbox (in memory)")
+        Self::new(iridium_mail_engine::sample::sample_session(), "sample mailbox (in memory)")
     }
 
     /// A profile folder (created when missing); changes are journaled to it. A new profile gets the storage
-    /// `MAILCRAFT_STORE` names.
+    /// `IRIDIUM_MAIL_STORE` names.
     pub fn open(dir: &Path) -> Result<Self, String> {
-        Self::open_with(dir, mailcraft_engine::StoreKind::from_env())
+        Self::open_with(dir, iridium_mail_engine::StoreKind::from_env())
     }
 
     /// [`HeadlessBackend::open`], a new profile getting `kind` storage.
-    pub fn open_with(dir: &Path, kind: mailcraft_engine::StoreKind) -> Result<Self, String> {
+    pub fn open_with(dir: &Path, kind: iridium_mail_engine::StoreKind) -> Result<Self, String> {
         let session = Session::open_with(dir, kind).map_err(|e| e.to_string())?;
         Ok(Self::new(session, format!("profile {}", dir.display())))
     }
@@ -260,7 +260,7 @@ impl BridgedBackend {
                     self.conn = Some((BufReader::new(reader), stream));
                     return Ok(());
                 }
-                Err(e) => last = format!("cannot connect to the MailCraft control channel at {a}: {e}"),
+                Err(e) => last = format!("cannot connect to the Mail control channel at {a}: {e}"),
             }
         }
         Err(last)

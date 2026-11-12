@@ -1,4 +1,4 @@
-//! MailCraft engine (layer L4): the session and its commands.
+//! Mail engine (layer L4): the session and its commands.
 //!
 //! **Everything is a command.** Each user-visible action is a [`CommandSpec`] with a stable id (`mail.reply`,
 //! `folder.new`, `view.readingPane`), a label, its UI location, a default shortcut, a params description and a
@@ -41,8 +41,8 @@ pub mod undo;
 use serde_json::Value;
 
 pub use accounts::{FileSecretStore, MemorySecretStore, SecretStore};
-pub use mailcraft_model as model;
-pub use mailcraft_store::{BodyStore, Content, StoreKind};
+pub use iridium_mail_model as model;
+pub use iridium_mail_store::{BodyStore, Content, StoreKind};
 pub use session::{
     DEFAULT_QUICK_ACCESS, Module, Notice, SNAPSHOT_TOO_LARGE, SearchScope, Selection, Session, TodoBar,
     UNSAVED_TOO_LARGE, ViewState, recent_move_folders,
@@ -61,8 +61,8 @@ pub enum CmdError {
     Failed(String),
 }
 
-impl From<mailcraft_model::ModelError> for CmdError {
-    fn from(e: mailcraft_model::ModelError) -> Self {
+impl From<iridium_mail_model::ModelError> for CmdError {
+    fn from(e: iridium_mail_model::ModelError) -> Self {
         CmdError::Failed(e.to_string())
     }
 }

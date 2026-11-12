@@ -32,12 +32,12 @@ use serde_json::{Value, json};
 use super::{dialog, settings};
 use crate::cmd::notes::IconMode;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::dates::weekday_of_day;
-use mailcraft_model::view::{
+use iridium_mail_model::dates::weekday_of_day;
+use iridium_mail_model::view::{
     ExpandDefault, GROUP_SEP, ItemFilter, ItemRule, MAX_GROUP_LEVELS, MAX_SORT_KEYS, TableOther,
     sanitize_rules,
 };
-use mailcraft_model::{FolderId, FolderKind, ItemId, ReadingPanePos, SortOrder, ViewSettings};
+use iridium_mail_model::{FolderId, FolderKind, ItemId, ReadingPanePos, SortOrder, ViewSettings};
 
 const MOD_STATE: &str = "\u{1}mod.state=";
 const MOD_SAVED: &str = "\u{1}mod.saved=";
@@ -1407,7 +1407,7 @@ pub(crate) fn view_settings(s: &mut Session, folder: FolderId, kind: ModuleKind,
     for (key, slot) in [("rowFont", &mut st.other.row_font), ("columnFont", &mut st.other.column_font)] {
         if let Some(v) = p.get(key) {
             let n = v.as_u64().ok_or_else(|| CmdError::Params(format!("`{key}` must be a font size")))?;
-            *slot = mailcraft_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX));
+            *slot = iridium_mail_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX));
         }
     }
     if let Some(v) = p.get("formats") {
@@ -1781,7 +1781,7 @@ mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
     use crate::{Notice, Selection};
-    use mailcraft_model::{FolderRole, ListFilter};
+    use iridium_mail_model::{FolderRole, ListFilter};
 
     fn run(s: &mut Session, id: &str, p: Value) -> Value {
         s.run(id, &p).unwrap_or_else(|e| panic!("{id}: {e}"))

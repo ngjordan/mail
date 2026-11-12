@@ -7,15 +7,15 @@ use super::{DrawingKind, bounds, descendants, explicit_ids, find, opt_str, rejoi
 use crate::cmd::insert::drawing as draw;
 use crate::compose::ComposeState;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::rich::{Drawing, WrapStyle};
+use iridium_mail_model::rich::{Drawing, WrapStyle};
 
 /// The width and height drawings are aligned in (the text area, at least as tall as the text and the
 /// drawings).
 fn page(c: &ComposeState, ds: &[u32]) -> (f32, f32) {
     let width = c.view_width.filter(|w| w.is_finite() && *w > 40.0).unwrap_or(draw::DEFAULT_VIEW_WIDTH);
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    let fonts = mailcraft_fonts::FontDb::bundled();
-    let text_h = mailcraft_layout::layout_doc(&c.body, &fonts, &lo).height;
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    let fonts = iridium_mail_fonts::FontDb::bundled();
+    let text_h = iridium_mail_layout::layout_doc(&c.body, &fonts, &lo).height;
     let low = bounds(&c.body.drawings, ds).map_or(0.0, |b| b.3);
     (width, text_h.max(low))
 }
@@ -473,7 +473,7 @@ mod tests {
         assert_eq!((bb.x, bb.y, bb.w, bb.h), (210.0, 220.0, 100.0, 100.0));
         // Formatting a group formats its members.
         s.run("drawing.fill", &json!({"compose": cid, "color": "#00ff00"})).unwrap();
-        assert_eq!(get(&s, cid, a).fill, Some(mailcraft_geom::Color::rgb(0, 255, 0)));
+        assert_eq!(get(&s, cid, a).fill, Some(iridium_mail_geom::Color::rgb(0, 255, 0)));
         // Undo takes back the fill, then the size.
         s.run("compose.editUndo", &json!({"compose": cid})).unwrap();
         s.run("compose.editUndo", &json!({"compose": cid})).unwrap();

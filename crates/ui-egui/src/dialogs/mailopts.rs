@@ -9,8 +9,8 @@ use serde_json::{Value, json};
 
 use super::common::{self, Dlg, Out, btn, muted, ok_cancel, window, with_state};
 use crate::App;
-use mailcraft_engine::compose::SaveSentTo;
-use mailcraft_model::{Importance, ItemId, Sensitivity};
+use iridium_mail_engine::compose::SaveSentTo;
+use iridium_mail_model::{Importance, ItemId, Sensitivity};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -274,7 +274,7 @@ fn save_sent_choices(app: &App, current: SaveSentTo) -> Vec<(String, SaveSentTo)
         .mailbox
         .folders
         .values()
-        .filter(|f| f.kind == mailcraft_model::FolderKind::Mail)
+        .filter(|f| f.kind == iridium_mail_model::FolderKind::Mail)
         .map(|f| (format!("Folder: {}", app.s.mailbox.folder_path(f.id)), SaveSentTo::Folder(f.id)))
         .collect();
     folders.sort_by(|a, b| a.0.cmp(&b.0));
@@ -318,7 +318,7 @@ fn message_options(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let item = d.u64("id");
     let init = |a: &App| {
         if let Some(c) = compose.and_then(|c| a.s.composes.get(&c)) {
-            let parts = |t: Option<mailcraft_model::DateTime>, default_time: &str| match t {
+            let parts = |t: Option<iridium_mail_model::DateTime>, default_time: &str| match t {
                 Some(t) => common::date_parts(a, t.unix),
                 None => (common::today(a), default_time.to_owned()),
             };

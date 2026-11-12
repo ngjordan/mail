@@ -5,10 +5,10 @@
 use egui::vec2;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use mailcraft_engine::Module;
-use mailcraft_engine::cmd::calendar::{self as engine_cal, CalendarColumn, pim::Kind};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::FolderId;
+use iridium_mail_engine::Module;
+use iridium_mail_engine::cmd::calendar::{self as engine_cal, CalendarColumn, pim::Kind};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::FolderId;
 use serde_json::{Value, json};
 
 use super::super::common::{load, store};
@@ -236,7 +236,7 @@ fn a_named_calendar_zone_shows_and_drags_times_across_dst() {
             json!({"subject": "Eye exam", "start": "2026-11-16T12:00", "durationMin": 60}),
         )
         .unwrap();
-    let id = mailcraft_model::ItemId(r["id"].as_u64().unwrap());
+    let id = iridium_mail_model::ItemId(r["id"].as_u64().unwrap());
     assert_eq!(a.s.mailbox.appointments[&id].start.unix.rem_euclid(86_400), 17 * 3600, "12:00 EST");
     a.ui.calendar_view = "day".into();
     let mut h = harness(a);
@@ -293,7 +293,7 @@ fn new_meeting_opens_a_prefilled_window_and_saves_nothing() {
         (ed.subject.as_str(), ed.attendees.as_str(), ed.body.as_str()),
         ("Kickoff", "Ann Lee <ann@example.com>", "Agenda")
     );
-    assert!(h.state().s.notices.iter().all(|n| !matches!(n, mailcraft_engine::Notice::OpenDialog(..))));
+    assert!(h.state().s.notices.iter().all(|n| !matches!(n, iridium_mail_engine::Notice::OpenDialog(..))));
     h.run_ok();
     assert!(has_part(&h, "Kickoff - Meeting"));
     assert_eq!(h.state().s.mailbox.appointments.len(), before);
@@ -389,7 +389,7 @@ fn share_window_advanced_options_shape_the_message() {
     h.run_ok();
     let s = &h.state().s;
     let c = s.composes.values().last().expect("the calendar went into a message");
-    let body = mailcraft_html::doc_to_text(&c.body);
+    let body = iridium_mail_html::doc_to_text(&c.body);
     assert!(body.contains("working hours"), "{body}");
     assert!(c.attachments.iter().any(|a| a.filename.ends_with(".ics")));
 }

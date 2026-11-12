@@ -1,5 +1,5 @@
-//! Insert › Icons: a bundled set of simple pictograms drawn for MailCraft (48×48 SVG bodies, plain shapes
-//! only), sorted into categories. They are inserted as PNG (rasterised by `mailcraft-render`), since many
+//! Insert › Icons: a bundled set of simple pictograms drawn for Mail (48×48 SVG bodies, plain shapes
+//! only), sorted into categories. They are inserted as PNG (rasterised by `iridium-mail-render`), since many
 //! mail programs do not show SVG.
 
 /// Icon categories, in the order the Insert Icons dialog shows them.
@@ -428,7 +428,7 @@ pub fn svg(id: &str) -> Option<String> {
 /// Icon `id` as a PNG `px` pixels square (`None` for an unknown id).
 pub fn png(id: &str, px: f32) -> Option<Vec<u8>> {
     let px = if px.is_finite() { px.clamp(8.0, 1024.0) } else { 48.0 };
-    mailcraft_render::svg::svg_to_png(svg(id)?.as_bytes(), px / 48.0).map(|p| p.png)
+    iridium_mail_render::svg::svg_to_png(svg(id)?.as_bytes(), px / 48.0).map(|p| p.png)
 }
 
 #[cfg(test)]
@@ -443,7 +443,7 @@ mod tests {
             assert!(CATEGORIES.contains(cat), "{id}: {cat}");
             assert!(!label.is_empty());
             let png = png(id, 32.0).unwrap_or_else(|| panic!("{id} does not draw"));
-            let pm = mailcraft_render::svg::decode_png(&png).unwrap();
+            let pm = iridium_mail_render::svg::decode_png(&png).unwrap();
             assert_eq!((pm.width, pm.height), (32, 32));
             assert!(pm.pixels.chunks(4).any(|p| p[3] > 0), "{id} is blank");
         }

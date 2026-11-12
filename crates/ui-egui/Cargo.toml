@@ -1,19 +1,19 @@
 [package]
-name = "mailcraft-ui-egui"
-description = "MailCraft's desktop user interface on egui"
+name = "iridium-mail-ui-egui"
+description = "Mail's desktop user interface on egui"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mailcraft-geom.workspace = true
-mailcraft-model.workspace = true
-mailcraft-mime.workspace = true
-mailcraft-fonts.workspace = true
-mailcraft-html.workspace = true
-mailcraft-layout.workspace = true
-mailcraft-engine.workspace = true
+iridium-mail-geom.workspace = true
+iridium-mail-model.workspace = true
+iridium-mail-mime.workspace = true
+iridium-mail-fonts.workspace = true
+iridium-mail-html.workspace = true
+iridium-mail-layout.workspace = true
+iridium-mail-engine.workspace = true
 egui.workspace = true
 egui_extras.workspace = true
 serde.workspace = true
@@ -27,12 +27,12 @@ base64.workspace = true
 
 # Downloading remote pictures in message bodies (native only: the browser build has no sockets or threads).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-mailcraft-net.workspace = true
+iridium-mail-net.workspace = true
 
 [dev-dependencies]
 egui_kittest = { workspace = true, features = ["wgpu"] }
-mailcraft-testmail.workspace = true
-mailcraft-smime = { workspace = true, features = ["testkit"] }
+iridium-mail-testmail.workspace = true
+iridium-mail-smime = { workspace = true, features = ["testkit"] }
 
 [lints]
 workspace = true

@@ -1,4 +1,4 @@
-//! S/MIME for MailCraft (layer L3): sign, verify, encrypt and decrypt mail.
+//! S/MIME for Mail (layer L3): sign, verify, encrypt and decrypt mail.
 //!
 //! Specs: RFC 8551 (S/MIME 4.0 message format), RFC 5652 (CMS: SignedData, EnvelopedData), RFC 5280 (X.509
 //! certificates and path validation, simplified: no revocation checking), RFC 7292 (PKCS #12), RFC 5958 /
@@ -12,7 +12,7 @@
 //! - [`trust`]: certificate chains and the status a signature gets (valid, untrusted, expired, invalid).
 //! - [`mime`]: whole messages: [`mime::protect`] (sign, encrypt, both) and [`mime::open`] (unwrap the layers).
 //! - [`ber`]: the BER reader that turns streamed CMS from other programs into DER.
-//! - [`seal`]: password protection (PBES2) for files MailCraft writes, such as a data file with a password.
+//! - [`seal`]: password protection (PBES2) for files Mail writes, such as a data file with a password.
 //!
 //! Everything is pure Rust (RustCrypto), so the browser build has it too. Every entry point is total: hostile
 //! input (messages, certificates, `.pfx` files) yields an error, never a panic. Sizes are capped
@@ -48,7 +48,7 @@ pub enum SmimeError {
     /// The data is not what it claims to be (bad DER, truncated, wrong structure).
     #[error("malformed data: {0}")]
     Malformed(String),
-    /// Valid, but uses something MailCraft does not support (an algorithm, a key type, a format).
+    /// Valid, but uses something Mail does not support (an algorithm, a key type, a format).
     #[error("not supported: {0}")]
     Unsupported(String),
     /// The password is wrong (or the file is damaged).

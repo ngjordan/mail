@@ -3,17 +3,17 @@
 `oauth-providers.json` lists mail providers that require or offer OAuth 2.0 sign-in. It holds **public
 metadata only**: the authorization, token and device-authorization endpoints the providers publish, the
 scopes their IMAP/POP/SMTP servers document, and the mail domains they serve. It is compiled into
-`mailcraft-net` (`oauth::builtin_providers`).
+`iridium-mail-net` (`oauth::builtin_providers`).
 
 **No client ids or client secrets are checked in.** OAuth providers only issue tokens to registered
 applications, and a registration belongs to whoever distributes the app. To sign in with OAuth:
 
 1. Register an application with the provider (for example as a "desktop" or "public client" application),
    allowing the loopback redirect `http://127.0.0.1` (any port) and, where offered, the device flow.
-2. In MailCraft, open **File › Account Settings**, pick the account, choose **Sign in with OAuth**, pick the
+2. In Mail, open **File › Account Settings**, pick the account, choose **Sign in with OAuth**, pick the
    provider and paste the client id (and, for providers that issue one to installed apps, the client secret).
 3. Choose **Device code** (enter the shown code at the provider's verification page on any device) or
-   **Browser** (MailCraft opens the provider's page and receives the answer on a one-time 127.0.0.1 port,
+   **Browser** (Mail opens the provider's page and receives the answer on a one-time 127.0.0.1 port,
    with PKCE).
 
 The access token and the refresh token are kept in the secret store (the OS keyring when available) and never
@@ -29,23 +29,23 @@ Notes on the listed providers (from their public documentation):
 - Microsoft: both flows work with the `common` tenant (or the organization's own tenant, which account setup
   finds from the domain); `offline_access` is needed for refresh tokens. A **Microsoft 365 (Graph)** account
   signs in with the same provider but asks for Microsoft Graph's delegated scopes instead of the scopes listed
-  in `oauth-providers.json` (`mailcraft_net::graph::MAIL_SCOPES`): `https://graph.microsoft.com/Mail.ReadWrite`,
+  in `oauth-providers.json` (`iridium_mail_net::graph::MAIL_SCOPES`): `https://graph.microsoft.com/Mail.ReadWrite`,
   `https://graph.microsoft.com/Mail.Send` and `offline_access`, plus `Contacts.ReadWrite`,
   `Calendars.ReadWrite`, `Calendars.ReadWrite.Shared`, `Tasks.ReadWrite` and `MailboxSettings.Read` for
-  contacts, calendars, To Do tasks and the mailbox's time zone (`mailcraft_net::graph::pim::PIM_SCOPES`). One
+  contacts, calendars, To Do tasks and the mailbox's time zone (`iridium_mail_net::graph::pim::PIM_SCOPES`). One
   access token serves one resource, so a
   Graph account's token never signs in to IMAP or SMTP, and the other way round.
 
 ## Registering a client id, step by step
 
-Whoever builds and distributes a copy of MailCraft (or each user, for their own use) registers it once with
-each provider. MailCraft is a *public client* (an installed application cannot keep a secret), so register
+Whoever builds and distributes a copy of Mail (or each user, for their own use) registers it once with
+each provider. Mail is a *public client* (an installed application cannot keep a secret), so register
 it as one:
 
 **Any provider**
 
 - Application type: *desktop*, *native*, *installed* or *public client* (not "web application").
-- Redirect URI: `http://127.0.0.1` with any port (RFC 8252 section 7.3). MailCraft listens on a one-time
+- Redirect URI: `http://127.0.0.1` with any port (RFC 8252 section 7.3). Mail listens on a one-time
   port of 127.0.0.1 and sends `http://127.0.0.1:<port>/` as the redirect URI; providers that require the
   port to be listed cannot be used with the browser flow (use the device flow instead).
 - Device flow: enable it if the provider has a switch for it (RFC 8628).
@@ -58,7 +58,7 @@ it as one:
 1. In the Google Cloud console, create a project and configure the OAuth consent screen (add yourself as a
    test user while the app is unverified).
 2. Create credentials › OAuth client ID › Application type **Desktop app**. Google shows a client id and a
-   client secret; enter both in MailCraft.
+   client secret; enter both in Mail.
 3. Use the **Browser** flow: Google's device flow does not allow the `https://mail.google.com/` scope.
 
 **Microsoft** (public documentation: "Register an application with the Microsoft identity platform",
@@ -67,7 +67,7 @@ it as one:
 1. In the Azure portal (Microsoft Entra ID › App registrations) create a registration; supported account
    types: personal and work or school accounts, to match the `common` endpoints.
 2. Authentication › Add a platform › **Mobile and desktop applications**, and add **both** redirect URIs
-   `http://127.0.0.1` and `http://localhost`. MailCraft sends `http://127.0.0.1:<port>/` (a one-time port);
+   `http://127.0.0.1` and `http://localhost`. Mail sends `http://127.0.0.1:<port>/` (a one-time port);
    Microsoft ignores the port of loopback redirects for public clients, but only matches the host name that
    is registered, so `http://localhost` alone is not enough.
 3. Authentication › **Allow public client flows: Yes** (needed for the device code flow).
@@ -101,8 +101,8 @@ Endpoints must be `https`. The IMAP, POP3 and SMTP servers must offer `AUTH=XOAU
 
 ## Trying it without a real provider
 
-`mailcraft-testmail` runs a local authorization server (`TestServers::oauth_endpoints`, client id
-`mailcraft-test-client`) whose access tokens sign in to its IMAP, SMTP and JMAP servers and its fake
+`iridium-mail-testmail` runs a local authorization server (`TestServers::oauth_endpoints`, client id
+`iridium-mail-test-client`) whose access tokens sign in to its IMAP, SMTP and JMAP servers and its fake
 Microsoft Graph mail service. Tests approve a
 device code with `TestServers::oauth_approve` (standing in for the person at the verification page) and can
 expire every access token at once to exercise refreshing. See `crates/net/tests/accounts_testmail.rs` and

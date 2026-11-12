@@ -1,7 +1,7 @@
 //! Mail rows of `store.db`: encoding an item, and the writes that keep `folder_counts` and the body
 //! reference counts in step with the `mail` table (always in the caller's transaction).
 
-use mailcraft_model::{
+use iridium_mail_model::{
     FlagState, FocusClass, Importance, MailItem, ResponseState, Sensitivity, message_id_key,
 };
 use rusqlite::{Connection, OptionalExtension, params};
@@ -72,7 +72,7 @@ pub fn sender_key(item: &MailItem) -> Option<String> {
 
 /// The folded subject of `item` for sorting by Subject (reply and forward prefixes dropped).
 pub fn subject_key(item: &MailItem) -> String {
-    mailcraft_model::subject::conversation_topic(&item.subject).chars().take(256).collect()
+    iridium_mail_model::subject::conversation_topic(&item.subject).chars().take(256).collect()
 }
 
 /// The JSON `item` is stored as.
@@ -84,7 +84,7 @@ pub fn encode(item: &MailItem) -> Result<String> {
 pub fn decode(id: i64, meta: &str) -> Result<MailItem> {
     let mut item: MailItem = serde_json::from_str(meta)
         .map_err(|e| StoreError::Corrupt(format!("mail row {}: {e}", from_sql_id(id))))?;
-    item.id = mailcraft_model::ItemId(from_sql_id(id));
+    item.id = iridium_mail_model::ItemId(from_sql_id(id));
     Ok(item)
 }
 

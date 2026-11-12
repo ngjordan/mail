@@ -20,8 +20,8 @@ use serde_json::{Value, json};
 
 use crate::compose::ComposeAttachment;
 use crate::{CmdError, Notice, Session};
-use mailcraft_model::rule::{RuleContext, RuleEnv};
-use mailcraft_model::{
+use iridium_mail_model::rule::{RuleContext, RuleEnv};
+use iridium_mail_model::{
     Account, AccountId, Address, BodyFormat, DateTime, Doc, FlagState, FolderId, FolderKind, FolderRole,
     ItemId, ListTime, MailItem, Rule, RuleAction, Sensitivity,
 };
@@ -138,7 +138,7 @@ pub fn rule_env(s: &Session, item: &MailItem, contacts: &[String]) -> RuleEnv {
 /// The start of `item`'s source read from the body store, for conditions that scan it. `None` when it has
 /// none.
 fn stored_source_head(s: &Session, item: &MailItem) -> Option<Vec<u8>> {
-    s.source_head(item, mailcraft_model::rule::SOURCE_SCAN_LIMIT)
+    s.source_head(item, iridium_mail_model::rule::SOURCE_SCAN_LIMIT)
 }
 
 fn contact_addresses(s: &Session) -> Vec<String> {
@@ -516,7 +516,7 @@ fn defer(s: &mut Session, id: ItemId, minutes: u32) {
 fn recipients(list: &[String]) -> Vec<Address> {
     let mut out: Vec<Address> = Vec::new();
     for entry in list {
-        for m in mailcraft_mime::addr::parse_address_list(entry).iter().flat_map(|a| a.mailboxes()) {
+        for m in iridium_mail_mime::addr::parse_address_list(entry).iter().flat_map(|a| a.mailboxes()) {
             let addr = m.addr.trim();
             if addr.contains('@') && !out.iter().any(|o| o.addr.eq_ignore_ascii_case(addr)) {
                 out.push(m);
@@ -549,7 +549,7 @@ fn cc_to(s: &mut Session, run: &mut Run, rule: &Rule, id: ItemId, list: &[String
     if added.is_empty() {
         return;
     }
-    let text: Vec<String> = added.iter().map(|a| mailcraft_mime::addr::format_mailbox(a, true)).collect();
+    let text: Vec<String> = added.iter().map(|a| iridium_mail_mime::addr::format_mailbox(a, true)).collect();
     edit_source(s, id, |raw| {
         let current = header_value(&raw, "Cc");
         let value = match current.as_deref().map(str::trim) {
@@ -566,7 +566,7 @@ fn notify_header(s: &mut Session, id: ItemId, header: &str) {
         return;
     }
     let Some(from) = s.mailbox.mail.get(id).and_then(|m| m.from.clone()) else { return };
-    let value = mailcraft_mime::addr::format_mailbox(&from, true);
+    let value = iridium_mail_mime::addr::format_mailbox(&from, true);
     edit_source(s, id, |raw| set_header(&raw, header, Some(value)));
 }
 
@@ -669,7 +669,7 @@ fn forward(s: &mut Session, run: &mut Run, rule: &Rule, id: ItemId, to: &[String
     let cmd = if attach { "mail.forwardAsAttachment" } else { "mail.forward" };
     let result = open_response(s, cmd, id).and_then(|cid| {
         let line: Vec<String> =
-            rcpts.iter().map(|a| mailcraft_mime::addr::format_mailbox(a, false)).collect();
+            rcpts.iter().map(|a| iridium_mail_mime::addr::format_mailbox(a, false)).collect();
         if let Some(c) = s.composes.get_mut(&cid) {
             c.to = line.join("; ");
         }
@@ -706,8 +706,8 @@ fn redirect(s: &mut Session, run: &mut Run, rule: &Rule, id: ItemId, to: &[Strin
     let resent_id =
         format!("{}.{}.rule@{}", now.unix, id.0, if domain.is_empty() { "localhost" } else { &domain });
     let resent_to: Vec<String> =
-        rcpts.iter().map(|a| mailcraft_mime::addr::format_mailbox(a, true)).collect();
-    let from = mailcraft_mime::addr::format_mailbox(
+        rcpts.iter().map(|a| iridium_mail_mime::addr::format_mailbox(a, true)).collect();
+    let from = iridium_mail_mime::addr::format_mailbox(
         &Address::new(Some(account.sender_name.trim()).filter(|n| !n.is_empty()), account.address.trim()),
         true,
     );
@@ -756,16 +756,16 @@ enum Reply<'a> {
 fn no_auto_reply(s: &Session, m: &MailItem) -> bool {
     let env = RuleEnv { source_head: stored_source_head(s, m), ..Default::default() };
     let source = env.source_head.as_deref();
-    if mailcraft_model::rule::is_automatic_reply_in(m, source) {
+    if iridium_mail_model::rule::is_automatic_reply_in(m, source) {
         return true;
     }
-    let head = mailcraft_model::rule::RuleCondition::HeaderContains(vec!["list-id:".into()]);
+    let head = iridium_mail_model::rule::RuleCondition::HeaderContains(vec!["list-id:".into()]);
     let ctx = RuleContext::default();
     if head.matches_in(m, &ctx, &env) {
         return true;
     }
     ["precedence: bulk", "precedence: list", "precedence: junk"].iter().any(|p| {
-        mailcraft_model::rule::RuleCondition::HeaderContains(vec![(*p).into()]).matches_in(m, &ctx, &env)
+        iridium_mail_model::rule::RuleCondition::HeaderContains(vec![(*p).into()]).matches_in(m, &ctx, &env)
     })
 }
 
@@ -787,16 +787,16 @@ fn load_template(path: &str, now: DateTime) -> Result<Template, String> {
     if path.trim().is_empty() {
         return Err("no template chosen".into());
     }
-    let bytes = match mailcraft_store::journal::read_capped(p, MAX_TEMPLATE_BYTES) {
+    let bytes = match iridium_mail_store::journal::read_capped(p, MAX_TEMPLATE_BYTES) {
         Ok(Some(b)) => b,
         Ok(None) => return Err(format!("the template {} was not found", p.display())),
         Err(e) => return Err(format!("the template {} could not be read: {e}", p.display())),
     };
-    let msg = mailcraft_mime::parse(&bytes).map_err(|e| format!("the template is not a message: {e}"))?;
+    let msg = iridium_mail_mime::parse(&bytes).map_err(|e| format!("the template is not a message: {e}"))?;
     let item = MailItem::from_message(&msg, &bytes, now);
-    let content = mailcraft_model::Body::from_message(&msg);
+    let content = iridium_mail_model::Body::from_message(&msg);
     let (body, format) = match (&content.html, &content.text) {
-        (Some(h), _) if !h.trim().is_empty() => (mailcraft_html::html_to_doc(h), BodyFormat::Html),
+        (Some(h), _) if !h.trim().is_empty() => (iridium_mail_html::html_to_doc(h), BodyFormat::Html),
         (_, Some(t)) => (Doc::from_plain_text(t), BodyFormat::PlainText),
         _ => (Doc::from_plain_text(""), BodyFormat::PlainText),
     };
@@ -955,13 +955,13 @@ pub(crate) fn set_header(raw: &[u8], name: &str, value: Option<String>) -> Vec<u
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Contact, Importance, Mailbox, ServerSettings};
+    use iridium_mail_model::{Contact, Importance, Mailbox, ServerSettings};
 
     /// A local data file plus an IMAP account that can send (no password: nothing connects), fixed clock.
     fn session() -> (Session, AccountId) {
         let mut mb = Mailbox::new_local("Local");
         let acc = mb.add_account(Account {
-            kind: mailcraft_model::AccountKind::Imap,
+            kind: iridium_mail_model::AccountKind::Imap,
             display_name: "me@example.com".into(),
             address: "me@example.com".into(),
             sender_name: "Me Example".into(),
@@ -998,13 +998,13 @@ mod tests {
 
     /// Delivers a parsed message into `folder`.
     fn deliver(s: &mut Session, folder: FolderId, raw: &[u8]) -> ItemId {
-        let msg = mailcraft_mime::parse(raw).unwrap();
+        let msg = iridium_mail_mime::parse(raw).unwrap();
         let mut item = MailItem::from_message(&msg, raw, s.now());
         item.folder = folder;
-        s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap()
+        s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap()
     }
 
-    fn rule(conditions: Vec<mailcraft_model::RuleCondition>, actions: Vec<RuleAction>) -> Rule {
+    fn rule(conditions: Vec<iridium_mail_model::RuleCondition>, actions: Vec<RuleAction>) -> Rule {
         Rule { id: 1, name: "R".into(), enabled: true, conditions, actions, exceptions: Vec::new() }
     }
 
@@ -1025,7 +1025,7 @@ mod tests {
 
     #[test]
     fn env_conditions_junk_rss_contacts() {
-        use mailcraft_model::RuleCondition as C;
+        use iridium_mail_model::RuleCondition as C;
         let (mut s, acc) = session();
         let junk = folder(&s, acc, FolderRole::JunkEmail);
         let inbox = folder(&s, acc, FolderRole::Inbox);
@@ -1110,7 +1110,7 @@ mod tests {
         let b = deliver(&mut s, inbox, &raw_message("ann@example.org", "Two", ""));
         let print = rule(vec![], vec![RuleAction::Print]);
         let purge = rule(
-            vec![mailcraft_model::RuleCondition::SubjectContains(vec!["one".into()])],
+            vec![iridium_mail_model::RuleCondition::SubjectContains(vec!["one".into()])],
             vec![RuleAction::PermanentlyDelete],
         );
         s.notices.clear();
@@ -1169,7 +1169,7 @@ mod tests {
         assert!(raw.contains("Resent-To: ap@example.net\r\n"));
         assert!(raw.contains("Resent-Message-ID: <"));
         assert!(raw.contains("From: Bob <bob@example.org>"));
-        assert!(mailcraft_mime::parse(raw.as_bytes()).is_ok());
+        assert!(iridium_mail_mime::parse(raw.as_bytes()).is_ok());
     }
 
     #[test]
@@ -1280,7 +1280,7 @@ mod tests {
     fn send_rules_defer_cc_and_notify() {
         let (mut s, acc) = session();
         let mut r = rule(
-            vec![mailcraft_model::RuleCondition::SubjectContains(vec!["budget".into()])],
+            vec![iridium_mail_model::RuleCondition::SubjectContains(vec!["budget".into()])],
             vec![
                 RuleAction::DeferDelivery(10),
                 RuleAction::CcTo(vec!["Boss <boss@example.net>".into()]),
@@ -1325,7 +1325,7 @@ mod tests {
             Some("NOTIFY=SUCCESS,FAILURE; RET=HDRS")
         );
         assert_eq!(header_value(&raw, "Sensitivity").as_deref(), Some("Company-Confidential"));
-        let parsed = mailcraft_mime::parse(&raw).unwrap();
+        let parsed = iridium_mail_mime::parse(&raw).unwrap();
         let again = MailItem::from_message(&parsed, &raw, s.now());
         assert_eq!(again.cc.len(), 1);
         // Items outside an Outbox are not touched by send rules.
@@ -1395,7 +1395,7 @@ mod tests {
         let a = deliver(&mut s, inbox, &raw_message("bob@example.org", "Clearance offer", ""));
         let kept = deliver(&mut s, inbox, &raw_message("ann@example.org", "Agenda", ""));
         s.mailbox.rules = vec![rule(
-            vec![mailcraft_model::RuleCondition::SubjectContains(vec!["offer".into()])],
+            vec![iridium_mail_model::RuleCondition::SubjectContains(vec!["offer".into()])],
             vec![RuleAction::PermanentlyDelete],
         )];
         crate::sync::arrival::on_new_mail(&mut s, &[a, kept]);
@@ -1444,7 +1444,7 @@ mod tests {
     /// shows it in the New Item Alert window (the send/receive hook).
     #[test]
     fn sync_hook_runs_rules_on_new_mail_and_forwards_over_smtp() {
-        use mailcraft_testmail::{Config, TestServers};
+        use iridium_mail_testmail::{Config, TestServers};
         let srv = TestServers::start(Config {
             users: vec![
                 ("alice@example.com".into(), "alice-pw".into()),
@@ -1490,7 +1490,7 @@ mod tests {
             .messages("bob@example.org", "INBOX")
             .unwrap()
             .iter()
-            .filter_map(|m| mailcraft_mime::parse(&m.raw).ok().map(|x| x.subject()))
+            .filter_map(|m| iridium_mail_mime::parse(&m.raw).ok().map(|x| x.subject()))
             .collect();
         assert!(delivered.contains(&"FW: Ticket 42".to_owned()), "{delivered:?}");
         let outbox = s.mailbox.role_folder(acct, FolderRole::Outbox).unwrap();

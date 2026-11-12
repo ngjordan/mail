@@ -39,7 +39,7 @@ Calendar|Home > New Items > More Items|Internet Fax|-|requires a third-party int
 Calendar|Home > New Items > More Items|Choose Form...|mail.newItem
 Calendar|Home > New Items > More Items|Data File...|file.newDataFile
 Calendar|Home > Add Calendar|From Address Book...|calendar.addCalendar
-Calendar|Home > Add Calendar|From Room List...|-|room lists are directory objects MailCraft does not read (Microsoft 365 opens a room calendar by address with Open Shared Calendar)
+Calendar|Home > Add Calendar|From Room List...|-|room lists are directory objects Mail does not read (Microsoft 365 opens a room calendar by address with Open Shared Calendar)
 Calendar|Home > Add Calendar|From Internet...|calendar.addCalendar
 Calendar|Home > Add Calendar|Create New Blank Calendar...|calendar.addCalendar
 Calendar|Home > Add Calendar|Open Shared Calendar...|calendar.addCalendar
@@ -67,7 +67,7 @@ Calendar|Folder › Share|Add Calendar|calendar.addCalendar
 Calendar|Folder › Share|Share Calendar|calendar.share
 Calendar|Folder › Properties|Calendar Properties|folder.properties
 Calendar|Folder > Add Calendar|From Address Book...|calendar.addCalendar
-Calendar|Folder > Add Calendar|From Room List...|-|room lists are directory objects MailCraft does not read (Microsoft 365 opens a room calendar by address with Open Shared Calendar)
+Calendar|Folder > Add Calendar|From Room List...|-|room lists are directory objects Mail does not read (Microsoft 365 opens a room calendar by address with Open Shared Calendar)
 Calendar|Folder > Add Calendar|From Internet...|calendar.addCalendar
 Calendar|Folder > Add Calendar|Create New Blank Calendar...|calendar.addCalendar
 Calendar|Folder > Add Calendar|Open Shared Calendar...|calendar.addCalendar

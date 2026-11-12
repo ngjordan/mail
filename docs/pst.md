@@ -1,6 +1,6 @@
 # PST files
 
-MailCraft can import a PST data file (`.pst`) and open one as a data file of its own. It reads PST files
+Mail can import a PST data file (`.pst`) and open one as a data file of its own. It reads PST files
 only: it never writes or changes them.
 
 ## Importing
@@ -33,10 +33,10 @@ when something was left out.
 
 ## Opening a PST file as a data file
 
-**File › Open & Export › Open Data File...**, then pick a `.pst` file. MailCraft makes a new data file named
+**File › Open & Export › Open Data File...**, then pick a `.pst` file. Mail makes a new data file named
 after the file and imports the PST file into it, with the same folder tree. **Remove** on the data file's
 context menu closes it again, like any other data file (it is kept with the profile's closed data files and
-can be opened again). The PST file itself is not linked: changes made in MailCraft stay in MailCraft.
+can be opened again). The PST file itself is not linked: changes made in Mail stay in Mail.
 
 ## What comes across
 
@@ -51,18 +51,18 @@ can be opened again). The PST file itself is not linked: changes made in MailCra
 
 Not imported (each is listed in the report): contact groups, journal entries, attachments stored as links
 to files, attachments over 40 MB per message, and attached messages (a message forwarded as an attachment;
-the PST reader MailCraft uses cannot open them yet). Changed occurrences of a recurring series come across
+the PST reader Mail uses cannot open them yet). Changed occurrences of a recurring series come across
 as the series' pattern. Search folders are not imported.
 
-Files MailCraft refuses with a message: files that are not PST files, offline cache files, PST files of a
+Files Mail refuses with a message: files that are not PST files, offline cache files, PST files of a
 format version it does not know, and password-protected PST files (remove the password in the program that
 created the file, then import it again).
 
 ## Exporting
 
-MailCraft does not write PST files. To take mail elsewhere, export folders to MBOX, calendars to iCalendar,
+Mail does not write PST files. To take mail elsewhere, export folders to MBOX, calendars to iCalendar,
 contacts to vCard or CSV, save messages as `.eml` or `.msg` files (**File › Save As**), or keep whole folders
-in a MailCraft data file (`.mcdata`, **File › Open & Export › New Data File**).
+in a Mail data file (`.mcdata`, **File › Open & Export › New Data File**).
 
 ## Damaged and hostile files
 
@@ -71,7 +71,7 @@ damaged file that makes the reader fail can only end that process: the import st
 it had read. Inside the reader every folder and item is read under a panic guard, reads stop at a byte
 budget (a damaged index that loops is cut off), and folders, items, attachments and nesting are capped. The
 files are read with Microsoft's MIT-licensed `outlook-pst` crate, the reference reader for the public
-[MS-PST] specification; the mapping to MailCraft items follows [MS-OXCMSG], [MS-OXOCAL], [MS-OXOCNTC],
+[MS-PST] specification; the mapping to Mail items follows [MS-OXCMSG], [MS-OXOCAL], [MS-OXOCNTC],
 [MS-OXOTASK] and [MS-OXONOTE].
 
 ## Commands

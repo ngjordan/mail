@@ -4,8 +4,8 @@
 
 use std::time::Duration;
 
-use mailcraft_model::{AccountId, AccountKind};
-use mailcraft_net::ews::{BusyBlock, EwsClient, MeetingReply, OofSettings};
+use iridium_mail_model::{AccountId, AccountKind};
+use iridium_mail_net::ews::{BusyBlock, EwsClient, MeetingReply, OofSettings};
 
 use super::native::{Incoming, conn_settings};
 use crate::Session;

@@ -7,7 +7,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use mailcraft_model::{FolderRole, Security, ServerSettings};
+use iridium_mail_model::{FolderRole, Security, ServerSettings};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{NetError, Result};
@@ -772,7 +772,8 @@ pub fn imap_date(year: i64, month: u8, day: u8) -> Option<String> {
     const MONTHS: [&str; 12] =
         ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let name = MONTHS.get(usize::from(month).checked_sub(1)?)?;
-    if !(1..=9999).contains(&year) || day == 0 || day > mailcraft_model::dates::days_in_month(year, month) {
+    if !(1..=9999).contains(&year) || day == 0 || day > iridium_mail_model::dates::days_in_month(year, month)
+    {
         return None;
     }
     Some(format!("{day}-{name}-{year}"))
@@ -781,11 +782,11 @@ pub fn imap_date(year: i64, month: u8, day: u8) -> Option<String> {
 /// The UTC day `months` calendar months before the Unix time `now` (the day of month is clamped to the
 /// target month's length): the start of a "download mail from the past N months" window.
 pub fn months_before(now: i64, months: u32) -> (i64, u8, u8) {
-    let (y, m, d) = mailcraft_model::dates::civil_from_days(now.div_euclid(86_400));
+    let (y, m, d) = iridium_mail_model::dates::civil_from_days(now.div_euclid(86_400));
     let total = y.saturating_mul(12).saturating_add(i64::from(m) - 1).saturating_sub(i64::from(months));
     let year = total.div_euclid(12);
     let month = u8::try_from(total.rem_euclid(12) + 1).unwrap_or(1);
-    let day = d.min(mailcraft_model::dates::days_in_month(year, month));
+    let day = d.min(iridium_mail_model::dates::days_in_month(year, month));
     (year, month, day)
 }
 

@@ -1,13 +1,13 @@
 [package]
-name = "mailcraft-net"
-description = "MailCraft protocol clients: IMAP, SMTP submission, JMAP, OAuth 2.0 and folder sync (blocking, rustls)"
+name = "iridium-mail-net"
+description = "Mail protocol clients: IMAP, SMTP submission, JMAP, OAuth 2.0 and folder sync (blocking, rustls)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mailcraft-model.workspace = true
+iridium-mail-model.workspace = true
 thiserror.workspace = true
 base64.workspace = true
 serde.workspace = true
@@ -27,7 +27,7 @@ ipconfig.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-mailcraft-testmail.workspace = true
+iridium-mail-testmail.workspace = true
 # Self-signed certificates for scripted TLS servers in tests.
 rcgen.workspace = true
 

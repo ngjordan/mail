@@ -6,8 +6,8 @@
 
 use std::collections::BTreeMap;
 
-use mailcraft_model::account::AccountSync;
-use mailcraft_model::{
+use iridium_mail_model::account::AccountSync;
+use iridium_mail_model::{
     Account, AccountId, AccountSignatures, Category, FolderId, JunkSettings, Mailbox, QuickStep,
     RecentRecipient, Rule, Signature, ViewSettings,
 };

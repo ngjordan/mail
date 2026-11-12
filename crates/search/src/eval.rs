@@ -2,7 +2,7 @@
 //! against one [`Doc`] without an index. The index ([`crate::Index`]) gives the same answers; this path is
 //! for single items (rules, a freshly composed draft) and is the reference the index is tested against.
 
-use mailcraft_model::dates::{civil_from_days, days_from_civil, days_in_month, weekday_of_day};
+use iridium_mail_model::dates::{civil_from_days, days_from_civil, days_in_month, weekday_of_day};
 
 use crate::doc::Doc;
 use crate::fold::fold;
@@ -407,14 +407,14 @@ mod tests {
         assert_eq!(expiry_of(b"Expires: soon\r\n\r\n"), None);
         assert_eq!(expiry_of(&[0xff, 0xfe, b':', b'\n']), None);
         assert_eq!(expiry_of(b""), None);
-        let m = mailcraft_model::MailItem {
-            expires: Some(mailcraft_model::DateTime { unix: NOW, offset_min: 0 }),
+        let m = iridium_mail_model::MailItem {
+            expires: Some(iridium_mail_model::DateTime { unix: NOW, offset_min: 0 }),
             ..Default::default()
         };
         assert_eq!(Doc::from_mail(&m, None).expires, Some(NOW));
-        assert_eq!(Doc::from_mail(&mailcraft_model::MailItem::default(), None).expires, None);
+        assert_eq!(Doc::from_mail(&iridium_mail_model::MailItem::default(), None).expires, None);
         let body =
-            mailcraft_model::Body { html: Some("<p>Hello <b>there</b></p>".into()), ..Default::default() };
+            iridium_mail_model::Body { html: Some("<p>Hello <b>there</b></p>".into()), ..Default::default() };
         assert_eq!(
             Doc::from_mail(&m, Some(&body)).body.split_whitespace().collect::<Vec<_>>(),
             ["Hello", "there"]

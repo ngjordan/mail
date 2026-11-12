@@ -1,33 +1,33 @@
 //! Server copies kept across an edit: a vCard (RFC 6350 / 2426) or iCalendar object (RFC 5545) that came
-//! from a CardDAV / CalDAV server holds more than MailCraft models (properties it does not read, a fourth
-//! e-mail address, extra alarms, attachments by URI, other clients' `X-` properties). When MailCraft uploads
+//! from a CardDAV / CalDAV server holds more than Mail models (properties it does not read, a fourth
+//! e-mail address, extra alarms, attachments by URI, other clients' `X-` properties). When Mail uploads
 //! its own copy of an edited item, it starts from the server's copy instead and replaces only what changed:
 //!
 //! - `server`: the copy last read from the server (as [`kept_calendar`] / [`kept_card`] keep it);
-//! - `base`: what MailCraft writes for that copy as it read it;
-//! - `mine`: what MailCraft writes for the item now.
+//! - `base`: what Mail writes for that copy as it read it;
+//! - `mine`: what Mail writes for the item now.
 //!
-//! A part MailCraft writes the same in `base` and `mine` was not changed here, so the server's lines for it
-//! go back as they were (with whatever MailCraft does not model about them); a changed part takes
-//! MailCraft's lines; a part only the server has is kept.
+//! A part Mail writes the same in `base` and `mine` was not changed here, so the server's lines for it
+//! go back as they were (with whatever Mail does not model about them); a changed part takes
+//! Mail's lines; a part only the server has is kept.
 //!
 //! - Cards are merged by contact field: every line the reader takes a field from is that field's, whatever
 //!   its name (`X-EVOLUTION-SPOUSE`, `X-MS-SPOUSE`, `RELATED;TYPE=spouse` are all the spouse), so a changed
 //!   field replaces all of them and no other client keeps showing the old value. In lists, only the lines
 //!   read are the field's: a fourth e-mail address, a second web page or a `RELATED;TYPE=child` stays when
-//!   the ones MailCraft shows are edited. MailCraft's lines go where the server's first line of the field
+//!   the ones Mail shows are edited. Mail's lines go where the server's first line of the field
 //!   was, so the card reads the same here and elsewhere.
 //! - Calendar components are merged by property name. Start, end, duration and due change together, and so
 //!   do the recurrence rule, dates and exceptions, so a kept part never contradicts a changed one. The
-//!   organizer and attendees are always MailCraft's when it writes any (they say SCHEDULE-AGENT=CLIENT, RFC
-//!   6638: MailCraft mails invitations, the server must not); attendees of an item MailCraft does not model
-//!   them for stay, marked SCHEDULE-AGENT=CLIENT. Sub-components (alarms) are kept when MailCraft's are
+//!   organizer and attendees are always Mail's when it writes any (they say SCHEDULE-AGENT=CLIENT, RFC
+//!   6638: Mail mails invitations, the server must not); attendees of an item Mail does not model
+//!   them for stay, marked SCHEDULE-AGENT=CLIENT. Sub-components (alarms) are kept when Mail's are
 //!   unchanged; time zone definitions are merged by TZID; the events and tasks of a calendar object are
 //!   matched by component name and RECURRENCE-ID instant. Inline files of an event are the item's own
-//!   (MailCraft holds them), plus the server's inline files it did not take (over its limits) and files by
+//!   (Mail holds them), plus the server's inline files it did not take (over its limits) and files by
 //!   URI.
 //!
-//! Stamps (`DTSTAMP`, `LAST-MODIFIED`, `REV`, `PRODID`, `VERSION`) are always MailCraft's. Every step groups
+//! Stamps (`DTSTAMP`, `LAST-MODIFIED`, `REV`, `PRODID`, `VERSION`) are always Mail's. Every step groups
 //! lines and components by name once, so a merge takes time in proportion to the size of the copies.
 
 use std::collections::{HashMap, HashSet};
@@ -37,17 +37,17 @@ use crate::ics::parse::{self, Component};
 use crate::ics::tz::{TimeZone, Zones};
 use crate::text::ContentLine;
 
-/// Largest server copy kept (bytes); a larger one is not kept (the item then goes up as MailCraft writes it).
+/// Largest server copy kept (bytes); a larger one is not kept (the item then goes up as Mail writes it).
 pub const MAX_KEPT_BYTES: usize = crate::ics::MAX_ICS_BYTES;
 
 /// Components of a calendar object matched one to one by RECURRENCE-ID.
 const INSTANCES: [&str; 3] = ["VEVENT", "VTODO", "VJOURNAL"];
 
-/// Properties that change together: when one of a group changed, MailCraft's lines are used for all.
+/// Properties that change together: when one of a group changed, Mail's lines are used for all.
 const UNITS: [&[&str]; 2] =
     [&["DTSTART", "DTEND", "DURATION", "DUE"], &["RRULE", "RDATE", "EXDATE", "EXRULE"]];
 
-/// Properties always written as MailCraft has them.
+/// Properties always written as Mail has them.
 const STAMPS: [&str; 5] = ["DTSTAMP", "LAST-MODIFIED", "REV", "PRODID", "VERSION"];
 
 /// The people of a scheduled item (RFC 6638 implicit scheduling acts on them).
@@ -218,7 +218,7 @@ pub fn patch_card(server: &str, base: &str, mine: &str) -> Option<String> {
             out.push(line.clone());
         }
     }
-    // What MailCraft changed or added that the server's card has no line for.
+    // What Mail changed or added that the server's card has no line for.
     let on_server: HashSet<&Key<'_>> = sk.iter().collect();
     for (line, k) in m.props.iter().zip(&mk) {
         if !done.contains(k) && !on_server.contains(k) && take_mine(k) {
@@ -254,7 +254,7 @@ pub fn card_version(server: &str) -> crate::vcf::Version {
 }
 
 /// The iCalendar object to upload: `mine` rebuilt on the server's object (see the module docs). `None` when
-/// the server copy has no VCALENDAR or MailCraft's copy none: upload `mine` then. `local_offset_min` places
+/// the server copy has no VCALENDAR or Mail's copy none: upload `mine` then. `local_offset_min` places
 /// floating RECURRENCE-ID times, as when reading.
 pub fn patch_calendar(server: &str, base: &str, mine: &str, local_offset_min: i32) -> Option<String> {
     let server_top = parse::parse(server);
@@ -300,7 +300,7 @@ pub fn patch_calendar(server: &str, base: &str, mine: &str, local_offset_min: i3
             None => cal.children.push(mc.clone()),
         }
     }
-    // Server instances MailCraft did not read (another UID, more than it keeps) go back; the ones it read
+    // Server instances Mail did not read (another UID, more than it keeps) go back; the ones it read
     // and no longer has were deleted here.
     for (k, i) in &sk {
         if mine_keys.contains(k.as_str()) || base_at.contains_key(k.as_str()) {
@@ -387,12 +387,12 @@ fn merge_props(server: &Component, base: &Component, mine: &Component) -> Vec<Co
     };
     let changed = |n: &str| b.get(n).unwrap_or(&empty) != m.get(n).unwrap_or(&empty);
     let instance = INSTANCES.contains(&mine.name.as_str());
-    // MailCraft models the people of this item: its lines (with SCHEDULE-AGENT=CLIENT) are the ones to send.
+    // Mail models the people of this item: its lines (with SCHEDULE-AGENT=CLIENT) are the ones to send.
     let people_here = PEOPLE.iter().any(|n| b.contains_key(n) || m.contains_key(n));
     let mut out: Vec<ContentLine> = Vec::new();
     for n in prop_names(server, mine) {
         if n == "ATTACH" && mine.name == "VEVENT" {
-            // The item's files, then the server's that MailCraft did not take (kept copies hold no others).
+            // The item's files, then the server's that Mail did not take (kept copies hold no others).
             out.extend(of(&m, n));
             out.extend(of(&s, n));
         } else if instance && PEOPLE.contains(&n) {
@@ -430,8 +430,8 @@ fn children_by_name<'a>(
     (order, out)
 }
 
-/// Sub-components passing `pick`, by name: time zones merged by TZID (MailCraft's, then the server's other
-/// definitions), others the server's when MailCraft's are unchanged since `base`, else MailCraft's.
+/// Sub-components passing `pick`, by name: time zones merged by TZID (Mail's, then the server's other
+/// definitions), others the server's when Mail's are unchanged since `base`, else Mail's.
 fn merge_children(
     server: &Component,
     base: &Component,

@@ -54,7 +54,7 @@ pub enum Effect {
     Exposed,
     /// Stored and shown; nothing reads it yet.
     Stored,
-    /// Not applicable to MailCraft (cloud services, Office-wide options); kept so the page is complete.
+    /// Not applicable to Mail (cloud services, Office-wide options); kept so the page is complete.
     NotApplicable,
 }
 
@@ -311,20 +311,20 @@ const QAT_POSITION: &[(&str, &str)] = &[("above", "Above Ribbon"), ("below", "Be
 const AUTO_ARCHIVE_ACTION: &[(&str, &str)] =
     &[("move", "Move old items to the archive folder"), ("delete", "Permanently delete old items")];
 
-/// Every setting. Labels name the feature (MailCraft wording); the order is the page order of the window.
+/// Every setting. Labels name the feature (Mail wording); the order is the page order of the window.
 pub const DEFS: &[Def] = &[
     // ---------------------------------------------------------------- General
     d(
         "general",
         "Cloud storage options",
         "general.cloudSettings",
-        "Store my MailCraft settings in the cloud",
+        "Store my Mail settings in the cloud",
         Bool(false),
         N,
     ),
-    // N: MailCraft always lays itself out again at each display's scale, keeping its physical size (egui and
+    // N: Mail always lays itself out again at each display's scale, keeping its physical size (egui and
     // winit are per-monitor scale aware). "Optimize for compatibility" asks the system to stretch a bitmap
-    // drawn at one scale instead; MailCraft has no such mode, and shrinking or growing the UI is not one.
+    // drawn at one scale instead; Mail has no such mode, and shrinking or growing the UI is not one.
     d(
         "general",
         "User Interface options",
@@ -350,11 +350,11 @@ pub const DEFS: &[Def] = &[
         Choice("descriptions", SCREEN_TIPS),
         E,
     ),
-    d("general", "Personalize your copy of MailCraft", "general.userName", "User name:", Text("", 128), A),
-    d("general", "Personalize your copy of MailCraft", "general.initials", "Initials:", Text("", 16), E),
+    d("general", "Personalize your copy of Mail", "general.userName", "User name:", Text("", 128), A),
+    d("general", "Personalize your copy of Mail", "general.initials", "Initials:", Text("", 16), E),
     d(
         "general",
-        "Personalize your copy of MailCraft",
+        "Personalize your copy of Mail",
         "general.alwaysUseValues",
         "Always use these values regardless of sign in",
         Bool(false),
@@ -362,22 +362,22 @@ pub const DEFS: &[Def] = &[
     ),
     d(
         "general",
-        "Personalize your copy of MailCraft",
+        "Personalize your copy of Mail",
         "general.background",
         "Background:",
         Choice("none", BACKGROUNDS),
         A,
     ),
-    d("general", "Personalize your copy of MailCraft", "general.theme", "Theme:", Choice("light", THEMES), A),
+    d("general", "Personalize your copy of Mail", "general.theme", "Theme:", Choice("light", THEMES), A),
     d(
         "general",
-        "Personalize your copy of MailCraft",
+        "Personalize your copy of Mail",
         "general.keepMessageBackground",
         "Never change the message background color",
         Bool(false),
         A,
     ),
-    d("general", "Start up options", "general.startup", "When MailCraft opens:", Choice("ask", STARTUP), S),
+    d("general", "Start up options", "general.startup", "When Mail opens:", Choice("ask", STARTUP), S),
     d(
         "general",
         "Attachment options",
@@ -1110,7 +1110,7 @@ pub const DEFS: &[Def] = &[
         Choice("hijri", ALT_CALENDARS),
         A,
     ),
-    // N: MailCraft always sends meeting requests as iCalendar (RFC 5545/5546); the other choice is a
+    // N: Mail always sends meeting requests as iCalendar (RFC 5545/5546); the other choice is a
     // proprietary rich-text encoding it does not write.
     d(
         "calendar",
@@ -1477,7 +1477,7 @@ pub const DEFS: &[Def] = &[
         "At least one recipient prefers accessible content",
         Bool(true),
         // N: a recipient's accessible-content preference is published by a cloud directory service;
-        // MailCraft has no source for it.
+        // Mail has no source for it.
         N,
     ),
     d(
@@ -1512,7 +1512,7 @@ pub const DEFS: &[Def] = &[
         Bool(true),
         A,
     ),
-    // N: MailCraft has no audio output (no sound library in its dependencies), so feedback sounds cannot play.
+    // N: Mail has no audio output (no sound library in its dependencies), so feedback sounds cannot play.
     d(
         "accessibility",
         "Feedback options",
@@ -1547,14 +1547,14 @@ pub const DEFS: &[Def] = &[
         A,
     ),
     // ---------------------------------------------------------------- Advanced
-    d("advanced", "MailCraft panes", "advanced.showApps", "Show Apps in MailCraft", Bool(true), N),
-    v("advanced", "MailCraft panes", "view.favorites", "Show Favorites in the folder pane", Bool(true)),
-    v("advanced", "MailCraft panes", "view.statusBar", "Show the status bar", Bool(true)),
+    d("advanced", "Mail panes", "advanced.showApps", "Show Apps in Mail", Bool(true), N),
+    v("advanced", "Mail panes", "view.favorites", "Show Favorites in the folder pane", Bool(true)),
+    v("advanced", "Mail panes", "view.statusBar", "Show the status bar", Bool(true)),
     d(
         "advanced",
         "Start and exit",
         "advanced.startFolder",
-        "Start MailCraft in this folder (empty = Inbox):",
+        "Start Mail in this folder (empty = Inbox):",
         Text("", 512),
         A,
     ),
@@ -1562,7 +1562,7 @@ pub const DEFS: &[Def] = &[
         "advanced",
         "Start and exit",
         "advanced.emptyDeletedOnExit",
-        "Empty Deleted Items folders when exiting MailCraft",
+        "Empty Deleted Items folders when exiting Mail",
         Bool(false),
         A,
     ),
@@ -1646,13 +1646,13 @@ pub const DEFS: &[Def] = &[
         Choice("desktop", OPEN_FILES),
         N,
     ),
-    // N: links always open in the system's default browser, the only choice MailCraft has (the other
+    // N: links always open in the system's default browser, the only choice Mail has (the other
     // observed choice names one vendor's browser).
     d(
         "advanced",
         "File and browser preferences",
         "advanced.openLinksIn",
-        "Open hyperlinks from MailCraft in:",
+        "Open hyperlinks from Mail in:",
         Choice("default", OPEN_LINKS),
         N,
     ),
@@ -1682,7 +1682,7 @@ pub const DEFS: &[Def] = &[
         Bool(false),
         A,
     ),
-    // N: MailCraft has no RSS feeds.
+    // N: Mail has no RSS feeds.
     d(
         "advanced",
         "RSS Feeds",
@@ -1816,7 +1816,7 @@ pub const DEFS: &[Def] = &[
         "advanced",
         "Other",
         "advanced.logging",
-        "Enable troubleshooting logging (requires restarting MailCraft)",
+        "Enable troubleshooting logging (requires restarting Mail)",
         Bool(false),
         A,
     ),
@@ -1886,7 +1886,7 @@ pub const DEFS: &[Def] = &[
         Bool(false),
         A,
     ),
-    // Email Security: S/MIME defaults for new messages (smime.rs). Labels are MailCraft's own.
+    // Email Security: S/MIME defaults for new messages (smime.rs). Labels are Mail's own.
     d(
         "trustCenter",
         "Email Security",
@@ -2424,30 +2424,30 @@ impl Settings {
     }
 
     /// Mail › Compose messages in this format.
-    pub fn compose_format(&self) -> mailcraft_model::BodyFormat {
+    pub fn compose_format(&self) -> iridium_mail_model::BodyFormat {
         match self.text("mail.compose.defaultFormat").as_str() {
-            "plain" => mailcraft_model::BodyFormat::PlainText,
-            "rich" => mailcraft_model::BodyFormat::RichText,
-            _ => mailcraft_model::BodyFormat::Html,
+            "plain" => iridium_mail_model::BodyFormat::PlainText,
+            "rich" => iridium_mail_model::BodyFormat::RichText,
+            _ => iridium_mail_model::BodyFormat::Html,
         }
     }
 
     /// Mail › Default Importance level.
-    pub fn default_importance(&self) -> mailcraft_model::Importance {
+    pub fn default_importance(&self) -> iridium_mail_model::Importance {
         match self.text("mail.send.defaultImportance").as_str() {
-            "low" => mailcraft_model::Importance::Low,
-            "high" => mailcraft_model::Importance::High,
-            _ => mailcraft_model::Importance::Normal,
+            "low" => iridium_mail_model::Importance::Low,
+            "high" => iridium_mail_model::Importance::High,
+            _ => iridium_mail_model::Importance::Normal,
         }
     }
 
     /// Mail › Default Sensitivity level.
-    pub fn default_sensitivity(&self) -> mailcraft_model::Sensitivity {
+    pub fn default_sensitivity(&self) -> iridium_mail_model::Sensitivity {
         match self.text("mail.send.defaultSensitivity").as_str() {
-            "personal" => mailcraft_model::Sensitivity::Personal,
-            "private" => mailcraft_model::Sensitivity::Private,
-            "confidential" => mailcraft_model::Sensitivity::Confidential,
-            _ => mailcraft_model::Sensitivity::Normal,
+            "personal" => iridium_mail_model::Sensitivity::Personal,
+            "private" => iridium_mail_model::Sensitivity::Private,
+            "confidential" => iridium_mail_model::Sensitivity::Confidential,
+            _ => iridium_mail_model::Sensitivity::Normal,
         }
     }
 
@@ -2488,12 +2488,12 @@ impl Settings {
     }
 
     /// Mail › Save messages › "Save to this folder": the folder unsent items are saved to.
-    pub fn draft_folder_role(&self) -> mailcraft_model::FolderRole {
+    pub fn draft_folder_role(&self) -> iridium_mail_model::FolderRole {
         match self.text("mail.save.folder").as_str() {
-            "inbox" => mailcraft_model::FolderRole::Inbox,
-            "sentItems" => mailcraft_model::FolderRole::SentItems,
-            "outbox" => mailcraft_model::FolderRole::Outbox,
-            _ => mailcraft_model::FolderRole::Drafts,
+            "inbox" => iridium_mail_model::FolderRole::Inbox,
+            "sentItems" => iridium_mail_model::FolderRole::SentItems,
+            "outbox" => iridium_mail_model::FolderRole::Outbox,
+            _ => iridium_mail_model::FolderRole::Drafts,
         }
     }
 
@@ -2560,10 +2560,10 @@ pub struct CleanUpOptions {
 impl CleanUpOptions {
     /// Whether these options keep `m` in place whatever its conversation holds (unread, categorized,
     /// flagged or digitally signed, as ticked). `signed` says whether `m` carries a signature part.
-    pub fn keeps(&self, m: &mailcraft_model::MailItem, signed: bool) -> bool {
+    pub fn keeps(&self, m: &iridium_mail_model::MailItem, signed: bool) -> bool {
         (self.keep_unread && !m.read)
             || (self.keep_categorized && !m.categories.is_empty())
-            || (self.keep_flagged && m.flag != mailcraft_model::FlagState::None)
+            || (self.keep_flagged && m.flag != iridium_mail_model::FlagState::None)
             || (self.keep_signed && signed)
     }
 }
@@ -2861,9 +2861,9 @@ mod tests {
         assert_eq!(s.auto_save_minutes(), Some(3));
         s.set("mail.save.autoSave", &json!(false)).unwrap();
         assert_eq!(s.auto_save_minutes(), None);
-        assert_eq!(s.draft_folder_role(), mailcraft_model::FolderRole::Drafts);
+        assert_eq!(s.draft_folder_role(), iridium_mail_model::FolderRole::Drafts);
         s.set("mail.save.folder", &json!("sentItems")).unwrap();
-        assert_eq!(s.draft_folder_role(), mailcraft_model::FolderRole::SentItems);
+        assert_eq!(s.draft_folder_role(), iridium_mail_model::FolderRole::SentItems);
         assert_eq!(s.expire_days(), None);
         s.set("mail.send.expire", &json!(true)).unwrap();
         s.set("mail.send.expireDays", &json!(7)).unwrap();
@@ -2879,7 +2879,7 @@ mod tests {
         assert!(
             o.folder.is_empty() && !o.keep_unread && o.keep_categorized && o.keep_flagged && o.keep_signed
         );
-        let mut m = mailcraft_model::MailItem { read: true, ..Default::default() };
+        let mut m = iridium_mail_model::MailItem { read: true, ..Default::default() };
         assert!(!o.keeps(&m, false));
         assert!(o.keeps(&m, true), "signed");
         m.categories = vec!["Red".into()];

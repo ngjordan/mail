@@ -4,10 +4,10 @@
 //!
 //! Days are civil day numbers (days since 1970-01-01, local time); minutes count from local midnight.
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::{Color, Rect};
-use mailcraft_layout::DisplayItem;
-use mailcraft_model::dates::{civil_from_days, days_from_civil, days_in_month, weekday_of_day};
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::{Color, Rect};
+use iridium_mail_layout::DisplayItem;
+use iridium_mail_model::dates::{civil_from_days, days_from_civil, days_in_month, weekday_of_day};
 
 use super::text::{self, Style};
 use super::{Frame, GRID, MAX_PAGES, SHADE, hrule, line};

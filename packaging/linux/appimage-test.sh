@@ -2,13 +2,13 @@
 # Runs packaging/linux/appimage-smoke.sh on an AppImage inside a plain Ubuntu 22.04 container without
 # network (packaging/linux/appimage-test/Containerfile), with podman or docker.
 #
-#     packaging/linux/appimage-test.sh [--timeout SECONDS] [--settle SECONDS] [--self-test] <MailCraft-ARCH.AppImage>
+#     packaging/linux/appimage-test.sh [--timeout SECONDS] [--settle SECONDS] [--self-test] <Mail-ARCH.AppImage>
 #
 #   --self-test  also prove that the smoke test catches what it is meant to catch: it must fail when the
 #                app exits a moment after its window appears, and when a bundled library is taken from the
 #                system instead of the AppImage (libXext.so.6, which the test image has).
 #
-# The image (mailcraft-appimage-test) is built on first use, which needs network; the test itself runs with
+# The image (iridium-mail-appimage-test) is built on first use, which needs network; the test itself runs with
 # --network none. The container's architecture is the host's, so test the AppImage of the host
 # architecture. Set CONTAINER=docker or CONTAINER=podman to pick the engine (default: podman if installed).
 set -euo pipefail
@@ -39,7 +39,7 @@ if [ -z "$engine" ]; then
 fi
 command -v "$engine" >/dev/null 2>&1 || mc_die "$engine not found (install podman or docker)"
 
-tag="mailcraft-appimage-test"
+tag="iridium-mail-appimage-test"
 kit="$MC_ROOT/packaging/linux/appimage-test"
 mc_log "$engine build $tag"
 if ! build_log="$("$engine" build -q -t "$tag" -f "$kit/Containerfile" "$kit" 2>&1)"; then
@@ -70,13 +70,13 @@ cp /test/app.AppImage "$TMPDIR/real.AppImage"
 chmod 0755 "$TMPDIR/real.AppImage"
 "$TMPDIR/real.AppImage" &
 for _ in $(seq 1 120); do
-	[ -n "$(xdotool search --onlyvisible --name MailCraft 2>/dev/null)" ] && break
+	[ -n "$(xdotool search --onlyvisible --name Mail 2>/dev/null)" ] && break
 	sleep 0.5
 done
 sleep 1
 for p in /proc/[0-9]*; do
 	case "$(readlink "$p/exe" 2>/dev/null)" in
-	*/usr/bin/mailcraft) kill -KILL "${p#/proc/}" ;;
+	*/usr/bin/iridium-mail) kill -KILL "${p#/proc/}" ;;
 	esac
 done
 wait

@@ -2,14 +2,14 @@
 //! published to a WebDAV server: everything here except the network (the native worker side is
 //! `sync/dav.rs`).
 //!
-//! **Mapping.** An account's DAV settings ([`mailcraft_model::DavSettings`]) name the server; send/receive
+//! **Mapping.** An account's DAV settings ([`iridium_mail_model::DavSettings`]) name the server; send/receive
 //! discovers its address books, task lists and calendars. The account's Contacts folder takes the first
 //! address book, its Tasks folder the first task list and its Calendar the first calendar of events; further
 //! collections get folders of their own below them. The mapping (collection URL and the ETags seen at the
 //! last synchronisation) lives in `AccountSync::dav`.
 //!
 //! **Items.** A synchronised contact or task carries a [`RemoteRef`]: resource URL, ETag, UID and the
-//! fingerprint of the item as last synchronised. The fingerprint is a hash of the vCard / VTODO MailCraft
+//! fingerprint of the item as last synchronised. The fingerprint is a hash of the vCard / VTODO Mail
 //! writes for the item, so an edit of anything the server keeps marks it changed; local-only details (a
 //! contact's follow-up flag, a task's link to the mail it came from) do not.
 //!
@@ -39,11 +39,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use mailcraft_formats::ics::{self, ImportOptions};
-use mailcraft_formats::{keep, vcf};
-use mailcraft_model::account::{DavFolderState, normalize_url_path};
-use mailcraft_model::task::TaskRecurrence;
-use mailcraft_model::{
+use iridium_mail_formats::ics::{self, ImportOptions};
+use iridium_mail_formats::{keep, vcf};
+use iridium_mail_model::account::{DavFolderState, normalize_url_path};
+use iridium_mail_model::task::TaskRecurrence;
+use iridium_mail_model::{
     AccountId, Appointment, Contact, DateTime, Folder, FolderId, FolderKind, FolderRole, ItemId, Mailbox,
     RemoteRef, Task,
 };
@@ -108,7 +108,7 @@ impl PimKind {
         }
     }
     /// Whether the account's DAV settings turn this kind on.
-    pub fn enabled(self, d: &mailcraft_model::DavSettings) -> bool {
+    pub fn enabled(self, d: &iridium_mail_model::DavSettings) -> bool {
         match self {
             PimKind::Contacts => d.contacts,
             PimKind::Tasks => d.tasks,
@@ -135,12 +135,12 @@ fn clean_uid(uid: &str) -> String {
     uid.chars().filter(|c| c.is_ascii_graphic() && !matches!(c, ';' | ':' | ',' | '\\')).take(200).collect()
 }
 
-/// The contact as the vCard 4.0 MailCraft uploads (with `uid`, when given).
+/// The contact as the vCard 4.0 Mail uploads (with `uid`, when given).
 pub fn contact_card(c: &Contact, uid: &str) -> String {
     contact_card_as(c, uid, vcf::Version::V4)
 }
 
-/// The task as the iCalendar object (one VTODO) MailCraft uploads.
+/// The task as the iCalendar object (one VTODO) Mail uploads.
 pub fn task_calendar(t: &Task, uid: &str, now: DateTime) -> String {
     let mut plain = t.clone();
     plain.remote = None;
@@ -175,8 +175,8 @@ fn contact_card_as(c: &Contact, uid: &str, version: vcf::Version) -> String {
 }
 
 /// The vCard uploaded for a changed contact: [`contact_card`], rebuilt on the server's copy (`server`, as
-/// kept) so what MailCraft does not model goes back unchanged ([`mailcraft_formats::keep`]). The rebuilt
-/// card is used only when it reads back exactly as MailCraft's own card does.
+/// kept) so what Mail does not model goes back unchanged ([`iridium_mail_formats::keep`]). The rebuilt
+/// card is used only when it reads back exactly as Mail's own card does.
 pub fn upload_contact(c: &Contact, uid: &str, server: Option<&str>) -> String {
     let mine = contact_card(c, uid);
     let Some(raw) = server else { return mine };
@@ -290,10 +290,10 @@ fn groups_by_lead(mb: &Mailbox, folder: FolderId) -> BTreeMap<ItemId, Vec<ItemId
     event_groups(mb, folder).into_iter().map(|g| (g.lead, g.members)).collect()
 }
 
-/// The iCalendar object MailCraft uploads for a group of appointments (all under `uid`): the series first,
+/// The iCalendar object Mail uploads for a group of appointments (all under `uid`): the series first,
 /// then its exceptions. An instance the group overrides is not also an EXDATE of the series (RFC 5545:
 /// RECURRENCE-ID names an instance of the set). Organizer and attendees say the client schedules
-/// (SCHEDULE-AGENT=CLIENT): MailCraft mails the invitations, so the server must not send its own.
+/// (SCHEDULE-AGENT=CLIENT): Mail mails the invitations, so the server must not send its own.
 pub fn event_calendar(items: &[&Appointment], uid: &str, now: DateTime) -> String {
     stored_events(items, uid, now, false)
 }
@@ -398,7 +398,7 @@ pub fn read_task(data: &str, tz_offset_min: i32) -> Option<(Task, String)> {
 /// A new UID for an item first uploaded from here.
 fn new_uid(account: AccountId, id: ItemId, now: i64) -> String {
     let h = fnv(format!("{}:{}:{now}", account.0, id.0).as_bytes());
-    format!("mailcraft-{h:016x}-{}", id.0)
+    format!("iridium-mail-{h:016x}-{}", id.0)
 }
 
 /// Longest resource name made from a UID (before the extension).
@@ -544,7 +544,7 @@ pub fn web_origin(url: &str) -> Option<String> {
     }
 }
 
-/// Origin and path of an address MailCraft stored (a link, a known resource, a collection). Stored addresses
+/// Origin and path of an address Mail stored (a link, a known resource, a collection). Stored addresses
 /// have no query, so a `?` or `#` there is part of the path.
 fn split_stored(url: &str) -> Option<(String, &str)> {
     let url = url.trim();
@@ -618,7 +618,7 @@ pub fn stored_inside(url: &str, collection: &str) -> bool {
 /// Which contacts and tasks server (and login) an account's DAV links belong to: the server address in a
 /// comparable form (origin, path without its trailing `/`) and the user name it signs in with. `None` when
 /// the account has no such server. Links survive any settings change that keeps this.
-pub(crate) fn dav_identity(a: &mailcraft_model::Account) -> Option<(String, String)> {
+pub(crate) fn dav_identity(a: &iridium_mail_model::Account) -> Option<(String, String)> {
     let d = a.dav.as_ref()?;
     let url = d.url.trim();
     let origin = web_origin(url)?;
@@ -738,7 +738,7 @@ pub struct PublishJob {
     pub fingerprint: u64,
     /// Remove the published file instead.
     pub withdraw: bool,
-    /// ETag of the file as MailCraft last wrote it (empty: never written). Writes and removals are
+    /// ETag of the file as Mail last wrote it (empty: never written). Writes and removals are
     /// conditional on it, so a file someone else put at the address is never replaced or removed.
     pub etag: String,
 }
@@ -846,8 +846,9 @@ pub fn is_ews_url(url: &str) -> bool {
 }
 
 /// True when `a` keeps `kind` on its Exchange server: an Exchange account whose settings name no DAV server.
-pub fn via_ews(a: &mailcraft_model::Account, _kind: PimKind) -> bool {
-    a.kind == mailcraft_model::AccountKind::Exchange && a.dav.as_ref().is_none_or(|d| d.url.trim().is_empty())
+pub fn via_ews(a: &iridium_mail_model::Account, _kind: PimKind) -> bool {
+    a.kind == iridium_mail_model::AccountKind::Exchange
+        && a.dav.as_ref().is_none_or(|d| d.url.trim().is_empty())
 }
 
 /// What became of a meeting answer sent to Microsoft Graph ([`PimEvent::GraphResponded`]).
@@ -878,8 +879,8 @@ pub fn is_graph_url(url: &str) -> bool {
 
 /// True when `a` keeps `kind` on Microsoft Graph: a Graph account whose settings name no DAV server (one
 /// with a DAV server keeps using it).
-pub fn via_graph(a: &mailcraft_model::Account, _kind: PimKind) -> bool {
-    a.kind == mailcraft_model::AccountKind::Graph && a.dav.as_ref().is_none_or(|d| d.url.trim().is_empty())
+pub fn via_graph(a: &iridium_mail_model::Account, _kind: PimKind) -> bool {
+    a.kind == iridium_mail_model::AccountKind::Graph && a.dav.as_ref().is_none_or(|d| d.url.trim().is_empty())
 }
 
 /// The protocol a collection address belongs to: 1 JMAP, 2 Exchange, 3 Microsoft Graph, 0 WebDAV.
@@ -899,19 +900,19 @@ fn protocol_of(url: &str) -> u8 {
 /// name no DAV server. An account with a DAV server keeps using it (its folders stay linked to what they
 /// synchronised with, and nothing is uploaded a second time where JMAP and DAV share one store); clearing
 /// the DAV server moves Contacts and Calendar to JMAP.
-pub fn via_jmap(a: &mailcraft_model::Account, kind: PimKind) -> bool {
+pub fn via_jmap(a: &iridium_mail_model::Account, kind: PimKind) -> bool {
     let offered = match kind {
         PimKind::Contacts => a.sync.jmap_contacts,
         PimKind::Calendar => a.sync.jmap_calendars,
         PimKind::Tasks => false,
     };
-    a.kind == mailcraft_model::AccountKind::Jmap
+    a.kind == iridium_mail_model::AccountKind::Jmap
         && offered
         && a.dav.as_ref().is_none_or(|d| d.url.trim().is_empty())
 }
 
 /// True when `a` synchronises `kind` at all (over JMAP or with its DAV server).
-pub fn kind_on(a: &mailcraft_model::Account, kind: PimKind) -> bool {
+pub fn kind_on(a: &iridium_mail_model::Account, kind: PimKind) -> bool {
     via_jmap(a, kind)
         || via_ews(a, kind)
         || via_graph(a, kind)
@@ -1441,7 +1442,7 @@ fn server_contact(new: Contact, old: &Contact, graph: bool) -> Contact {
 /// while the status stays what it is here, so does the percentage complete.
 fn server_task(new: Task, old: &Task, graph: bool) -> Task {
     let mut t = merged_task(new, Some(old));
-    if graph && t.status == old.status && t.status != mailcraft_model::task::TaskStatus::Completed {
+    if graph && t.status == old.status && t.status != iridium_mail_model::task::TaskStatus::Completed {
         t.percent_complete = old.percent_complete;
     }
     t
@@ -1549,7 +1550,7 @@ fn apply_folder(s: &mut Session, account: AccountId, out: FolderOutcome) {
         PimKind::Contacts | PimKind::Tasks => BTreeMap::new(),
     };
     for inc in out.incoming {
-        // What MailCraft does not model of the server copy goes back with the next upload of the item.
+        // What Mail does not model of the server copy goes back with the next upload of the item.
         let raw = kept(kind, &inc.data);
         // Microsoft Graph holds only some of an item's properties: the rest stays as it is here.
         let graph = is_graph_url(&inc.url);
@@ -1855,7 +1856,7 @@ fn published(
     use crate::cmd::calendar::props;
     let mut p = props::read(&s.mailbox, folder);
     let name = s.mailbox.folder(folder).map(|f| f.name.clone()).unwrap_or_default();
-    let this = |x: &mailcraft_model::calendar::Publication| x.url == url && x.account == account;
+    let this = |x: &iridium_mail_model::calendar::Publication| x.url == url && x.account == account;
     if withdrawn {
         let stopped = p.publication.as_ref().is_some_and(|x| x.withdraw && this(x));
         match result {
@@ -2037,7 +2038,7 @@ mod tests {
             ..Default::default()
         };
         let fp = contact_fingerprint(&c);
-        let flag = mailcraft_model::FlagState::Flagged {
+        let flag = iridium_mail_model::FlagState::Flagged {
             label: "Follow up".into(),
             start: None,
             due: None,
@@ -2101,9 +2102,9 @@ mod tests {
         assert_eq!(web_origin("ftp://dav.example.com/"), None);
         assert_eq!(web_origin("https://:443/"), None);
         assert_eq!(web_origin("https://h.example.com:x/"), None);
-        let mut a = mailcraft_model::Account {
+        let mut a = iridium_mail_model::Account {
             address: "pat@example.com".into(),
-            dav: Some(mailcraft_model::account::DavSettings {
+            dav: Some(iridium_mail_model::account::DavSettings {
                 url: "https://DAV.example.com/dav/".into(),
                 ..Default::default()
             }),
@@ -2197,7 +2198,7 @@ mod tests {
             }
             folder_job(s, account, folder, PimKind::Contacts).collection
         };
-        use mailcraft_model::AccountKind::{Exchange, Graph};
+        use iridium_mail_model::AccountKind::{Exchange, Graph};
         assert_eq!(collection_for(&mut s, Exchange, &ews), Some(ews.clone()));
         assert_eq!(collection_for(&mut s, Exchange, &graph), None, "a Graph link is not Exchange's");
         assert_eq!(collection_for(&mut s, Exchange, &dav), None);
@@ -2217,7 +2218,7 @@ mod tests {
         let tasks = s.mailbox.role_folder(account, FolderRole::Tasks).unwrap();
         let old = "https://dav.example.com/c/";
         if let Some(a) = s.mailbox.accounts.iter_mut().find(|a| a.id == account) {
-            a.kind = mailcraft_model::AccountKind::Jmap;
+            a.kind = iridium_mail_model::AccountKind::Jmap;
             a.dav = None;
             a.sync.jmap_contacts = true;
             a.sync.dav.insert(folder, DavFolderState { collection: old.into(), ..Default::default() });
@@ -2259,7 +2260,7 @@ mod tests {
 
         // A DAV server in the settings keeps the account on DAV.
         if let Some(a) = s.mailbox.accounts.iter_mut().find(|a| a.id == account) {
-            a.dav = Some(mailcraft_model::DavSettings {
+            a.dav = Some(iridium_mail_model::DavSettings {
                 url: "https://dav.example.com/".into(),
                 contacts: true,
                 ..Default::default()
@@ -2283,7 +2284,7 @@ mod tests {
 
     #[test]
     fn publish_results_apply_to_the_publication_they_were_for() {
-        use mailcraft_model::calendar::{Publication, Withdrawal};
+        use iridium_mail_model::calendar::{Publication, Withdrawal};
         let (mut s, account) = local_session();
         let cal = s.mailbox.role_folder(account, FolderRole::Calendar).unwrap();
         let old = "https://dav.example.com/p/old.ics";
@@ -2433,7 +2434,7 @@ mod tests {
     fn a_withdrawal_saved_by_an_earlier_version_is_still_removed() {
         // Regression: an earlier version kept no ETag for a pending removal; read back with none, it counted
         // as a file never written, so the published calendar stayed public.
-        use mailcraft_model::calendar::Withdrawal;
+        use iridium_mail_model::calendar::Withdrawal;
         let old: Withdrawal =
             serde_json::from_str(r#"{"url": "https://dav.example.com/p/a.ics", "account": 1}"#).unwrap();
         assert_eq!(old.etag, "*");
@@ -2456,7 +2457,7 @@ mod tests {
 
     #[test]
     fn task_uploads_keep_what_the_server_copy_holds() {
-        // Regression: a task went up as MailCraft rebuilt it, deleting other clients' properties and alarms.
+        // Regression: a task went up as Mail rebuilt it, deleting other clients' properties and alarms.
         let server = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example//EN\r\nBEGIN:VTODO\r\nUID:t-1\r\n\
             DTSTAMP:20261001T000000Z\r\nSUMMARY:Report\r\nX-OTHER-CLIENT:keep me\r\nCATEGORIES:Work\r\n\
             BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:-PT1H\r\nEND:VALARM\r\nEND:VTODO\r\nEND:VCALENDAR\r\n";
@@ -2469,7 +2470,7 @@ mod tests {
         assert!(body.contains("PERCENT-COMPLETE:50"), "{body}");
         let (back, _) = read_task(&body, 0).unwrap();
         assert_eq!(task_fingerprint(&merged_task(back, Some(&edited))), task_fingerprint(&edited));
-        // Without a kept copy, or when the kept copy is junk: MailCraft's own.
+        // Without a kept copy, or when the kept copy is junk: Mail's own.
         assert_eq!(upload_task(&edited, &uid, now, None, 0), task_calendar(&edited, &uid, now));
         assert_eq!(upload_task(&edited, &uid, now, Some("junk"), 0), task_calendar(&edited, &uid, now));
         // Contacts: a property the mapping drops survives an edit.

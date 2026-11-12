@@ -4,9 +4,9 @@ use egui::accesskit::Role;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_engine::model::Mailbox;
-use mailcraft_engine::{Notice, Session};
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_engine::model::Mailbox;
+use iridium_mail_engine::{Notice, Session};
 
 use super::*;
 
@@ -96,7 +96,7 @@ fn send_without_account_shows_the_notice() {
     h.run();
     let notices = &h.state().s.notices;
     assert!(
-        notices.contains(&Notice::Error(mailcraft_engine::cmd::compose::NO_ACCOUNT.into())),
+        notices.contains(&Notice::Error(iridium_mail_engine::cmd::compose::NO_ACCOUNT.into())),
         "notices: {notices:?}"
     );
     assert!(h.state().s.composes.contains_key(&cid), "the compose stays open");
@@ -190,12 +190,12 @@ fn tiny_windows_hide_the_ribbon() {
 #[test]
 fn caret_moves_through_a_quoted_reply() {
     let ids: Vec<u64> =
-        mailcraft_engine::sample::sample_session().mailbox.mail.ids().map(|i| i.0).take(4).collect();
+        iridium_mail_engine::sample::sample_session().mailbox.mail.ids().map(|i| i.0).take(4).collect();
     assert!(!ids.is_empty());
     for id in ids {
-        let mut s = mailcraft_engine::sample::sample_session();
-        s.selection.items = vec![mailcraft_engine::model::ItemId(id)];
-        s.selection.focus = Some(mailcraft_engine::model::ItemId(id));
+        let mut s = iridium_mail_engine::sample::sample_session();
+        s.selection.items = vec![iridium_mail_engine::model::ItemId(id)];
+        s.selection.focus = Some(iridium_mail_engine::model::ItemId(id));
         let r = s.run("mail.reply", &serde_json::json!({"ids": [id], "window": true}));
         let cid = r.ok().and_then(|v| v["compose"].as_u64()).unwrap_or_default();
         let mut h = window_harness(App::new(s));
@@ -274,7 +274,7 @@ fn file_opens_the_backstage_inside_the_compose_window() {
 use egui::{Event, Key, Modifiers, PointerButton, Pos2};
 use serde_json::json;
 
-use mailcraft_engine::model::{Contact, DateTime, Doc, ItemId};
+use iridium_mail_engine::model::{Contact, DateTime, Doc, ItemId};
 
 /// A mailbox with two contacts (Alice: two addresses, Bob: one), an Auto-Complete entry and a signature, and
 /// a new compose.
@@ -452,7 +452,7 @@ fn misspelled_words_are_flagged_and_the_context_menu_fixes_them() {
     assert_eq!(words, ["Recieve", "wrld"], "checked once typing paused");
 
     // Right-click on the first word: the speller's suggestions, Ignore All, Add to Dictionary.
-    let expected = mailcraft_engine::cmd::review::speller(&h.state().s).suggest("Recieve", 5);
+    let expected = iridium_mail_engine::cmd::review::speller(&h.state().s).suggest("Recieve", 5);
     let first = expected.first().cloned().unwrap();
     let p = body_point(&h, 8.0);
     click_at(&mut h, p, PointerButton::Secondary, Modifiers::NONE);
@@ -491,7 +491,7 @@ fn ignore_all_and_add_to_dictionary_from_the_context_menu() {
 #[test]
 fn f7_steps_through_issues_in_the_spelling_dialog() {
     let (mut h, cid) = typed_body("Thiss is fine");
-    let expected = mailcraft_engine::cmd::review::speller(&h.state().s).suggest("Thiss", 5);
+    let expected = iridium_mail_engine::cmd::review::speller(&h.state().s).suggest("Thiss", 5);
     h.key_press(Key::F7);
     h.run();
     assert!(spelling_open(&h.ctx, cid));
@@ -525,7 +525,7 @@ fn tab_moves_between_table_cells() {
         .body
         .blocks
         .iter()
-        .position(|b| matches!(b, mailcraft_engine::model::Block::Table { .. }))
+        .position(|b| matches!(b, iridium_mail_engine::model::Block::Table { .. }))
         .unwrap();
     app.s
         .run("compose.select", &json!({"compose": cid, "anchor": {"path": [ti, 0, 0, 0], "offset": 0}}))
@@ -552,8 +552,8 @@ fn tab_moves_between_table_cells() {
 
 #[test]
 fn ctrl_click_follows_a_bookmark_link() {
-    use mailcraft_engine::compose::{Bookmark, DocPos};
-    use mailcraft_engine::model::{Block, Inline};
+    use iridium_mail_engine::compose::{Bookmark, DocPos};
+    use iridium_mail_engine::model::{Block, Inline};
     let link = Block::Paragraph {
         style: Default::default(),
         inlines: vec![Inline::Link {
@@ -607,7 +607,7 @@ fn attachment_chips_open_a_menu_that_removes() {
 fn test_dir() -> std::path::PathBuf {
     let d = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../target/tmp")
-        .join(format!("mailcraft-compose-ui-test-{}", std::process::id()));
+        .join(format!("iridium-mail-compose-ui-test-{}", std::process::id()));
     std::fs::create_dir_all(&d).unwrap();
     d
 }
@@ -826,7 +826,7 @@ fn ctrl_backspace_at_a_block_start_acts_like_backspace() {
         .body
         .blocks
         .iter()
-        .position(|b| matches!(b, mailcraft_engine::model::Block::Table { .. }))
+        .position(|b| matches!(b, iridium_mail_engine::model::Block::Table { .. }))
         .unwrap();
     for (col, text) in [(0, "abc"), (1, "def")] {
         app.s
@@ -871,8 +871,8 @@ fn ctrl_v_pastes_the_html_flavour_and_offers_paste_options() {
     let c = compose(&h, cid);
     assert!(c.body.to_plain_text().contains("Rich bold paste"), "{}", c.body.to_plain_text());
     let bold = c.body.blocks.iter().any(|b| match b {
-        mailcraft_model::Block::Paragraph { inlines, .. } => inlines.iter().any(|i| {
-            matches!(i, mailcraft_model::Inline::Text { text, style } if text.contains("bold") && style.bold == Some(true))
+        iridium_mail_model::Block::Paragraph { inlines, .. } => inlines.iter().any(|i| {
+            matches!(i, iridium_mail_model::Inline::Text { text, style } if text.contains("bold") && style.bold == Some(true))
         }),
         _ => false,
     });
@@ -886,9 +886,9 @@ fn ctrl_v_pastes_the_html_flavour_and_offers_paste_options() {
     let c = compose(&h, cid);
     assert!(c.body.to_plain_text().contains("Rich bold paste"), "{}", c.body.to_plain_text());
     let still_bold = c.body.blocks.iter().any(|b| match b {
-        mailcraft_model::Block::Paragraph { inlines, .. } => inlines
+        iridium_mail_model::Block::Paragraph { inlines, .. } => inlines
             .iter()
-            .any(|i| matches!(i, mailcraft_model::Inline::Text { style, .. } if style.bold == Some(true))),
+            .any(|i| matches!(i, iridium_mail_model::Inline::Text { style, .. } if style.bold == Some(true))),
         _ => false,
     });
     assert!(!still_bold);
@@ -912,19 +912,19 @@ fn voting_app() -> (App, ItemId) {
     let inbox = mb
         .folders
         .values()
-        .find(|f| f.role == Some(mailcraft_engine::model::FolderRole::Inbox))
+        .find(|f| f.role == Some(iridium_mail_engine::model::FolderRole::Inbox))
         .map(|f| f.id)
         .unwrap();
-    let raw = b"From: Ann <ann@example.org>\r\nTo: me@example.com\r\nSubject: Lunch\r\nMessage-ID: <v1@example.org>\r\nX-MailCraft-Voting: Approve;Reject\r\nDisposition-Notification-To: ann@example.org\r\n\r\nWhere?\r\n".to_vec();
-    let msg = mailcraft_mime::parse(&raw).unwrap();
-    let mut item = mailcraft_engine::model::MailItem::from_message(
+    let raw = b"From: Ann <ann@example.org>\r\nTo: me@example.com\r\nSubject: Lunch\r\nMessage-ID: <v1@example.org>\r\nX-Mail-Voting: Approve;Reject\r\nDisposition-Notification-To: ann@example.org\r\n\r\nWhere?\r\n".to_vec();
+    let msg = iridium_mail_mime::parse(&raw).unwrap();
+    let mut item = iridium_mail_engine::model::MailItem::from_message(
         &msg,
         &raw,
         DateTime::from_civil(2026, 10, 9, 12, 0, 0, 0).unwrap(),
     );
     item.folder = inbox;
     let mut s = Session::new(mb);
-    let id = s.add_message(item, &mailcraft_engine::Content::source(raw.clone())).unwrap();
+    let id = s.add_message(item, &iridium_mail_engine::Content::source(raw.clone())).unwrap();
     (App::new(s), id)
 }
 
@@ -1018,7 +1018,7 @@ fn compose_panes_paste_apply_styles_and_hide_pictures() {
     // Styles: clicking a style applies it.
     h.get_by_label("Heading 1").click();
     h.run();
-    assert!(matches!(compose(&h, cid).body.blocks[0], mailcraft_model::Block::Heading { level: 1, .. }));
+    assert!(matches!(compose(&h, cid).body.blocks[0], iridium_mail_model::Block::Heading { level: 1, .. }));
     // Selection: hide / show the picture (view only), select it by name.
     h.get_by_label("Hide Picture").click();
     h.run();
@@ -1252,7 +1252,7 @@ fn styles_pane_creates_a_style_from_the_selection() {
 #[test]
 fn panes_leave_a_usable_body_in_narrow_windows() {
     let c = ComposeState {
-        editor: mailcraft_engine::compose::EditorFlags {
+        editor: iridium_mail_engine::compose::EditorFlags {
             clipboard_pane: true,
             styles_pane: true,
             ..Default::default()
@@ -1272,7 +1272,7 @@ fn panes_leave_a_usable_body_in_narrow_windows() {
 }
 
 fn png_reader() -> Option<Vec<u8>> {
-    Some(mailcraft_mime::transfer::decode_base64(PNG_B64.as_bytes()))
+    Some(iridium_mail_mime::transfer::decode_base64(PNG_B64.as_bytes()))
 }
 
 #[test]
@@ -1395,7 +1395,7 @@ fn modify_style_dialog_changes_the_style() {
     let x = c.custom_styles.iter().find(|x| x.name == "Heading 2").unwrap();
     assert_eq!((x.style.font_family.as_deref(), x.style.size_pt, x.para.line_height), (None, None, None));
     assert_eq!((x.style.bold, x.style.underline), (None, None));
-    assert!(matches!(c.body.blocks.first(), Some(mailcraft_model::Block::Heading { level: 2, .. })));
+    assert!(matches!(c.body.blocks.first(), Some(iridium_mail_model::Block::Heading { level: 2, .. })));
 }
 
 /// OK without a change leaves the style as it was (no created definition).
@@ -1460,7 +1460,7 @@ fn auto_save_timer_ticks_while_a_compose_has_changes() {
     // The window draws the timer every frame.
     let mut h = window_harness(app);
     h.run();
-    assert!(h.ctx.data(|d| d.get_temp::<f64>(egui::Id::unique("mailcraft-compose-autosave"))).is_some());
+    assert!(h.ctx.data(|d| d.get_temp::<f64>(egui::Id::unique("iridium-mail-compose-autosave"))).is_some());
 }
 
 #[test]
@@ -1490,9 +1490,9 @@ fn paste_defaults_follow_where_the_text_was_copied() {
     let c = compose(&h, cid);
     assert_eq!(c.body.to_plain_text().matches("Rich bold paste").count(), 2, "{}", c.body.to_plain_text());
     let bold = c.body.blocks.iter().any(|b| match b {
-        mailcraft_model::Block::Paragraph { inlines, .. } => inlines
+        iridium_mail_model::Block::Paragraph { inlines, .. } => inlines
             .iter()
-            .any(|i| matches!(i, mailcraft_model::Inline::Text { style, .. } if style.bold == Some(true))),
+            .any(|i| matches!(i, iridium_mail_model::Inline::Text { style, .. } if style.bold == Some(true))),
         _ => false,
     });
     assert!(!bold, "kept text only: {:?}", c.body);
@@ -1562,10 +1562,10 @@ fn writing_style_grammar_drops_refinement_marks_with_spelling_and_grammar_on() {
     set_option(&mut h, "mail.editor.writingStyle", json!("grammar"));
     h.run();
     h.run();
-    let live = mailcraft_engine::cmd::review::live_proofing(&h.state().s);
+    let live = iridium_mail_engine::cmd::review::live_proofing(&h.state().s);
     assert!(live.spelling && live.grammar && !live.refinements);
     let k = kinds(&h);
-    assert!(k.iter().all(|k| !mailcraft_engine::cmd::review::is_refinement(k)), "{k:?}");
+    assert!(k.iter().all(|k| !iridium_mail_engine::cmd::review::is_refinement(k)), "{k:?}");
     assert!(k.iter().any(|k| k == "confused"), "grammar is still marked: {k:?}");
     // Frequently confused words off: that mark goes too.
     set_option(&mut h, "mail.editor.confusedWords", json!(false));
@@ -1725,7 +1725,7 @@ fn accessibility_warning_bar_follows_the_checker_options() {
     let mut h = inline_harness(app, cid);
     h.run();
     assert!(h.query_by_label(ACCESSIBILITY_BAR_LABEL).is_none(), "no condition holds");
-    h.state_mut().s.composes.get_mut(&cid).unwrap().importance = mailcraft_model::Importance::High;
+    h.state_mut().s.composes.get_mut(&cid).unwrap().importance = iridium_mail_model::Importance::High;
     h.run();
     h.get_by_label(ACCESSIBILITY_BAR_LABEL);
     h.get_by_label_contains("1 issue to check (high importance)");
@@ -1783,10 +1783,10 @@ fn ctrl_shift_angle_brackets_grow_and_shrink_the_font_in_the_body() {
     h.run();
     // The size of the first run (0 = inherited).
     let size = |h: &Harness<'_, App>| match compose(h, cid).body.blocks.first() {
-        Some(mailcraft_model::Block::Paragraph { inlines, .. }) => inlines
+        Some(iridium_mail_model::Block::Paragraph { inlines, .. }) => inlines
             .iter()
             .find_map(|i| match i {
-                mailcraft_model::Inline::Text { style, .. } => Some(style.size_pt.unwrap_or(0.0)),
+                iridium_mail_model::Inline::Text { style, .. } => Some(style.size_pt.unwrap_or(0.0)),
                 _ => None,
             })
             .unwrap_or(0.0),
@@ -1895,14 +1895,14 @@ fn ribbon_paste_takes_the_system_clipboard() {
     let html = Some("<p><b>loud</b></p>".to_owned());
     assert!(paste_system_clipboard(&ctx, &mut app, cid, "loud", html, None, Some("keepSource")));
     let bold = app.s.composes[&cid].body.blocks.iter().any(|b| match b {
-        mailcraft_model::Block::Paragraph { inlines, .. } => inlines.iter().any(|i| {
-            matches!(i, mailcraft_model::Inline::Text { text, style } if text.contains("loud") && style.bold == Some(true))
+        iridium_mail_model::Block::Paragraph { inlines, .. } => inlines.iter().any(|i| {
+            matches!(i, iridium_mail_model::Inline::Text { text, style } if text.contains("loud") && style.bold == Some(true))
         }),
         _ => false,
     });
     assert!(bold);
     // Only a picture on the clipboard.
-    let png = mailcraft_mime::transfer::decode_base64(PNG_B64.as_bytes());
+    let png = iridium_mail_mime::transfer::decode_base64(PNG_B64.as_bytes());
     let pictures = app.s.composes[&cid].inline_images.len();
     assert!(paste_system_clipboard(&ctx, &mut app, cid, "", None, Some(png), None));
     assert_eq!(app.s.composes[&cid].inline_images.len(), pictures + 1);
@@ -2015,11 +2015,11 @@ fn one_shot_format_painter_paints_a_triple_clicked_paragraph() {
         .blocks
         .iter()
         .flat_map(|b| match b {
-            mailcraft_model::Block::Paragraph { inlines, .. } => inlines.clone(),
+            iridium_mail_model::Block::Paragraph { inlines, .. } => inlines.clone(),
             _ => Vec::new(),
         })
         .filter_map(|i| match i {
-            mailcraft_model::Inline::Text { text, style } if style.bold == Some(true) => Some(text),
+            iridium_mail_model::Inline::Text { text, style } if style.bold == Some(true) => Some(text),
             _ => None,
         })
         .collect();
@@ -2124,12 +2124,12 @@ fn paragraph_dialog_over_several_paragraphs_changes_only_what_was_changed() {
     .unwrap();
     app.run("format.paragraphSpacing", json!({"compose": cid, "before": 12, "after": 24})).unwrap();
     app.run("format.selectAll", json!({"compose": cid})).unwrap();
-    let paras = |c: &ComposeState| -> Vec<mailcraft_model::rich::ParaStyle> {
+    let paras = |c: &ComposeState| -> Vec<iridium_mail_model::rich::ParaStyle> {
         c.body
             .blocks
             .iter()
             .filter_map(|b| match b {
-                mailcraft_model::Block::Paragraph { style, .. } => Some(style.clone()),
+                iridium_mail_model::Block::Paragraph { style, .. } => Some(style.clone()),
                 _ => None,
             })
             .collect()
@@ -2176,7 +2176,7 @@ fn more_colors_picks_from_the_standard_grid() {
     h.get_by_label("OK").click();
     h.run();
     let c = compose(&h, cid);
-    assert!(c.selection_all(|st, _| st.color == mailcraft_geom::Color::parse_hex(&label)), "{label}");
+    assert!(c.selection_all(|st, _| st.color == iridium_mail_geom::Color::parse_hex(&label)), "{label}");
     // Page Color › More Colors... uses the same picker, with No Color.
     h.state_mut().run("compose.pageColor", json!({"compose": cid})).unwrap();
     h.run();

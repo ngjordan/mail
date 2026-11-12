@@ -63,7 +63,7 @@ use egui::{
 };
 use serde_json::json;
 
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
 
 use crate::responsive::Frame;
 use crate::{App, Surface};
@@ -161,7 +161,7 @@ pub(crate) fn insert_symbol(app: &mut App, cid: u64, ch: &str) -> bool {
 
 /// The viewport of compose window `cid`.
 pub fn viewport_id(cid: u64) -> ViewportId {
-    ViewportId::from_hash_of(("mailcraft-compose", cid))
+    ViewportId::from_hash_of(("iridium-mail-compose", cid))
 }
 
 /// Header fields.
@@ -213,7 +213,7 @@ impl Field {
 
 /// egui id of a header field of compose `cid`.
 fn field_id(cid: u64, f: Field) -> Id {
-    Id::unique(("mailcraft-compose-field", cid, f))
+    Id::unique(("iridium-mail-compose-field", cid, f))
 }
 
 /// The compose whose header field or body has keyboard focus, if any (for the keyboard handler: compose
@@ -243,7 +243,7 @@ struct WinState {
 }
 
 fn win_state_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-win", cid))
+    Id::unique(("iridium-mail-compose-win", cid))
 }
 
 fn win_state(ctx: &egui::Context, cid: u64) -> WinState {
@@ -306,7 +306,7 @@ pub fn compose_windows(ctx: &egui::Context, app: &mut App) {
 }
 
 fn auto_save_id() -> Id {
-    Id::unique("mailcraft-compose-autosave")
+    Id::unique("iridium-mail-compose-autosave")
 }
 
 /// The auto-save timer: while a compose (window or inline) has unsaved changes, runs `compose.autoSaveTick`
@@ -351,7 +351,7 @@ pub fn inline_compose(ui: &mut Ui, app: &mut App, id: u64) {
     let ctx = ui.ctx().clone();
     initial_focus(&ctx, app, id);
     attach::take_dropped_files(&ctx, app, id, Some(ui.max_rect()));
-    ui.push_id(("mailcraft-inline-compose", id), |ui| {
+    ui.push_id(("iridium-mail-inline-compose", id), |ui| {
         // Discard / Pop Out at the top right.
         ui.allocate_ui_with_layout(
             vec2(ui.available_width(), 28.0),
@@ -607,7 +607,7 @@ fn save_prompt(ctx: &egui::Context, app: &mut App, cid: u64) {
     }
     let mut choice: Option<Option<bool>> = None;
     let theme = app.theme.clone();
-    let modal = egui::Modal::new(Id::unique(("mailcraft-compose-save", cid))).show(ctx, |ui| {
+    let modal = egui::Modal::new(Id::unique(("iridium-mail-compose-save", cid))).show(ctx, |ui| {
         crate::dialogs::form_visuals(ui, &theme);
         ui.set_min_width(300.0);
         ui.label(egui::RichText::new(SAVE_PROMPT).size(15.0));
@@ -765,7 +765,7 @@ pub(crate) fn ribbon_command(
             let grammar = params
                 .get("grammar")
                 .and_then(serde_json::Value::as_bool)
-                .unwrap_or_else(|| mailcraft_engine::cmd::review::grammar_mode(&app.s));
+                .unwrap_or_else(|| iridium_mail_engine::cmd::review::grammar_mode(&app.s));
             spelling::open_with(ctx, app, cid, grammar);
             true
         }
@@ -896,7 +896,7 @@ fn insert_command(
             if params.get("action").and_then(serde_json::Value::as_str) == Some("browse")
                 && params.get("path").is_none() =>
         {
-            match picked(app, "Browse for Themes", &[FileFilter::new("MailCraft themes", &["json"])]) {
+            match picked(app, "Browse for Themes", &[FileFilter::new("Mail themes", &["json"])]) {
                 Some(path) => run_with_path(app, cmd, path),
                 None => false,
             }
@@ -924,7 +924,8 @@ pub(crate) fn paste_system_clipboard(
     mode: Option<&str>,
 ) -> bool {
     if text.len() > MAX_PASTE_TEXT {
-        app.s.notify(mailcraft_engine::Notice::Error("The clipboard holds too much text to paste.".into()));
+        app.s
+            .notify(iridium_mail_engine::Notice::Error("The clipboard holds too much text to paste.".into()));
         return false;
     }
     if !text.is_empty() {
@@ -932,7 +933,7 @@ pub(crate) fn paste_system_clipboard(
     }
     match image {
         Some(data) => {
-            let b64 = mailcraft_mime::transfer::encode_base64_flat(&data);
+            let b64 = iridium_mail_mime::transfer::encode_base64_flat(&data);
             app.run("format.paste", json!({"compose": cid, "image": b64})).is_some()
         }
         None => false,

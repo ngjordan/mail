@@ -2,7 +2,7 @@
 //! Formatting and Format Columns), Conversation Settings, Zoom, Manage All Views, Save View As, Apply View,
 //! Quick Actions.
 //!
-//! The mail view state they edit lives in the engine (`mailcraft_engine::cmd::view::mail`): each dialog reads
+//! The mail view state they edit lives in the engine (`iridium_mail_engine::cmd::view::mail`): each dialog reads
 //! it when it opens and applies its changes with the `view.*` commands on OK.
 
 use egui::{Context, RichText};
@@ -10,12 +10,12 @@ use serde_json::{Value, json};
 
 use super::common::{self, Dlg, Out, btn, btn_en, footer, muted, ok_cancel, primary, window, with_state};
 use crate::App;
-use mailcraft_engine::cmd::view::mail::{self as mailview, CustomFilter, FormatRule, RuleFont};
-use mailcraft_engine::cmd::view::modules::ModuleKind;
-use mailcraft_engine::cmd::view::table;
-use mailcraft_engine::queries::view_settings;
-use mailcraft_model::FolderId;
-use mailcraft_model::view::{ArrangeBy, ReadingPanePos, SortOrder, ViewLayout};
+use iridium_mail_engine::cmd::view::mail::{self as mailview, CustomFilter, FormatRule, RuleFont};
+use iridium_mail_engine::cmd::view::modules::ModuleKind;
+use iridium_mail_engine::cmd::view::table;
+use iridium_mail_engine::queries::view_settings;
+use iridium_mail_model::FolderId;
+use iridium_mail_model::view::{ArrangeBy, ReadingPanePos, SortOrder, ViewLayout};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -173,7 +173,7 @@ struct Level {
 }
 
 /// Sort and Group By keep at most this many levels (Sort items by / Group items by, then three Then by).
-const LEVELS: usize = mailcraft_model::view::MAX_SORT_KEYS;
+const LEVELS: usize = iridium_mail_model::view::MAX_SORT_KEYS;
 
 /// The level rows of Sort or Group By: `first` names the first row ("Sort items by"), the others read "Then
 /// by". `choices` starts with "(none)"; a row after an empty one is greyed out. Returns the levels picked,
@@ -326,7 +326,7 @@ fn group_by(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let arranged = match &module {
         Some((kind, st)) => st
             .arrangement(*kind)
-            .map(|a| mailcraft_engine::cmd::view::modules::arrange_label(*kind, a).to_owned())
+            .map(|a| iridium_mail_engine::cmd::view::modules::arrange_label(*kind, a).to_owned())
             .filter(|l| !l.is_empty()),
         None => Some(view_settings(&app.s, folder).arrange_by.label().to_owned()),
     };
@@ -380,7 +380,7 @@ fn group_by(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 
 /// The mail view summary of `folder` (what View Settings shows), from the engine.
 fn mailview_summary(app: &App, folder: FolderId) -> Value {
-    mailcraft_engine::cmd::view::mail::summary_of(&app.s, folder)
+    iridium_mail_engine::cmd::view::mail::summary_of(&app.s, folder)
 }
 
 #[derive(Clone, Default)]
@@ -756,16 +756,17 @@ fn format_columns(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let uid = d.uid;
     let folder = app.s.selection.folder;
     let init = |a: &App| {
-        if let Some((mailcraft_engine::cmd::view::modules::ModuleKind::Notes, st)) =
-            mailcraft_engine::cmd::view::modules::current(&a.s, folder)
+        if let Some((iridium_mail_engine::cmd::view::modules::ModuleKind::Notes, st)) =
+            iridium_mail_engine::cmd::view::modules::current(&a.s, folder)
         {
             // Notes tables: label and alignment of their columns.
             return FormatState {
-                cols: mailcraft_engine::cmd::view::modules::note_shown(&st)
+                cols: iridium_mail_engine::cmd::view::modules::note_shown(&st)
                     .into_iter()
                     .map(|(id, label, align)| ColFormat {
                         id: id.to_owned(),
-                        default_label: mailcraft_engine::cmd::view::modules::note_column_label(id).to_owned(),
+                        default_label: iridium_mail_engine::cmd::view::modules::note_column_label(id)
+                            .to_owned(),
                         formats: vec![("text".to_owned(), "Text".to_owned())],
                         start: (label.clone(), "text".to_owned(), align.to_owned()),
                         label,
@@ -1045,7 +1046,7 @@ fn conversation(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let folder = folder_of(app, d);
     // The folder's settings as the engine keeps them (`view.conversationSettings`).
     let current = |a: &App| -> Vec<bool> {
-        let cs = mailcraft_engine::queries::conversation_settings(&a.s, folder);
+        let cs = iridium_mail_engine::queries::conversation_settings(&a.s, folder);
         CONV.iter().map(|(k, _)| cs.get(k).unwrap_or(false)).collect()
     };
     let init =
@@ -1121,7 +1122,7 @@ fn zoom(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                 ui.horizontal(|ui| {
                     for (label, fit) in [("Page width", "page"), ("Text width", "text")] {
                         if ui.button(label).clicked()
-                            && let Some(pct) = mailcraft_engine::cmd::format::fit_zoom(fit, view)
+                            && let Some(pct) = iridium_mail_engine::cmd::format::fit_zoom(fit, view)
                         {
                             st.pct = u32::from(pct);
                         }
@@ -1340,7 +1341,7 @@ fn manage_mail_views(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 /// with where they can be used; New, Copy, Modify, Rename, Reset, Delete and Apply View
 /// (`view.manageViews` with `op`).
 fn manage_views(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    use mailcraft_engine::cmd::view::modules;
+    use iridium_mail_engine::cmd::view::modules;
     let uid = d.uid;
     let folder = folder_of(app, d);
     let Some(kind) = modules::module_kind(&app.s, folder) else {
@@ -1583,7 +1584,7 @@ fn apply_view(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                                     .mailbox
                                     .folders
                                     .values()
-                                    .filter(|f| f.kind == mailcraft_model::FolderKind::Mail && f.id != src)
+                                    .filter(|f| f.kind == iridium_mail_model::FolderKind::Mail && f.id != src)
                                     .map(|f| (app.s.mailbox.folder_path(f.id), f.id.0))
                                     .collect();
                                 folders.sort();
@@ -1680,8 +1681,8 @@ mod tests {
     use serde_json::json;
 
     use crate::App;
-    use mailcraft_engine::cmd::view::mail as mailview;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::cmd::view::mail as mailview;
+    use iridium_mail_engine::sample::sample_session;
 
     fn harness() -> Harness<'static, App> {
         let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(
@@ -1795,7 +1796,7 @@ mod tests {
         let mut h = harness();
         let s = &mut h.state_mut().s;
         let tasks =
-            s.mailbox.folders.values().find(|f| f.kind == mailcraft_model::FolderKind::Tasks).unwrap().id;
+            s.mailbox.folders.values().find(|f| f.kind == iridium_mail_model::FolderKind::Tasks).unwrap().id;
         s.run("nav.selectFolder", &json!({"folder": tasks.0})).unwrap();
         s.run("view.changeView", &json!({"name": "Simple List"})).unwrap();
         s.run("view.viewSettings", &json!({"rowFont": 13, "columnFont": 15})).unwrap();
@@ -1806,7 +1807,7 @@ mod tests {
         assert_eq!(shown, ["15 pt", "13 pt"], "column and row fonts show as set");
         h.get_by_label("OK").click();
         h.run_steps(2);
-        let o = mailcraft_engine::cmd::view::table::other(&h.state().s, tasks);
+        let o = iridium_mail_engine::cmd::view::table::other(&h.state().s, tasks);
         assert_eq!((o.row_font, o.column_font), (13, 15), "OK keeps both sizes");
     }
 
@@ -1864,7 +1865,7 @@ mod tests {
 
     #[test]
     fn module_manage_views_copy_rename_and_delete() {
-        use mailcraft_engine::cmd::view::modules;
+        use iridium_mail_engine::cmd::view::modules;
         let mut h = harness();
         let notes = h
             .state()
@@ -1872,7 +1873,7 @@ mod tests {
             .mailbox
             .folders
             .values()
-            .find(|f| f.kind == mailcraft_model::FolderKind::Notes)
+            .find(|f| f.kind == iridium_mail_model::FolderKind::Notes)
             .unwrap()
             .id;
         h.state_mut().run("nav.selectFolder", json!({"folder": notes.0})).unwrap();
@@ -1935,7 +1936,7 @@ mod tests {
 
 // ---------------------------------------------------------------------------------------------------------
 // Module tables (People › Phone and List, the Tasks views): Show Columns, Sort, Filter and Conditional
-// Formatting act on the engine's per-view table state (`mailcraft_engine::cmd::view::table`).
+// Formatting act on the engine's per-view table state (`iridium_mail_engine::cmd::view::table`).
 
 /// Show Columns for a module table: the module's columns, shown ones in order (`view.columns`).
 fn module_columns(ctx: &Context, app: &mut App, d: &Dlg<'_>, kind: ModuleKind) -> Out {
@@ -1982,7 +1983,7 @@ fn module_columns(ctx: &Context, app: &mut App, d: &Dlg<'_>, kind: ModuleKind) -
                         st.shown.remove(i);
                     }
                     if btn(ui, "Reset") {
-                        let view = mailcraft_engine::cmd::view::modules::state(&app.s, folder, kind).view;
+                        let view = iridium_mail_engine::cmd::view::modules::state(&app.s, folder, kind).view;
                         st.shown =
                             table::default_columns(kind, &view).iter().map(|c| (*c).to_owned()).collect();
                         st.pick_shown = None;
@@ -2034,7 +2035,7 @@ fn module_sort(ctx: &Context, app: &mut App, d: &Dlg<'_>, kind: ModuleKind) -> O
     let cols = table::available(kind);
     let keys: Vec<&'static str> = cols.iter().map(|c| c.id).collect();
     let init = |a: &App| {
-        let start = mailcraft_engine::cmd::view::modules::current(&a.s, folder)
+        let start = iridium_mail_engine::cmd::view::modules::current(&a.s, folder)
             .map(|(_, st)| table::sort_keys(&table::custom(&st)))
             .unwrap_or_default()
             .into_iter()
@@ -2088,7 +2089,7 @@ fn module_other(ctx: &Context, app: &mut App, d: &Dlg<'_>, kind: ModuleKind) -> 
     let uid = d.uid;
     let folder = app.s.selection.folder;
     let init = |a: &App| {
-        let st = mailcraft_engine::cmd::view::modules::current(&a.s, folder).map(|(_, st)| st);
+        let st = iridium_mail_engine::cmd::view::modules::current(&a.s, folder).map(|(_, st)| st);
         let o = table::other(&a.s, folder);
         let mut sizes = FONT_SIZES.to_vec();
         for pt in [o.row_font, o.column_font] {

@@ -4,8 +4,8 @@
 //! Mapping to [`Contact`]: N → name parts, FN when N is missing, ORG → company;department, TITLE → job title,
 //! EMAIL (first three), TEL (TYPE work/home/cell/fax/pager/car → phone kind), ADR (TYPE work/home → Business,
 //! Home, else Other), URL, IMPP (and the common X-…IM properties), BDAY, NOTE, CATEGORIES, CLASS (Private,
-//! RFC 2426; written in 4.0 cards too). MailCraft-only
-//! detail that has no standard property is kept in `X-MAILCRAFT-*` extension properties/parameters.
+//! RFC 2426; written in 4.0 cards too). Mail-only
+//! detail that has no standard property is kept in `X-IRIDIUM_MAIL-*` extension properties/parameters.
 //!
 //! Details page and picture:
 //! - PHOTO → picture (PNG, JPEG or GIF, at most [`MAX_PICTURE_BYTES`] and [`MAX_PHOTO_SIDE`] pixels a side).
@@ -13,10 +13,10 @@
 //!   `ENCODING=BASE64` value; remote (http) photos are not fetched. Written as a `data:` URI (4.0) or
 //!   `ENCODING=b;TYPE=JPEG|PNG|GIF` (3.0).
 //! - NICKNAME → nickname; ROLE → profession; ANNIVERSARY (4.0; `X-ANNIVERSARY` in 3.0) → anniversary.
-//! - Spouse/partner: RFC 6350 `RELATED;VALUE=text;TYPE=spouse` (4.0); `X-MAILCRAFT-SPOUSE` in 3.0, which has no
+//! - Spouse/partner: RFC 6350 `RELATED;VALUE=text;TYPE=spouse` (4.0); `X-IRIDIUM_MAIL-SPOUSE` in 3.0, which has no
 //!   RELATED property.
-//! - Office, manager and assistant have no standard property: `X-MAILCRAFT-OFFICE`, `X-MAILCRAFT-MANAGER`,
-//!   `X-MAILCRAFT-ASSISTANT`.
+//! - Office, manager and assistant have no standard property: `X-IRIDIUM_MAIL-OFFICE`, `X-IRIDIUM_MAIL-MANAGER`,
+//!   `X-IRIDIUM_MAIL-ASSISTANT`.
 //! - Read also: the `X-` names other address books use for these fields (`X-MS-…`, `X-EVOLUTION-…`,
 //!   `X-KADDRESSBOOK-X-…`, plain `X-MANAGER` and similar), and grouped `X-ABRELATEDNAMES` / `X-ABDATE` values
 //!   with an `X-ABLABEL` naming the relation or date.
@@ -25,8 +25,8 @@
 //!   `TYPE=X509` (or no type). Written as a `data:` URI (4.0) or `ENCODING=b;TYPE=X509` (3.0). PGP keys and
 //!   key URLs are not read.
 
-use mailcraft_model::Contact;
-use mailcraft_model::contact::{ContactPicture, MAX_PICTURE_BYTES, PostalAddress};
+use iridium_mail_model::Contact;
+use iridium_mail_model::contact::{ContactPicture, MAX_PICTURE_BYTES, PostalAddress};
 
 use crate::text::{CategoryList, ContentLine, MAX_CATEGORIES, escape, split_raw, split_unescaped, unescape};
 use crate::{Result, check_size};
@@ -153,7 +153,7 @@ fn text_value(cl: &ContentLine) -> String {
 }
 
 fn phone_kind(cl: &ContentLine) -> String {
-    if let Some(k) = cl.param("X-MAILCRAFT-KIND").filter(|k| !k.trim().is_empty()) {
+    if let Some(k) = cl.param("X-IRIDIUM_MAIL-KIND").filter(|k| !k.trim().is_empty()) {
         return k.trim().to_owned();
     }
     let has = |t: &str| cl.has_type(t);
@@ -176,7 +176,7 @@ fn phone_kind(cl: &ContentLine) -> String {
 }
 
 fn addr_kind(cl: &ContentLine) -> String {
-    if let Some(k) = cl.param("X-MAILCRAFT-KIND").filter(|k| !k.trim().is_empty()) {
+    if let Some(k) = cl.param("X-IRIDIUM_MAIL-KIND").filter(|k| !k.trim().is_empty()) {
         return k.trim().to_owned();
     }
     if cl.has_type("work") {
@@ -235,7 +235,7 @@ fn photo(cl: &ContentLine) -> Option<ContactPicture> {
     if payload.len() / 4 * 3 > MAX_PICTURE_BYTES.saturating_add(3) {
         return None;
     }
-    let data = mailcraft_mime::transfer::decode_base64(payload.as_bytes());
+    let data = iridium_mail_mime::transfer::decode_base64(payload.as_bytes());
     let pic = ContactPicture::sniff(&data)?;
     let (w, h) = pic.dimensions()?;
     (w > 0 && h > 0 && w <= MAX_PHOTO_SIDE && h <= MAX_PHOTO_SIDE).then_some(pic)
@@ -271,9 +271,10 @@ fn certificate(cl: &ContentLine) -> Option<String> {
     if payload.len() / 4 * 3 > MAX_KEY_BYTES {
         return None;
     }
-    let der = mailcraft_mime::transfer::decode_base64(payload.as_bytes());
+    let der = iridium_mail_mime::transfer::decode_base64(payload.as_bytes());
     // A DER certificate is a SEQUENCE; anything else is not one.
-    (der.first() == Some(&0x30) && der.len() > 64).then(|| mailcraft_mime::transfer::encode_base64_flat(&der))
+    (der.first() == Some(&0x30) && der.len() > 64)
+        .then(|| iridium_mail_mime::transfer::encode_base64_flat(&der))
 }
 
 /// TYPE value for a picture's MIME type (3.0 PHOTO).
@@ -397,7 +398,7 @@ fn contact_and_fields(lines: &[ContentLine]) -> (Contact, Vec<Option<&'static st
                 set_once(&mut c.nickname, text_value(cl));
                 Some("nickname")
             }
-            "X-MAILCRAFT-OFFICE"
+            "X-IRIDIUM_MAIL-OFFICE"
             | "X-OFFICE"
             | "X-MS-OFFICE"
             | "X-EVOLUTION-OFFICE"
@@ -405,7 +406,7 @@ fn contact_and_fields(lines: &[ContentLine]) -> (Contact, Vec<Option<&'static st
                 set_once(&mut c.office, text_value(cl));
                 Some("office")
             }
-            "X-MAILCRAFT-MANAGER"
+            "X-IRIDIUM_MAIL-MANAGER"
             | "X-MANAGER"
             | "X-MS-MANAGER"
             | "X-EVOLUTION-MANAGER"
@@ -413,7 +414,7 @@ fn contact_and_fields(lines: &[ContentLine]) -> (Contact, Vec<Option<&'static st
                 set_once(&mut c.manager, text_value(cl));
                 Some("manager")
             }
-            "X-MAILCRAFT-ASSISTANT"
+            "X-IRIDIUM_MAIL-ASSISTANT"
             | "X-ASSISTANT"
             | "X-MS-ASSISTANT"
             | "X-EVOLUTION-ASSISTANT"
@@ -421,7 +422,7 @@ fn contact_and_fields(lines: &[ContentLine]) -> (Contact, Vec<Option<&'static st
                 set_once(&mut c.assistant, text_value(cl));
                 Some("assistant")
             }
-            "X-MAILCRAFT-SPOUSE"
+            "X-IRIDIUM_MAIL-SPOUSE"
             | "X-SPOUSE"
             | "X-MS-SPOUSE"
             | "X-EVOLUTION-SPOUSE"
@@ -571,7 +572,7 @@ fn contact_and_fields(lines: &[ContentLine]) -> (Contact, Vec<Option<&'static st
                 }
                 Some("CATEGORIES")
             }
-            "X-MAILCRAFT-FILE-AS" => {
+            "X-IRIDIUM_MAIL-FILE-AS" => {
                 file_as = Some(text_value(cl));
                 Some("file-as")
             }
@@ -635,7 +636,7 @@ fn line(name: &str, params: Vec<(&str, String)>, value: String) -> ContentLine {
     }
 }
 
-/// TYPE values for a phone kind, and whether the kind needs an X-MAILCRAFT-KIND to survive a round trip.
+/// TYPE values for a phone kind, and whether the kind needs an X-IRIDIUM_MAIL-KIND to survive a round trip.
 fn tel_types(kind: &str) -> (&'static str, bool) {
     match kind {
         "Business" => ("work,voice", false),
@@ -705,7 +706,7 @@ pub fn write_one(c: &Contact, version: Version, out: &mut String) {
         let (types, needs_kind) = tel_types(kind);
         let mut params = vec![("TYPE", types.to_owned())];
         if needs_kind {
-            params.push(("X-MAILCRAFT-KIND", kind.clone()));
+            params.push(("X-IRIDIUM_MAIL-KIND", kind.clone()));
         }
         lines.push(line("TEL", params, escape(number)));
     }
@@ -721,7 +722,7 @@ pub fn write_one(c: &Contact, version: Version, out: &mut String) {
             params.push(("TYPE", t.to_owned()));
         }
         if needs_kind && !a.kind.is_empty() {
-            params.push(("X-MAILCRAFT-KIND", a.kind.clone()));
+            params.push(("X-IRIDIUM_MAIL-KIND", a.kind.clone()));
         }
         let value = ["", "", &a.street, &a.city, &a.region, &a.postal_code, &a.country]
             .iter()
@@ -747,9 +748,9 @@ pub fn write_one(c: &Contact, version: Version, out: &mut String) {
         }
     }
     for (name, value) in [
-        ("X-MAILCRAFT-OFFICE", &c.office),
-        ("X-MAILCRAFT-MANAGER", &c.manager),
-        ("X-MAILCRAFT-ASSISTANT", &c.assistant),
+        ("X-IRIDIUM_MAIL-OFFICE", &c.office),
+        ("X-IRIDIUM_MAIL-MANAGER", &c.manager),
+        ("X-IRIDIUM_MAIL-ASSISTANT", &c.assistant),
     ] {
         if !value.is_empty() {
             lines.push(line(name, vec![], escape(value)));
@@ -760,11 +761,11 @@ pub fn write_one(c: &Contact, version: Version, out: &mut String) {
             let params = vec![("VALUE", "text".to_owned()), ("TYPE", "spouse".to_owned())];
             lines.push(line("RELATED", params, escape(&c.spouse)));
         } else {
-            lines.push(line("X-MAILCRAFT-SPOUSE", vec![], escape(&c.spouse)));
+            lines.push(line("X-IRIDIUM_MAIL-SPOUSE", vec![], escape(&c.spouse)));
         }
     }
     if let Some(p) = c.picture.as_ref().filter(|p| !p.data.is_empty()) {
-        let b64 = mailcraft_mime::transfer::encode_base64_flat(&p.data);
+        let b64 = iridium_mail_mime::transfer::encode_base64_flat(&p.data);
         if v4 {
             let mime = photo_type(&p.mime).to_ascii_lowercase();
             lines.push(line("PHOTO", vec![], format!("data:image/{mime};base64,{b64}")));
@@ -789,7 +790,7 @@ pub fn write_one(c: &Contact, version: Version, out: &mut String) {
         lines.push(line("CATEGORIES", vec![], cats));
     }
     if !c.file_as.is_empty() && c.file_as != crate::csv::default_file_as(c) {
-        lines.push(line("X-MAILCRAFT-FILE-AS", vec![], escape(&c.file_as)));
+        lines.push(line("X-IRIDIUM_MAIL-FILE-AS", vec![], escape(&c.file_as)));
     }
     if c.private {
         // RFC 2426 CLASS (vCard 4.0 dropped it; readers that know it still take it there).

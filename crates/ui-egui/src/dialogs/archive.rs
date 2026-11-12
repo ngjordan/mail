@@ -1,4 +1,4 @@
-//! AutoArchive dialogs and the scheduler (engine `mailcraft_engine::archive`):
+//! AutoArchive dialogs and the scheduler (engine `iridium_mail_engine::archive`):
 //!
 //! - `autoArchiveSettings`: a folder's AutoArchive settings (Folder › AutoArchive Settings); the same form is
 //!   the AutoArchive tab of folder Properties ([`FolderForm`]). Saved with `folder.autoArchiveSettings`.
@@ -24,9 +24,9 @@ use super::common::{
     take_replies, window, with_state,
 };
 use crate::App;
-use mailcraft_engine::archive;
-use mailcraft_model::FolderId;
-use mailcraft_model::folder::{AgeUnit, ArchiveAction, ArchiveMode};
+use iridium_mail_engine::archive;
+use iridium_mail_model::FolderId;
+use iridium_mail_model::folder::{AgeUnit, ArchiveAction, ArchiveMode};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -131,7 +131,7 @@ pub(crate) fn folder_form(
         muted(ui, app, "Items in this folder are not archived.");
         return Out::Keep;
     }
-    let pick = if f.kind == mailcraft_model::FolderKind::Mail { "mail" } else { "any" };
+    let pick = if f.kind == iridium_mail_model::FolderKind::Mail { "mail" } else { "any" };
     ui.radio_value(&mut form.mode, 0, "Do not archive items in this folder");
     ui.radio_value(&mut form.mode, 1, "Archive items in this folder using the default settings");
     muted(ui, app, &defaults_text(app));
@@ -142,7 +142,8 @@ pub(crate) fn folder_form(
             ui.horizontal(|ui| {
                 ui.label("Clean out items older than");
                 ui.add(
-                    egui::DragValue::new(&mut form.age).range(1..=mailcraft_model::folder::MAX_ARCHIVE_AGE),
+                    egui::DragValue::new(&mut form.age)
+                        .range(1..=iridium_mail_model::folder::MAX_ARCHIVE_AGE),
                 );
                 common::combo_idx(ui, ("aa-unit", uid), &mut form.unit, &UNITS, 90.0);
             });

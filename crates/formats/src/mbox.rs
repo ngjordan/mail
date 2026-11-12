@@ -1,18 +1,18 @@
-//! MBOX (RFC 4155 family). The streaming reader/writer live in `mailcraft-store`; this module re-exports them
+//! MBOX (RFC 4155 family). The streaming reader/writer live in `iridium-mail-store`; this module re-exports them
 //! and adds in-memory import/export with a total size cap.
 
 use std::io::{BufRead, Write};
 
-use mailcraft_model::{DateTime, FolderId, MailItem};
+use iridium_mail_model::{DateTime, FolderId, MailItem};
 
-pub use mailcraft_store::mbox::{
+pub use iridium_mail_store::mbox::{
     MAX_MESSAGE_BYTES, MAX_MESSAGES, MboxMessage, MboxReader, parse_from_line, write_message,
 };
 
 use crate::Result;
 
 /// Most message source (bytes) held by one [`read`].
-pub const MAX_MBOX_BYTES: u64 = mailcraft_store::import::MAX_IMPORT_BYTES;
+pub const MAX_MBOX_BYTES: u64 = iridium_mail_store::import::MAX_IMPORT_BYTES;
 
 /// Result of reading an MBOX stream.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -52,11 +52,11 @@ pub fn read_capped<R: BufRead>(
         }
         held = held.saturating_add(len);
         let (_, delivered) = msg.envelope();
-        let mut item = mailcraft_store::import::item_from_raw(&msg.data, folder, now);
+        let mut item = iridium_mail_store::import::item_from_raw(&msg.data, folder, now);
         if let Some(t) = delivered {
             item.received = t;
         }
-        mailcraft_store::import::apply_status_headers(&msg.data, &mut item);
+        iridium_mail_store::import::apply_status_headers(&msg.data, &mut item);
         out.items.push((item, msg.data));
     }
     if reader.hit_message_limit() {

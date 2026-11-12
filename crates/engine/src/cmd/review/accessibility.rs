@@ -17,7 +17,7 @@
 //! background, to a large audience, to someone outside my organization, or with high importance.
 //!
 //! "At least one recipient prefers accessible content" needs a directory service that publishes that
-//! preference; MailCraft has none, so that condition never holds.
+//! preference; Mail has none, so that condition never holds.
 //!
 //! [`auto_alt_text`] is "Automatically generate alt text for me" without a cloud service: a description made
 //! from a descriptive file name ("team-lunch_by_the-lake.jpg" → "Team lunch by the lake"), or nothing for
@@ -30,9 +30,9 @@ use serde_json::{Value, json};
 use crate::Session;
 use crate::cmd::insert::{drawing, shapes};
 use crate::compose::{ComposeState, DocPos};
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Drawing, DrawingKind, TableCell};
-use mailcraft_model::{Block, Doc, Importance, Inline, ParaStyle, TextStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Drawing, DrawingKind, TableCell};
+use iridium_mail_model::{Block, Doc, Importance, Inline, ParaStyle, TextStyle};
 
 /// Minimum contrast ratio for body text (WCAG 2.x AA, normal text).
 pub const MIN_CONTRAST: f32 = 4.5;

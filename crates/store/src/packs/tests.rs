@@ -351,7 +351,7 @@ fn body_store_over_packs() {
     assert_eq!(bodies.source(&key).unwrap(), raw);
     assert_eq!(bodies.source_head(&key, 4).unwrap().unwrap(), b"From");
     assert!(bodies.has_source(&key));
-    let body = mailcraft_model::Body { text: Some("hello".into()), ..Default::default() };
+    let body = iridium_mail_model::Body { text: Some("hello".into()), ..Default::default() };
     let bkey = bodies.put_body(&body).unwrap();
     bodies.clear_cache();
     assert_eq!(*bodies.body_record(&bkey).unwrap(), body);

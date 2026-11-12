@@ -3,8 +3,8 @@
 #
 #     packaging/icons.sh <datadir>        e.g. stage/usr/share, AppDir/usr/share, /app/share
 #
-# Source: assets/app-icon/hicolor/<size>/apps/mailcraft.{png,svg}, rendered from our own
-# assets/app-icon/mailcraft.svg by `cargo xtask ico` (see ATTRIBUTION.md).
+# Source: assets/app-icon/hicolor/<size>/apps/iridium-mail.{png,svg}, rendered from our own
+# assets/app-icon/iridium-mail.svg by `cargo xtask ico` (see ATTRIBUTION.md).
 # Result: <datadir>/icons/hicolor/<size>/apps/$APP_ID.{png,svg}
 set -euo pipefail
 # shellcheck source=packaging/env.sh
@@ -18,7 +18,7 @@ src="$MC_ROOT/assets/app-icon/hicolor"
 count=0
 for dir in "$src"/*/apps; do
 	size="$(basename "$(dirname "$dir")")"
-	for icon in "$dir"/mailcraft.png "$dir"/mailcraft.svg; do
+	for icon in "$dir"/iridium-mail.png "$dir"/iridium-mail.svg; do
 		[ -f "$icon" ] || continue
 		ext="${icon##*.}"
 		dest="$datadir/icons/hicolor/$size/apps"

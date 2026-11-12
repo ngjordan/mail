@@ -1,6 +1,6 @@
 //! Paragraph and table borders.
 
-use mailcraft_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
+use iridium_mail_model::{BorderEdge, BorderLine, ParaBorders, TableBorders};
 
 use super::*;
 

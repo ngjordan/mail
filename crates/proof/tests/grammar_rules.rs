@@ -1,7 +1,7 @@
 //! Grammar rules (agreement, punctuation, confused words) and writing refinements: what is flagged, what is
 //! left alone, and that the suggestion fixes the text.
 
-use mailcraft_proof::{Issue, IssueKind, Refinements, SpellOptions, Speller};
+use iridium_mail_proof::{Issue, IssueKind, Refinements, SpellOptions, Speller};
 
 fn sp() -> &'static Speller {
     static S: std::sync::OnceLock<Speller> = std::sync::OnceLock::new();

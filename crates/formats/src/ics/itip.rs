@@ -1,8 +1,8 @@
 //! iTIP (RFC 5546) basics: meeting requests, replies and cancellations carried as `text/calendar`.
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::ResponseStatus;
-use mailcraft_model::{Appointment, DateTime};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::ResponseStatus;
+use iridium_mail_model::{Appointment, DateTime};
 
 use super::map::{self, EventOut};
 use super::{Event, ImportOptions};

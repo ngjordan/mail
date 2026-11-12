@@ -1,6 +1,6 @@
 [package]
-name = "mailcraft-smime"
-description = "S/MIME for MailCraft: sign, verify, encrypt and decrypt mail (RFC 8551, CMS RFC 5652, X.509 RFC 5280, PKCS #12)"
+name = "iridium-mail-smime"
+description = "S/MIME for Mail: sign, verify, encrypt and decrypt mail (RFC 8551, CMS RFC 5652, X.509 RFC 5280, PKCS #12)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,7 +11,7 @@ rust-version.workspace = true
 testkit = []
 
 [dependencies]
-mailcraft-mime.workspace = true
+iridium-mail-mime.workspace = true
 thiserror.workspace = true
 base64.workspace = true
 der.workspace = true

@@ -191,7 +191,7 @@ impl Session<'_> {
 
     fn run(&mut self) -> io::Result<()> {
         let host = self.ctx.config.hostname.clone();
-        self.reply(&format!("+OK {host} MailCraft test POP3 server ready"))?;
+        self.reply(&format!("+OK {host} Mail test POP3 server ready"))?;
         loop {
             let Some(line) = (match self.conn.read_line(MAX_LINE) {
                 Ok(l) => l,

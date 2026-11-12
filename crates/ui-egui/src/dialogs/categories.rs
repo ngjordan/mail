@@ -11,7 +11,7 @@ use super::common::{
 };
 use super::folders::last_error;
 use crate::App;
-use mailcraft_model::{CategoryColor, FlagState, ItemId};
+use iridium_mail_model::{CategoryColor, FlagState, ItemId};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -79,7 +79,7 @@ struct CatState {
 /// Categories of the target items: messages, or (with `area` people / tasks / notes / calendar) the
 /// module's items.
 fn item_categories<'a>(app: &'a App, area: &str, ids: &[u64]) -> Vec<&'a Vec<String>> {
-    use mailcraft_engine::cmd::calendar::pim;
+    use iridium_mail_engine::cmd::calendar::pim;
     ids.iter()
         .filter_map(|i| match area {
             "" | "mail" => app.s.mailbox.mail.get(ItemId(*i)).map(|m| &m.categories),
@@ -109,7 +109,7 @@ fn initial_marks(app: &App, area: &str, ids: &[u64]) -> Vec<(String, Option<bool
 }
 
 /// The master category list sorted by name (the Color Categories dialog lists it alphabetically).
-fn sorted_categories(app: &App) -> Vec<mailcraft_model::Category> {
+fn sorted_categories(app: &App) -> Vec<iridium_mail_model::Category> {
     let mut cats = app.s.mailbox.categories.clone();
     cats.sort_by_key(|c| c.name.to_lowercase());
     cats
@@ -383,7 +383,7 @@ fn quick_click(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         let kind = app.s.settings.text("tasks.quickClickFlag");
         FLAG_KINDS.iter().find(|(k, _)| *k == kind).map(|(_, l)| (*l).to_owned())
     } else {
-        mailcraft_engine::cmd::categories::quick_click_category(&app.s)
+        iridium_mail_engine::cmd::categories::quick_click_category(&app.s)
     };
     let init =
         |_: &App| QuickState { pick: saved.clone().or_else(|| names.first().cloned()).unwrap_or_default() };

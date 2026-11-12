@@ -23,7 +23,7 @@ const NEGOTIATE_EXTENDED_SESSIONSECURITY: u32 = 0x0008_0000;
 const NEGOTIATE_TARGET_INFO: u32 = 0x0080_0000;
 const NEGOTIATE_128: u32 = 0x2000_0000;
 const NEGOTIATE_56: u32 = 0x8000_0000;
-/// The flags MailCraft asks for.
+/// The flags Mail asks for.
 const FLAGS: u32 = NEGOTIATE_UNICODE
     | NEGOTIATE_OEM
     | REQUEST_TARGET
@@ -388,7 +388,7 @@ pub fn authenticate_message(
     let (name, domain) = split_user(user);
     let key = ntowf_v2(password, &name, &domain);
     let (nt, lm) = responses(&key, challenge, client_challenge, time);
-    let fields: [Vec<u8>; 5] = [lm, nt, utf16le(&domain), utf16le(&name), utf16le("MAILCRAFT")];
+    let fields: [Vec<u8>; 5] = [lm, nt, utf16le(&domain), utf16le(&name), utf16le("IRIDIUM_MAIL")];
     let mut header = Vec::with_capacity(64);
     header.extend_from_slice(SIGNATURE);
     header.extend_from_slice(&3u32.to_le_bytes());

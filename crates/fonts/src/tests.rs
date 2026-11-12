@@ -686,7 +686,7 @@ fn bundled_db_ignores_installed_fonts() {
 
 #[test]
 fn scanning_a_font_folder_indexes_faces() {
-    let dir = std::env::temp_dir().join(format!("mailcraft-fonts-scan-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("iridium-mail-fonts-scan-{}", std::process::id()));
     let sub = dir.join("a").join("b");
     std::fs::create_dir_all(&sub).unwrap();
     std::fs::copy(asset("Inter-SemiBold.ttf"), sub.join("Inter-SemiBold.ttf")).unwrap();

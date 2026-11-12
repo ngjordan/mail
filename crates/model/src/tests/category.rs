@@ -63,9 +63,9 @@ fn dark_colours_are_darker_than_light_ones() {
 
 #[test]
 fn text_colour_contrasts() {
-    assert_eq!(CategoryColor::Yellow.text_color(), mailcraft_geom::Color::BLACK);
-    assert_eq!(CategoryColor::Black.text_color(), mailcraft_geom::Color::WHITE);
-    assert_eq!(CategoryColor::DarkBlue.text_color(), mailcraft_geom::Color::WHITE);
+    assert_eq!(CategoryColor::Yellow.text_color(), iridium_mail_geom::Color::BLACK);
+    assert_eq!(CategoryColor::Black.text_color(), iridium_mail_geom::Color::WHITE);
+    assert_eq!(CategoryColor::DarkBlue.text_color(), iridium_mail_geom::Color::WHITE);
 }
 
 #[test]

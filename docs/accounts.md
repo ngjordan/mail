@@ -1,9 +1,9 @@
 # Mail accounts
 
-MailCraft talks to mail servers over open protocols and published APIs: IMAP and POP3 for incoming mail, SMTP
+Mail talks to mail servers over open protocols and published APIs: IMAP and POP3 for incoming mail, SMTP
 for sending, and JMAP for both; Microsoft 365 and Outlook.com mailboxes can also be reached through Microsoft
 Graph's public REST API, and Exchange accounts through Exchange Web Services (EWS). Accounts are added with **File › Add Account** (or
-`accounts.add`); try them against the local test servers (`mailcraft-testmail`) rather than a real mailbox.
+`accounts.add`); try them against the local test servers (`iridium-mail-testmail`) rather than a real mailbox.
 
 ## Finding the server settings
 
@@ -30,7 +30,7 @@ Graph's public REST API, and Exchange accounts through Exchange Web Services (EW
    `https://login.microsoftonline.com/<domain>/v2.0/.well-known/openid-configuration` (the domain only, never
    the address). **This sends the domain to Microsoft**, and only in two cases: when Microsoft 365 was
    already recognised (its MX records or servers are Microsoft's; the lookup reads the tenant id), and when
-   nothing else found anything and the domain's MX records name a mail exchanger MailCraft does not know (an
+   nothing else found anything and the domain's MX records name a mail exchanger Mail does not know (an
    organization whose mail passes through a filtering service first). The domain is not sent when the MX
    lookup gave no answer (no resolver, as on Windows; no MX records) or found a null MX, nor for consumer
    domains or domains whose autoconfig, SRV or MX records found their servers. Every domain verified in a
@@ -141,14 +141,14 @@ Page Up / Page Down (three stops) and Home / End, and screen readers get its val
   calendars over JMAP, without any DAV settings; the rules are the ones below for CardDAV / CalDAV. Cards
   are JSContact (RFC 9553) and events JSCalendar: a recurring series with its changed and removed
   occurrences is one event (`recurrenceRule`, `recurrenceOverrides`). An edit writes only the properties
-  it changed: a property it did not touch stays on the server as it is, with what MailCraft does not show
+  it changed: a property it did not touch stays on the server as it is, with what Mail does not show
   inside it (further organizations, a photo stored as a blob, further alerts, extra locations), and so does
-  a property MailCraft does not map. A property the edit changed (the company, the reminder, the location)
-  is replaced by MailCraft's version of it, which holds what MailCraft shows. Events are written with
-  `sendSchedulingMessages: false` (the server never mails attendees for MailCraft). An account whose
+  a property Mail does not map. A property the edit changed (the company, the reminder, the location)
+  is replaced by Mail's version of it, which holds what Mail shows. Events are written with
+  `sendSchedulingMessages: false` (the server never mails attendees for Mail). An account whose
   settings name a CardDAV / CalDAV server keeps using it for all three folders; clear the DAV server to
   move Contacts and Calendar to JMAP (items keep their UIDs, so the server's copies are matched rather than
-  uploaded again). JMAP has no task lists MailCraft uses: **Tasks** synchronise with a CalDAV server if one
+  uploaded again). JMAP has no task lists Mail uses: **Tasks** synchronise with a CalDAV server if one
   is set in the account's settings.
 - **Push.** After the first successful send/receive the account keeps the server's event source open
   (RFC 8620 section 7.3, `text/event-stream`, a ping every 60 seconds) and starts an update when a
@@ -176,7 +176,7 @@ organization that does not let users consent to apps needs an administrator's co
 Authenticated SMTP do not have to be turned on for the mailbox.
 
 - **Folders.** The whole folder tree with child folders. Graph's well-known folders (Inbox, Drafts, Sent
-  Items, Deleted Items, Junk Email, Archive) are the default folders; Graph's own Outbox stays out (MailCraft
+  Items, Deleted Items, Junk Email, Archive) are the default folders; Graph's own Outbox stays out (Mail
   keeps its own). Folders made, renamed, moved or deleted here are made, renamed, moved or deleted there; a
   new folder is created before mail is moved into it. A folder made below a default folder the service does
   not have (Conversation History, RSS Feeds) stays on this computer; mail moved into it keeps its copy on the
@@ -224,17 +224,17 @@ Authenticated SMTP do not have to be turned on for the mailbox.
   when its folder is deleted. The user's own calendars are told by the service (the default calendar, the
   ones only their owner may share, and those owned by the address the service knows the user by), so an
   account signed in with an alias still has its own Calendar. Events keep their time zone (Graph's Windows
-  zone names are read as the IANA zones MailCraft knows), all-day days (the days they have in the zone they
+  zone names are read as the IANA zones Mail knows), all-day days (the days they have in the zone they
   were made in, wherever the user is), reminders, show as, categories, privacy, importance and attendees
   with their answers; a recurring series keeps its pattern and range, its exceptions (an occurrence changed
   on either side) and its cancelled occurrences (exception dates; inferred only for a series in a zone
-  MailCraft knows, so an organizer's custom zone never turns occurrences into exception dates). An
+  Mail knows, so an organizer's custom zone never turns occurrences into exception dates). An
   appointment made here without a zone of its own, all-day ones included, is written in the mailbox's time
   zone.
 - **Meetings.** The service schedules the meetings of a Microsoft 365 calendar: a meeting made, changed or
   cancelled here goes to the service on the next update (started right away), and the service sends the
   invitations, updates and cancellations; Accept, Tentative and Decline on an invitation answer through the
-  event's actions, which tell the organizer (no iTIP mail goes from MailCraft). Invitations the service put
+  event's actions, which tell the organizer (no iTIP mail goes from Mail). Invitations the service put
   on the calendar are not doubled by the ones placed from their mail. Because the service sends as soon as
   it has the change, **Edit the response before sending** and **Cancel Meeting** first open a note to write
   (the answer or cancellation goes with it on Send; closing the note changes nothing), and a new meeting to
@@ -289,7 +289,7 @@ there.
   (`accounts.add` answers `{"needsConfirm": true, "confirmHost"}`; add the host to `"autodiscoverHosts"` to
   agree). Use it only when your provider told you to.
 - **Sign-in.** Basic, NTLM (NTLMv2, [MS-NLMP]; the user name may be `DOMAIN\user`) or an OAuth bearer token.
-  With no method set, MailCraft tries Basic and changes to NTLM when the server offers only NTLM or
+  With no method set, Mail tries Basic and changes to NTLM when the server offers only NTLM or
   Negotiate. NTLM signs in one connection, which is kept open for the requests that follow.
 - **A server with its own certificate.** Paste it into the account's extra root certificate setting
   (`incoming.extraRootPem`). A certificate given there is trusted for that server only, and the server's name
@@ -363,7 +363,7 @@ synchronise both ways (CardDAV, RFC 6352; CalDAV tasks and events, RFC 4791):
 - an item changed here is uploaded with `If-Match`, a new one with `If-None-Match: *`, one deleted here is
   deleted there; changes and deletions made on the server arrive here; when both sides changed an item the
   copy changed here wins (a change made on the server during the run is never overwritten unseen);
-- details only MailCraft keeps (a contact's follow-up flag, a task's link to its mail) stay local;
+- details only Mail keeps (a contact's follow-up flag, a task's link to its mail) stay local;
 - **View › Change View › Server Tasks** lists the tasks that live on the server;
 - the links between items and their server copies survive settings changes that keep the same contacts
   server and login (a new mail server, the address written with or without its trailing `/`); when they are
@@ -373,7 +373,7 @@ synchronise both ways (CardDAV, RFC 6352; CalDAV tasks and events, RFC 4791):
   address a server answers with that points elsewhere is not followed, and a listed item outside its
   collection is left out (that run then removes nothing here: the listing may be incomplete);
 - a collection the server moved (its listing is redirected) is followed to its new address, links included;
-  links saved by an earlier MailCraft version are recognised as they are and take the server's form;
+  links saved by an earlier Mail version are recognised as they are and take the server's form;
 - the server has connection settings of its own: a **Password (if different)**, the consent to sign in over
   plain `http://`, and (`accounts.edit {"dav": {"extraRootPem": …}}`) a trusted certificate for a self-signed
   server. Nothing is taken over from the mail server's settings. A saved password of its own can be removed
@@ -389,7 +389,7 @@ The same section takes a **publishing location**, a WebDAV collection. **Share C
 calendar) can then publish a calendar there and write a sharing invitation with its `webcal://` address;
 every send/receive uploads it again when it changed, and subscribers refresh it (`REFRESH-INTERVAL`). The
 commands are `calendar.publish` and `calendar.share {"publish": true}`. A calendar is only published as a
-file inside the account's publishing location (not a folder, not anywhere else on that server). MailCraft
+file inside the account's publishing location (not a folder, not anywhere else on that server). Mail
 only ever replaces or removes the file it wrote itself: the first upload creates the file and fails when
 something is already at that address, later uploads and the removal need the file to be unchanged since
 the last upload (`If-Match`), and a file changed or replaced by someone else is left as it is. Publishing
@@ -413,11 +413,11 @@ mailbox's folders, cannot send, and appears in the folder pane and in Search ›
 - Where no credential store is available (no keyring daemon or no D-Bus session), secrets stay in
   `secrets.json` in the profile folder. That file is **not encrypted**; Account Settings says so, and its
   **Use System Keyring** button retries the move (`accounts.useKeyring {"confirm": true}`).
-- `mailcraft-cli` reads secrets from the same place when the profile has mail accounts.
+- `iridium-mail-cli` reads secrets from the same place when the profile has mail accounts.
 
 ## OAuth 2.0 sign-in
 
-Some providers (for example Google and Microsoft) need OAuth 2.0 instead of a password. MailCraft ships the
+Some providers (for example Google and Microsoft) need OAuth 2.0 instead of a password. Mail ships the
 providers' public endpoints and scopes, but **no client id**: register a desktop / public-client
 application with the provider and enter its client id in **Sign in with OAuth 2.0**. Both the device-code
 flow and the browser flow (PKCE with a one-time 127.0.0.1 redirect) are supported, and tokens are refreshed

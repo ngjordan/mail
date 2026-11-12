@@ -1291,8 +1291,7 @@ dependencies = [
 [[package]]
 name = "ecolor"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31bcbef0d4263a63eb32c4834e5d711613035ce1333468e107d928923e21e6e2"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "bytemuck",
  "emath",
@@ -1301,8 +1300,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c5642501a65ca657d05f00c643a5c14ff2346cb3818032bfe23d58e1f8e5f84"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1338,8 +1336,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bec9144f49b7a28b5f395d3147e325b4fe3e77ba686eac11d1bdf0a7da3f375f"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "accesskit",
  "ahash",
@@ -1358,8 +1355,7 @@ dependencies = [
 [[package]]
 name = "egui-wgpu"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0309cbe1febed48af5b974e4bcc424b35e9664863a4d402697147b57a488c864"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1378,19 +1374,20 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4e449f4c4a2a60c7ccb4ba7fa4078417bfe1f9ddc03b5e05ce75748e33a70de"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "accesskit_winit",
  "arboard",
  "block2 0.6.2",
  "bytemuck",
  "egui",
+ "image",
  "log",
  "objc2 0.6.5",
  "objc2-app-kit 0.3.2",
  "objc2-foundation 0.3.2",
  "objc2-ui-kit 0.3.2",
+ "parking_lot",
  "profiling",
  "raw-window-handle",
  "smithay-clipboard",
@@ -1403,8 +1400,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "def286cf47194f3fe45b8e37c503ada7a20a64b59a903b4bc704baec943b1827"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "ahash",
  "egui",
@@ -1418,8 +1414,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9275ca5cc35a6b7c94e0e8cedf22542f66cb0cf45ed8ab2657c78ff49fec7268"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "bytemuck",
  "egui",
@@ -1432,8 +1427,7 @@ dependencies = [
 [[package]]
 name = "egui_kittest"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0979c2e37860fcf13a2bea77508607f067a9a6a84ba9bd47b5e298582fb59b86"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "eframe",
  "egui",
@@ -1456,8 +1450,7 @@ checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 [[package]]
 name = "emath"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e73ce90f54750be8672c02be0743fe47530e6f251e066f0ee2869b59eb297af5"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "bytemuck",
 ]
@@ -1526,8 +1519,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97bac86ae3dde93fc3951e790951caea739ff39a6c89d909cdaf1d9278dbb1bd"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1543,6 +1535,7 @@ dependencies = [
  "self_cell",
  "skrifa 0.44.0",
  "smallvec",
+ "unicode-bidi",
  "unicode-general-category",
  "unicode-properties",
  "unicode-segmentation",
@@ -1552,8 +1545,7 @@ dependencies = [
 [[package]]
 name = "epaint_default_fonts"
 version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfc1cc505827f4c23eedc297975a0fd038268d41293f389dd8ff3b574aefab19"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
 
 [[package]]
 name = "equivalent"
@@ -2330,6 +2322,341 @@ dependencies = [
 ]
 
 [[package]]
+name = "iridium-mail"
+version = "0.5.1"
+dependencies = [
+ "eframe",
+ "egui",
+ "iridium-mail-engine",
+ "iridium-mail-shell",
+ "iridium-mail-ui-egui",
+ "log",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "iridium-mail-bench"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-engine",
+ "iridium-mail-net",
+ "iridium-mail-search",
+ "iridium-mail-store",
+ "iridium-mail-testmail",
+ "serde_json",
+]
+
+[[package]]
+name = "iridium-mail-cli"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-engine",
+ "iridium-mail-mcp",
+ "iridium-mail-testmail",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "iridium-mail-engine"
+version = "0.5.1"
+dependencies = [
+ "base64 0.23.1",
+ "iridium-mail-engine",
+ "iridium-mail-fonts",
+ "iridium-mail-formats",
+ "iridium-mail-geom",
+ "iridium-mail-html",
+ "iridium-mail-layout",
+ "iridium-mail-mime",
+ "iridium-mail-model",
+ "iridium-mail-net",
+ "iridium-mail-proof",
+ "iridium-mail-render",
+ "iridium-mail-search",
+ "iridium-mail-smime",
+ "iridium-mail-store",
+ "iridium-mail-testmail",
+ "log",
+ "proptest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zeroize",
+]
+
+[[package]]
+name = "iridium-mail-fonts"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-geom",
+ "proptest",
+ "skrifa 0.48.0",
+]
+
+[[package]]
+name = "iridium-mail-formats"
+version = "0.5.1"
+dependencies = [
+ "cfb",
+ "encoding_rs",
+ "iridium-mail-mime",
+ "iridium-mail-model",
+ "iridium-mail-store",
+ "iridium-mail-testmail",
+ "log",
+ "miniz_oxide 0.8.9",
+ "outlook-pst",
+ "proptest",
+ "roxmltree",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "iridium-mail-geom"
+version = "0.5.1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "iridium-mail-html"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-geom",
+ "iridium-mail-model",
+ "proptest",
+]
+
+[[package]]
+name = "iridium-mail-layout"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-fonts",
+ "iridium-mail-geom",
+ "iridium-mail-model",
+ "proptest",
+ "unicode-linebreak",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "iridium-mail-mcp"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-engine",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
+name = "iridium-mail-mime"
+version = "0.5.1"
+dependencies = [
+ "base64 0.23.1",
+ "encoding_rs",
+ "idna",
+ "proptest",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "iridium-mail-model"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-geom",
+ "iridium-mail-mime",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "iridium-mail-net"
+version = "0.5.1"
+dependencies = [
+ "base64 0.23.1",
+ "ipconfig",
+ "iridium-mail-model",
+ "iridium-mail-testmail",
+ "keyring",
+ "log",
+ "proptest",
+ "rcgen",
+ "ring",
+ "rustls",
+ "rustls-native-certs",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "iridium-mail-proof"
+version = "0.5.1"
+dependencies = [
+ "encoding_rs",
+ "proptest",
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "iridium-mail-render"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-fonts",
+ "iridium-mail-geom",
+ "iridium-mail-layout",
+ "iridium-mail-model",
+ "krilla",
+ "proptest",
+ "resvg",
+ "tiny-skia 0.12.0",
+]
+
+[[package]]
+name = "iridium-mail-search"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-model",
+ "proptest",
+]
+
+[[package]]
+name = "iridium-mail-shell"
+version = "0.5.1"
+dependencies = [
+ "arboard",
+ "eframe",
+ "egui",
+ "image",
+ "iridium-mail-engine",
+ "iridium-mail-fonts",
+ "iridium-mail-ui-egui",
+ "log",
+ "rfd",
+ "serde_json",
+ "tempfile",
+ "x11rb",
+ "xcap",
+ "zbus",
+]
+
+[[package]]
+name = "iridium-mail-smime"
+version = "0.5.1"
+dependencies = [
+ "aes 0.8.4",
+ "base64 0.23.1",
+ "cbc 0.1.2",
+ "cms",
+ "const-oid 0.9.6",
+ "der",
+ "des",
+ "getrandom 0.2.17",
+ "hmac 0.12.1",
+ "iridium-mail-mime",
+ "pbkdf2",
+ "pkcs12",
+ "pkcs5",
+ "pkcs8",
+ "proptest",
+ "rand_core 0.6.4",
+ "rc2",
+ "rsa",
+ "sha1",
+ "sha2 0.10.9",
+ "spki",
+ "thiserror 2.0.21",
+ "x509-cert",
+ "zeroize",
+]
+
+[[package]]
+name = "iridium-mail-store"
+version = "0.5.1"
+dependencies = [
+ "crc32fast",
+ "iridium-mail-mime",
+ "iridium-mail-model",
+ "log",
+ "proptest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "thiserror 2.0.21",
+ "zstd",
+]
+
+[[package]]
+name = "iridium-mail-testmail"
+version = "0.5.1"
+dependencies = [
+ "base64 0.23.1",
+ "rcgen",
+ "rustls",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "iridium-mail-testmail-app"
+version = "0.5.1"
+dependencies = [
+ "iridium-mail-testmail",
+]
+
+[[package]]
+name = "iridium-mail-ui-egui"
+version = "0.5.1"
+dependencies = [
+ "base64 0.23.1",
+ "egui",
+ "egui_extras",
+ "egui_kittest",
+ "image",
+ "iridium-mail-engine",
+ "iridium-mail-fonts",
+ "iridium-mail-geom",
+ "iridium-mail-html",
+ "iridium-mail-layout",
+ "iridium-mail-mime",
+ "iridium-mail-model",
+ "iridium-mail-net",
+ "iridium-mail-smime",
+ "iridium-mail-testmail",
+ "log",
+ "resvg",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "iridium-mail-web"
+version = "0.5.1"
+dependencies = [
+ "eframe",
+ "iridium-mail-engine",
+ "iridium-mail-store",
+ "iridium-mail-ui-egui",
+ "js-sys",
+ "log",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2677,326 +3004,6 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
-
-[[package]]
-name = "mailcraft"
-version = "0.5.1"
-dependencies = [
- "arboard",
- "eframe",
- "image",
- "log",
- "mailcraft-engine",
- "mailcraft-fonts",
- "mailcraft-ui-egui",
- "rfd",
- "serde_json",
- "tempfile",
- "x11rb",
- "xcap",
- "zbus",
-]
-
-[[package]]
-name = "mailcraft-bench"
-version = "0.5.1"
-dependencies = [
- "mailcraft-engine",
- "mailcraft-net",
- "mailcraft-search",
- "mailcraft-store",
- "mailcraft-testmail",
- "serde_json",
-]
-
-[[package]]
-name = "mailcraft-cli"
-version = "0.5.1"
-dependencies = [
- "mailcraft-engine",
- "mailcraft-mcp",
- "mailcraft-testmail",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "mailcraft-engine"
-version = "0.5.1"
-dependencies = [
- "base64 0.23.1",
- "log",
- "mailcraft-engine",
- "mailcraft-fonts",
- "mailcraft-formats",
- "mailcraft-geom",
- "mailcraft-html",
- "mailcraft-layout",
- "mailcraft-mime",
- "mailcraft-model",
- "mailcraft-net",
- "mailcraft-proof",
- "mailcraft-render",
- "mailcraft-search",
- "mailcraft-smime",
- "mailcraft-store",
- "mailcraft-testmail",
- "proptest",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "zeroize",
-]
-
-[[package]]
-name = "mailcraft-fonts"
-version = "0.5.1"
-dependencies = [
- "mailcraft-geom",
- "proptest",
- "skrifa 0.48.0",
-]
-
-[[package]]
-name = "mailcraft-formats"
-version = "0.5.1"
-dependencies = [
- "cfb",
- "encoding_rs",
- "log",
- "mailcraft-mime",
- "mailcraft-model",
- "mailcraft-store",
- "mailcraft-testmail",
- "miniz_oxide 0.8.9",
- "outlook-pst",
- "proptest",
- "roxmltree",
- "tempfile",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "mailcraft-geom"
-version = "0.5.1"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "mailcraft-html"
-version = "0.5.1"
-dependencies = [
- "mailcraft-geom",
- "mailcraft-model",
- "proptest",
-]
-
-[[package]]
-name = "mailcraft-layout"
-version = "0.5.1"
-dependencies = [
- "mailcraft-fonts",
- "mailcraft-geom",
- "mailcraft-model",
- "proptest",
- "unicode-linebreak",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "mailcraft-mcp"
-version = "0.5.1"
-dependencies = [
- "mailcraft-engine",
- "serde",
- "serde_json",
- "tempfile",
-]
-
-[[package]]
-name = "mailcraft-mime"
-version = "0.5.1"
-dependencies = [
- "base64 0.23.1",
- "encoding_rs",
- "idna",
- "proptest",
- "serde",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "mailcraft-model"
-version = "0.5.1"
-dependencies = [
- "mailcraft-geom",
- "mailcraft-mime",
- "proptest",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "mailcraft-net"
-version = "0.5.1"
-dependencies = [
- "base64 0.23.1",
- "ipconfig",
- "keyring",
- "log",
- "mailcraft-model",
- "mailcraft-testmail",
- "proptest",
- "rcgen",
- "ring",
- "rustls",
- "rustls-native-certs",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "mailcraft-proof"
-version = "0.5.1"
-dependencies = [
- "encoding_rs",
- "proptest",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "mailcraft-render"
-version = "0.5.1"
-dependencies = [
- "krilla",
- "mailcraft-fonts",
- "mailcraft-geom",
- "mailcraft-layout",
- "mailcraft-model",
- "proptest",
- "resvg",
- "tiny-skia 0.12.0",
-]
-
-[[package]]
-name = "mailcraft-search"
-version = "0.5.1"
-dependencies = [
- "mailcraft-model",
- "proptest",
-]
-
-[[package]]
-name = "mailcraft-smime"
-version = "0.5.1"
-dependencies = [
- "aes 0.8.4",
- "base64 0.23.1",
- "cbc 0.1.2",
- "cms",
- "const-oid 0.9.6",
- "der",
- "des",
- "getrandom 0.2.17",
- "hmac 0.12.1",
- "mailcraft-mime",
- "pbkdf2",
- "pkcs12",
- "pkcs5",
- "pkcs8",
- "proptest",
- "rand_core 0.6.4",
- "rc2",
- "rsa",
- "sha1",
- "sha2 0.10.9",
- "spki",
- "thiserror 2.0.21",
- "x509-cert",
- "zeroize",
-]
-
-[[package]]
-name = "mailcraft-store"
-version = "0.5.1"
-dependencies = [
- "crc32fast",
- "log",
- "mailcraft-mime",
- "mailcraft-model",
- "proptest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tempfile",
- "thiserror 2.0.21",
- "zstd",
-]
-
-[[package]]
-name = "mailcraft-testmail"
-version = "0.5.1"
-dependencies = [
- "base64 0.23.1",
- "rcgen",
- "rustls",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "mailcraft-testmail-app"
-version = "0.5.1"
-dependencies = [
- "mailcraft-testmail",
-]
-
-[[package]]
-name = "mailcraft-ui-egui"
-version = "0.5.1"
-dependencies = [
- "base64 0.23.1",
- "egui",
- "egui_extras",
- "egui_kittest",
- "image",
- "log",
- "mailcraft-engine",
- "mailcraft-fonts",
- "mailcraft-geom",
- "mailcraft-html",
- "mailcraft-layout",
- "mailcraft-mime",
- "mailcraft-model",
- "mailcraft-net",
- "mailcraft-smime",
- "mailcraft-testmail",
- "resvg",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "mailcraft-web"
-version = "0.5.1"
-dependencies = [
- "eframe",
- "js-sys",
- "log",
- "mailcraft-engine",
- "mailcraft-store",
- "mailcraft-ui-egui",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
 
 [[package]]
 name = "memchr"
@@ -5625,6 +5632,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
 
 [[package]]
+name = "unicode-bidi"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c1cb5db39152898a79168971543b1cb5020dff7fe43c8dc468b0885f5e29df5"
+
+[[package]]
 name = "unicode-general-category"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6533,8 +6546,7 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 [[package]]
 name = "winit"
 version = "0.30.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6755fa58a9f8350bd1e472d4c3fcc25f824ec358933bba33306d0b63df5978d"
+source = "git+https://github.com/ngjordan/winit.git?rev=a517b3846ee8457d84ee4975110bfda6797c44dc#a517b3846ee8457d84ee4975110bfda6797c44dc"
 dependencies = [
  "ahash",
  "android-activity",
@@ -6784,7 +6796,7 @@ checksum = "9440ea3e5aeabb0ac63af70daf835274065238cdd0cec83418f417eae38bacee"
 name = "xtask"
 version = "0.5.1"
 dependencies = [
- "mailcraft-engine",
+ "iridium-mail-engine",
  "resvg",
  "serde_json",
  "tempfile",
@@ -7129,3 +7141,18 @@ dependencies = [
  "syn 3.0.6",
  "winnow",
 ]
+
+[[patch.unused]]
+name = "egui_demo_lib"
+version = "0.37.0"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
+
+[[patch.unused]]
+name = "egui_inspection"
+version = "0.37.0"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"
+
+[[patch.unused]]
+name = "egui_system_font_provider"
+version = "0.37.0"
+source = "git+https://github.com/ngjordan/egui.git?rev=faf1ced22250c509636bff2578731a0be86a69ac#faf1ced22250c509636bff2578731a0be86a69ac"

@@ -184,7 +184,7 @@ impl Cert {
         self.not_before() <= at && at <= self.not_after()
     }
 
-    /// SHA-256 fingerprint (lower-case hex): the certificate's id in MailCraft.
+    /// SHA-256 fingerprint (lower-case hex): the certificate's id in Mail.
     pub fn fingerprint(&self) -> String {
         crate::hex(&sha2::Sha256::digest(&self.der))
     }

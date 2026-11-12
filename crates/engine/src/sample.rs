@@ -3,8 +3,8 @@
 //! Every message is built as a real RFC 5322 message with [`MessageBuilder`] and parsed back through
 //! [`MailItem::from_message`], so bodies, sizes, attachments and previews look like real mail.
 
-use mailcraft_mime::{Address, AttachmentSpec, MessageBuilder};
-use mailcraft_model::{
+use iridium_mail_mime::{Address, AttachmentSpec, MessageBuilder};
+use iridium_mail_model::{
     AccountId, Appointment, Attendee, BusyStatus, Contact, DateTime, FlagState, FocusClass, FolderId,
     FolderRole, MailItem, Mailbox, Note, NoteColor, Recurrence, ResponseState, Task, TaskPriority,
     TaskStatus, thread::topic_key,
@@ -13,14 +13,14 @@ use mailcraft_model::{
 use crate::Session;
 
 /// The sample account's display name.
-pub const SAMPLE_ACCOUNT: &str = "MailCraft Sample";
+pub const SAMPLE_ACCOUNT: &str = "Mail Sample";
 /// The sample user ("me").
 pub const SAMPLE_USER_NAME: &str = "Jordan Lee";
 pub const SAMPLE_USER_ADDR: &str = "jordan.lee@example.net";
 
 /// Fixed "now" used by [`sample_session`]: Friday 9 October 2026, 2:30 PM UTC.
 pub fn sample_now() -> DateTime {
-    mailcraft_model::dates::local_datetime(2026, 10, 9, 14, 30, 0, 0).unwrap_or_default()
+    iridium_mail_model::dates::local_datetime(2026, 10, 9, 14, 30, 0, 0).unwrap_or_default()
 }
 
 /// A session over [`sample_mailbox`] with the clock fixed at [`sample_now`] (UTC display).
@@ -35,7 +35,7 @@ pub fn sample_session() -> Session {
 /// An in-memory session over the sample mailbox dated relative to `now` (the clock is not fixed), its
 /// message sources in the session's body store.
 pub fn sample_session_at(now: DateTime) -> Session {
-    let mut bodies = mailcraft_store::BodyStore::in_memory();
+    let mut bodies = iridium_mail_store::BodyStore::in_memory();
     let mb = sample_mailbox(now, &mut bodies);
     let mut s = Session::new(mb);
     s.bodies = bodies;
@@ -195,7 +195,7 @@ impl Msg {
 /// Deterministic filler bytes for attachments (a recognisable header, then a repeating pattern).
 fn filler(name: &str, size: usize) -> Vec<u8> {
     let mut out = Vec::with_capacity(size);
-    out.extend_from_slice(format!("MailCraft sample attachment: {name}\n").as_bytes());
+    out.extend_from_slice(format!("Mail sample attachment: {name}\n").as_bytes());
     let mut x: u32 = 0x1234_5678;
     while out.len() < size {
         x = x.wrapping_mul(1_103_515_245).wrapping_add(12_345);
@@ -207,8 +207,8 @@ fn filler(name: &str, size: usize) -> Vec<u8> {
     out
 }
 
-fn mailbox(p: Person) -> mailcraft_mime::Mailbox {
-    mailcraft_mime::Mailbox::new(Some(p.0), p.1)
+fn mailbox(p: Person) -> iridium_mail_mime::Mailbox {
+    iridium_mail_mime::Mailbox::new(Some(p.0), p.1)
 }
 
 fn addresses(list: &[Person]) -> Vec<Address> {
@@ -394,11 +394,11 @@ fn messages() -> Vec<Msg> {
     ]
 }
 
-/// The sample: local account "MailCraft Sample", ~40 messages over the last five weeks relative to `now`
+/// The sample: local account "Mail Sample", ~40 messages over the last five weeks relative to `now`
 /// (unread, flagged, completed, high/low importance, categories, attachments, HTML newsletters, a reply
 /// thread, drafts, sent items, junk), plus a few appointments, contacts, tasks and notes. Each message's source
 /// goes to `bodies` (items refer to it by key).
-pub fn sample_mailbox(now: DateTime, bodies: &mut mailcraft_store::BodyStore) -> Mailbox {
+pub fn sample_mailbox(now: DateTime, bodies: &mut iridium_mail_store::BodyStore) -> Mailbox {
     let mut mb = Mailbox::new_local(SAMPLE_ACCOUNT);
     let account = mb.default_account().map(|a| a.id).unwrap_or(AccountId(1));
     if let Some(a) = mb.accounts.iter_mut().find(|a| a.id == account) {
@@ -424,7 +424,7 @@ pub fn sample_mailbox(now: DateTime, bodies: &mut mailcraft_store::BodyStore) ->
         }
         let date = DateTime::from_unix(t, 0);
         let message_id =
-            format!("sample-{i:02}.mailcraft@{}", m.from.1.rsplit('@').next().unwrap_or("example.com"));
+            format!("sample-{i:02}.iridium-mail@{}", m.from.1.rsplit('@').next().unwrap_or("example.com"));
         let parent = m.reply_of.and_then(|p| ids.get(p).cloned());
         let mut b = MessageBuilder::new();
         b.from = Some(mailbox(m.from));
@@ -458,7 +458,7 @@ pub fn sample_mailbox(now: DateTime, bodies: &mut mailcraft_store::BodyStore) ->
         }
         let raw = b.build();
         ids.push(message_id);
-        let mut item = match mailcraft_mime::parse(&raw) {
+        let mut item = match iridium_mail_mime::parse(&raw) {
             Ok(parsed) => MailItem::from_message(&parsed, &raw, now),
             Err(_) => MailItem { subject: m.subject.to_owned(), received: date, ..Default::default() },
         };
@@ -492,7 +492,7 @@ pub fn sample_mailbox(now: DateTime, bodies: &mut mailcraft_store::BodyStore) ->
             Resp::Replied => ResponseState::Replied(DateTime::from_unix(t.saturating_add(2_820), 0)),
             Resp::Forwarded => ResponseState::Forwarded(DateTime::from_unix(t.saturating_add(1_200), 0)),
         };
-        if let Err(e) = mailcraft_store::import::store_source(bodies, &mut item, &raw) {
+        if let Err(e) = iridium_mail_store::import::store_source(bodies, &mut item, &raw) {
             log::warn!("sample message {:?} keeps no source: {e}", item.subject);
         }
         mb.add_mail(item);
@@ -579,7 +579,7 @@ fn add_calendar(mb: &mut Mailbox, account: AccountId, day_start: i64) {
         },
     ];
     for mut a in appts {
-        let id = mailcraft_model::ItemId(mb.alloc_id());
+        let id = iridium_mail_model::ItemId(mb.alloc_id());
         a.id = id;
         a.folder = folder;
         mb.appointments.insert(id, a);
@@ -597,7 +597,7 @@ fn add_people(mb: &mut Mailbox, account: AccountId) {
         ("Grace", "Kim", GRACE.1, "Example Org", "Designer", "+1 555 0106"),
     ];
     for (first, last, email, company, job, phone) in people {
-        let id = mailcraft_model::ItemId(mb.alloc_id());
+        let id = iridium_mail_model::ItemId(mb.alloc_id());
         mb.contacts.insert(
             id,
             Contact {
@@ -640,7 +640,7 @@ fn add_tasks(mb: &mut Mailbox, account: AccountId, day_start: i64) {
         Task { subject: "Submit benefits forms".into(), due: day(14), ..Default::default() },
     ];
     for mut t in tasks {
-        let id = mailcraft_model::ItemId(mb.alloc_id());
+        let id = iridium_mail_model::ItemId(mb.alloc_id());
         t.id = id;
         t.folder = folder;
         mb.tasks.insert(id, t);
@@ -654,7 +654,7 @@ fn add_notes(mb: &mut Mailbox, account: AccountId, day_start: i64) {
         ("Retro ideas\n- fewer meetings\n- shared glossary", NoteColor::Blue, -3),
     ];
     for (text, color, d) in notes {
-        let id = mailcraft_model::ItemId(mb.alloc_id());
+        let id = iridium_mail_model::ItemId(mb.alloc_id());
         let d: i64 = d;
         let when = DateTime::from_unix(
             day_start.saturating_add(d.saturating_mul(86_400)).saturating_add(10 * 3600),
@@ -682,8 +682,8 @@ mod tests {
     #[test]
     fn sample_is_valid_and_deterministic() {
         let now = sample_now();
-        let a = sample_mailbox(now, &mut mailcraft_store::BodyStore::in_memory());
-        let b = sample_mailbox(now, &mut mailcraft_store::BodyStore::in_memory());
+        let a = sample_mailbox(now, &mut iridium_mail_store::BodyStore::in_memory());
+        let b = sample_mailbox(now, &mut iridium_mail_store::BodyStore::in_memory());
         assert_eq!(a, b);
         assert!(a.validate().is_empty(), "{:?}", a.validate());
         assert!((36..=45).contains(&a.mail.len()), "{}", a.mail.len());
@@ -697,14 +697,14 @@ mod tests {
 
     #[test]
     fn sample_covers_the_interesting_states() {
-        let mut bodies = mailcraft_store::BodyStore::in_memory();
+        let mut bodies = iridium_mail_store::BodyStore::in_memory();
         let mb = sample_mailbox(sample_now(), &mut bodies);
         let mail: Vec<&MailItem> = mb.mail.items().collect();
         assert!(mail.iter().any(|m| !m.read));
         assert!(mail.iter().any(|m| m.is_flagged()));
         assert!(mail.iter().any(|m| matches!(m.flag, FlagState::Complete { .. })));
-        assert!(mail.iter().any(|m| m.importance == mailcraft_model::Importance::High));
-        assert!(mail.iter().any(|m| m.importance == mailcraft_model::Importance::Low));
+        assert!(mail.iter().any(|m| m.importance == iridium_mail_model::Importance::High));
+        assert!(mail.iter().any(|m| m.importance == iridium_mail_model::Importance::Low));
         assert!(mail.iter().any(|m| !m.categories.is_empty()));
         assert!(mail.iter().any(|m| m.has_attachments()));
         assert!(mail.iter().any(|m| bodies.body_of(m).unwrap().is_some_and(|b| b.html.is_some())));

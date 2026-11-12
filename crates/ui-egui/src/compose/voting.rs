@@ -15,8 +15,8 @@
 use egui::{RichText, Sense, Ui, Vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::compose::{Tracking, tracking};
-use mailcraft_model::ItemId;
+use iridium_mail_engine::cmd::compose::{Tracking, tracking};
+use iridium_mail_model::ItemId;
 
 use crate::App;
 
@@ -54,11 +54,11 @@ struct Cache {
 struct Answered(Vec<u64>);
 
 fn cache_id() -> egui::Id {
-    egui::Id::unique("mailcraft-tracking-cache")
+    egui::Id::unique("iridium-mail-tracking-cache")
 }
 
 fn answered_id() -> egui::Id {
-    egui::Id::unique("mailcraft-receipt-answered")
+    egui::Id::unique("iridium-mail-receipt-answered")
 }
 
 /// Tracking state of `id`, recomputed only when the item or the mailbox changed.

@@ -11,24 +11,25 @@ description = "A clean-room, open-source desktop mail client modelled on the cla
 
 [workspace.dependencies]
 # internal
-mailcraft-geom = { path = "crates/geom" }
-mailcraft-mime = { path = "crates/mime" }
-mailcraft-model = { path = "crates/model" }
-mailcraft-fonts = { path = "crates/fonts" }
-mailcraft-store = { path = "crates/store" }
-mailcraft-html = { path = "crates/html" }
-mailcraft-layout = { path = "crates/layout" }
-mailcraft-render = { path = "crates/render" }
-mailcraft-engine = { path = "crates/engine" }
-mailcraft-ui-egui = { path = "crates/ui-egui" }
-mailcraft-mcp = { path = "crates/mcp" }
-mailcraft-proof = { path = "crates/proof" }
-mailcraft-net = { path = "crates/net" }
-mailcraft-formats = { path = "crates/formats" }
-mailcraft-search = { path = "crates/search" }
-mailcraft-smime = { path = "crates/smime" }
-mailcraft-testmail = { path = "crates/testmail" }
-mailcraft-web = { path = "apps/mailcraft-web" }
+iridium-mail-geom = { path = "crates/geom" }
+iridium-mail-mime = { path = "crates/mime" }
+iridium-mail-model = { path = "crates/model" }
+iridium-mail-fonts = { path = "crates/fonts" }
+iridium-mail-store = { path = "crates/store" }
+iridium-mail-html = { path = "crates/html" }
+iridium-mail-layout = { path = "crates/layout" }
+iridium-mail-render = { path = "crates/render" }
+iridium-mail-engine = { path = "crates/engine" }
+iridium-mail-ui-egui = { path = "crates/ui-egui" }
+iridium-mail-mcp = { path = "crates/mcp" }
+iridium-mail-proof = { path = "crates/proof" }
+iridium-mail-net = { path = "crates/net" }
+iridium-mail-formats = { path = "crates/formats" }
+iridium-mail-search = { path = "crates/search" }
+iridium-mail-smime = { path = "crates/smime" }
+iridium-mail-testmail = { path = "crates/testmail" }
+iridium-mail-web = { path = "apps/iridium-mail-web" }
+iridium-mail-shell = { path = "crates/mail-shell" }
 
 # foundation
 thiserror = "2"
@@ -61,7 +62,7 @@ rfd = "0.17"
 # egui-winit. `image-data` reads clipboard pictures (adds the image crate and the platform graphics bindings,
 # all MIT/Apache-2.0/Zlib).
 arboard = { version = "3.6", default-features = false, features = ["image-data"] }
-# Screen capture for Insert › Screenshot (apps/mailcraft only). Linux and the BSDs: the X11 window list and
+# Screen capture for Insert › Screenshot (apps/iridium-mail only). Linux and the BSDs: the X11 window list and
 # GetImage (x11rb, pure Rust, MIT OR Apache-2.0; already in the tree through winit) and the XDG desktop portal
 # over D-Bus (zbus, MIT; already in the tree through keyring). Windows and macOS: xcap (Apache-2.0).
 x11rb = "0.13"
@@ -126,7 +127,7 @@ miniz_oxide = "0.8"
 # PST files ([MS-PST], read only): Microsoft's MIT-licensed reference reader (byteorder, thiserror, tracing).
 outlook-pst = "1.2.0"
 
-# SVG rasterising: xtask ico, the UI (app icon, SVG pictures) and mailcraft-render (generated pictures to PNG)
+# SVG rasterising: xtask ico, the UI (app icon, SVG pictures) and iridium-mail-render (generated pictures to PNG)
 resvg = { version = "0.45.1", default-features = false }
 
 # text / rendering
@@ -161,3 +162,20 @@ lto = "thin"
 codegen-units = 16
 debug = 0
 strip = "symbols"
+
+[patch.crates-io]
+ecolor = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+emath = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+epaint = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+epaint_default_fonts = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui-winit = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui-wgpu = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_glow = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_extras = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_kittest = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_system_font_provider = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+eframe = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_demo_lib = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+egui_inspection = { git = "https://github.com/ngjordan/egui.git", rev = "faf1ced22250c509636bff2578731a0be86a69ac" }
+winit = { git = "https://github.com/ngjordan/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }

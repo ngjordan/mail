@@ -2,7 +2,7 @@
 
 use std::time::Instant;
 
-use mailcraft_proof::{IssueKind, SpellOptions, Speller, tokenize};
+use iridium_mail_proof::{IssueKind, SpellOptions, Speller, tokenize};
 
 fn sp() -> Speller {
     Speller::bundled_en_us()
@@ -126,18 +126,20 @@ fn numbers_and_addresses_ignored() {
 #[test]
 fn user_dictionary_and_ignore() {
     let mut s = sp();
-    assert!(!s.check("mailcraft"));
-    assert!(s.add_word("mailcraft"));
-    assert!(s.check("mailcraft"));
-    assert!(s.check("Mailcraft"));
-    assert!(s.check("MAILCRAFT"));
+    // A word added to the dictionary is matched in any case, so it is added in lower
+    // case: that is how the speller treats it.
+    assert!(!s.check("zorblax"));
+    assert!(s.add_word("zorblax"));
+    assert!(s.check("zorblax"));
+    assert!(s.check("Zorblax"));
+    assert!(s.check("ZORBLAX"));
     assert!(s.add_word("McTavish"));
     assert!(s.check("McTavish"));
     assert!(!s.check("mctavish"));
     assert!(s.check("MCTAVISH"));
-    assert_eq!(s.user_words().collect::<Vec<_>>(), ["McTavish", "mailcraft"]);
-    assert!(s.remove_word("mailcraft"));
-    assert!(!s.check("mailcraft"));
+    assert_eq!(s.user_words().collect::<Vec<_>>(), ["McTavish", "zorblax"]);
+    assert!(s.remove_word("zorblax"));
+    assert!(!s.check("zorblax"));
     assert!(!s.add_word(""));
     assert!(!s.add_word("two words"));
 
@@ -236,7 +238,7 @@ fn tokenize_ranges() {
     }
 }
 
-fn kinds(issues: &[mailcraft_proof::Issue]) -> Vec<IssueKind> {
+fn kinds(issues: &[iridium_mail_proof::Issue]) -> Vec<IssueKind> {
     issues.iter().map(|i| i.kind).collect()
 }
 

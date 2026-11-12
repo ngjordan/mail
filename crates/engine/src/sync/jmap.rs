@@ -19,14 +19,14 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use mailcraft_net::jmap::{JmapAuth, JmapClient, JmapMailbox};
-use mailcraft_net::{ConnectOptions, Credentials, NetError};
+use iridium_mail_net::jmap::{JmapAuth, JmapClient, JmapMailbox};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError};
 use serde_json::{Map, Value, json};
 
 use super::native::{Event, Events, Outgoing};
 use super::*;
 use crate::accounts::{JmapFolderShadow, JmapShadow, prefs};
-use mailcraft_model::{Account, FolderRole};
+use iridium_mail_model::{Account, FolderRole};
 
 /// Emails asked for per Email/query page of the first run.
 const QUERY_PAGE: u64 = 500;
@@ -67,7 +67,7 @@ impl JmapConn {
         &self.url
     }
     pub(crate) fn connect(&self) -> Result<JmapClient, NetError> {
-        let http = mailcraft_net::http::HttpClient::new(self.options.clone());
+        let http = iridium_mail_net::http::HttpClient::new(self.options.clone());
         JmapClient::connect(&self.url, self.auth.clone(), http)
     }
 }
@@ -131,7 +131,7 @@ const SEARCH_LIMIT: u64 = 2_000;
 /// The JMAP part of a server search for account `a` over `folders`; `None` when the criteria have no filter.
 pub(crate) fn build_search(s: &Session, a: &Account, req: &super::older::Request) -> Option<JmapSearch> {
     let filter = req.criterion.jmap_filter().ok().flatten()?;
-    let all: Vec<&mailcraft_model::Folder> = s
+    let all: Vec<&iridium_mail_model::Folder> = s
         .mailbox
         .folders
         .values()
@@ -235,11 +235,11 @@ fn keywords_of(m: &MailItem) -> Vec<String> {
         k.push("$flagged".to_owned());
     }
     match m.response {
-        mailcraft_model::ResponseState::Replied(_) | mailcraft_model::ResponseState::RepliedAll(_) => {
+        iridium_mail_model::ResponseState::Replied(_) | iridium_mail_model::ResponseState::RepliedAll(_) => {
             k.push("$answered".to_owned());
         }
-        mailcraft_model::ResponseState::Forwarded(_) => k.push("$forwarded".to_owned()),
-        mailcraft_model::ResponseState::None => {}
+        iridium_mail_model::ResponseState::Forwarded(_) => k.push("$forwarded".to_owned()),
+        iridium_mail_model::ResponseState::None => {}
     }
     if m.is_draft {
         k.push("$draft".to_owned());
@@ -315,7 +315,7 @@ pub(crate) fn build_job(
     Some(job)
 }
 
-/// The JMAP role of a default folder MailCraft makes on the server when the server has none.
+/// The JMAP role of a default folder Mail makes on the server when the server has none.
 fn creatable_role(r: FolderRole) -> Option<&'static str> {
     match r {
         FolderRole::Archive => Some("archive"),
@@ -929,7 +929,7 @@ fn item_of(s: &Session, account: AccountId, id: &str) -> Option<ItemId> {
     first_item(&s.mailbox, &account_scope(&s.mailbox, account), |m| m.remote_id.as_deref() == Some(id))
 }
 
-fn apply_keywords(m: &mut MailItem, k: &[String], now: mailcraft_model::DateTime) {
+fn apply_keywords(m: &mut MailItem, k: &[String], now: iridium_mail_model::DateTime) {
     let has = |w: &str| k.iter().any(|x| x == w);
     let mut flags: Vec<String> = Vec::new();
     for (kw, flag) in [
@@ -944,7 +944,7 @@ fn apply_keywords(m: &mut MailItem, k: &[String], now: mailcraft_model::DateTime
     }
     apply_server_flags(m, &flags, now);
     if !has("$answered") && !has("$forwarded") {
-        m.response = mailcraft_model::ResponseState::None;
+        m.response = iridium_mail_model::ResponseState::None;
     }
     m.is_draft = has("$draft");
 }
@@ -991,7 +991,7 @@ fn apply_mailboxes(s: &mut Session, account: AccountId, mut list: Vec<JmapMailbo
         // the place of the server's trash, whatever the listing order).
         let role = b.folder_role().or_else(|| {
             (b.role.is_none() && b.parent_id.is_none())
-                .then(|| mailcraft_net::imap::role_from_name(&b.name))
+                .then(|| iridium_mail_net::imap::role_from_name(&b.name))
                 .flatten()
                 .filter(|r| *r != FolderRole::Inbox && *r != FolderRole::Outbox && !server_roles.contains(r))
         });
@@ -1136,7 +1136,7 @@ fn apply_emails(s: &mut Session, account: AccountId, list: Vec<JEmail>, new_inbo
             }
             None => {
                 let Some(raw) = &e.raw else { continue };
-                let mut item = mailcraft_store::import::item_from_raw(raw, folder, now);
+                let mut item = iridium_mail_store::import::item_from_raw(raw, folder, now);
                 // A local copy waiting for this message (sent here, filed by the server): adopt it.
                 let adopt = item.message_id.as_deref().and_then(|mid| local_copy(&s.mailbox, folder, mid));
                 if let Some(local) = adopt {
@@ -1314,7 +1314,7 @@ mod tests {
     fn keywords_and_email_parsing() {
         let mut m = MailItem { read: true, is_draft: true, ..Default::default() };
         assert_eq!(keywords_of(&m), vec!["$draft".to_owned(), "$seen".to_owned()]);
-        apply_keywords(&mut m, &["$flagged".to_owned()], mailcraft_model::DateTime::default());
+        apply_keywords(&mut m, &["$flagged".to_owned()], iridium_mail_model::DateTime::default());
         assert!(!m.read && m.is_flagged() && !m.is_draft);
         let v = json!({"id": "e1", "blobId": "b1", "mailboxIds": {"m2": true, "m1": true, "m3": false},
             "keywords": {"$Seen": true}, "size": 42});

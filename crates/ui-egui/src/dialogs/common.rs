@@ -7,7 +7,7 @@ use egui::{
 use serde_json::{Value, json};
 
 use crate::App;
-use mailcraft_model::{Folder, FolderId, FolderKind, FolderRole};
+use iridium_mail_model::{Folder, FolderId, FolderKind, FolderRole};
 
 /// What a dialog wants after one frame.
 #[derive(Debug)]
@@ -384,7 +384,7 @@ pub(crate) fn parse_ymd(text: &str) -> Option<(i64, u8, u8)> {
     let y: i64 = parts.next()?.trim().parse().ok()?;
     let m: u8 = parts.next()?.trim().parse().ok()?;
     let d: u8 = parts.next()?.trim().parse().ok()?;
-    mailcraft_model::dates::days_from_civil(y, m, d).map(|_| (y, m, d))
+    iridium_mail_model::dates::days_from_civil(y, m, d).map(|_| (y, m, d))
 }
 
 /// Month shown by a date box's calendar (year, month), kept while it is open.
@@ -445,9 +445,9 @@ pub(crate) fn date_box(
                 }
             });
             ui.ctx().data_mut(|d| d.insert_temp(id, month));
-            let Some(first) = mailcraft_model::dates::days_from_civil(y, m, 1) else { return };
-            let lead = i64::from(mailcraft_model::dates::weekday_of_day(first).0);
-            let len = i64::from(mailcraft_model::dates::days_in_month(y, m));
+            let Some(first) = iridium_mail_model::dates::days_from_civil(y, m, 1) else { return };
+            let lead = i64::from(iridium_mail_model::dates::weekday_of_day(first).0);
+            let len = i64::from(iridium_mail_model::dates::days_in_month(y, m));
             let chosen = parse_ymd(text);
             egui::Grid::new((id, "grid")).spacing([2.0, 2.0]).show(ui, |ui| {
                 for w in ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] {
@@ -641,7 +641,7 @@ pub(crate) fn folder_tree(
             .min_scrolled_height(height)
             .auto_shrink([false, false])
             .show(ui, |ui| {
-                let accounts: Vec<(mailcraft_model::AccountId, String)> =
+                let accounts: Vec<(iridium_mail_model::AccountId, String)> =
                     app.s.mailbox.accounts.iter().map(|a| (a.id, account_title(a))).collect();
                 for (acct, name) in accounts {
                     ui.horizontal(|ui| {
@@ -659,7 +659,7 @@ pub(crate) fn folder_tree(
     ev
 }
 
-pub(crate) fn account_title(a: &mailcraft_model::Account) -> String {
+pub(crate) fn account_title(a: &iridium_mail_model::Account) -> String {
     if a.address.is_empty() { a.display_name.clone() } else { a.address.clone() }
 }
 
@@ -728,7 +728,7 @@ pub(crate) fn parse_date(app: &App, date: &str, time: &str) -> Option<i64> {
     let m: u8 = parts.next()?.trim().parse().ok()?;
     let day: u8 = parts.next()?.trim().parse().ok()?;
     let (h, mi) = parse_clock(time).unwrap_or((0, 0));
-    mailcraft_model::dates::local_datetime(y, m, day, h, mi, 0, app.s.tz_offset_min).map(|t| t.unix)
+    iridium_mail_model::dates::local_datetime(y, m, day, h, mi, 0, app.s.tz_offset_min).map(|t| t.unix)
 }
 
 /// "HH:MM" (24 h) or "H:MM AM/PM".
@@ -758,8 +758,8 @@ pub(crate) fn parse_clock(t: &str) -> Option<(u8, u8)> {
 
 /// Unix seconds → ("YYYY-MM-DD", "HH:MM") in the session's offset.
 pub(crate) fn date_parts(app: &App, unix: i64) -> (String, String) {
-    let t = mailcraft_model::dates::LocalTime::of(
-        mailcraft_model::DateTime { unix, offset_min: app.s.tz_offset_min },
+    let t = iridium_mail_model::dates::LocalTime::of(
+        iridium_mail_model::DateTime { unix, offset_min: app.s.tz_offset_min },
         app.s.tz_offset_min,
     );
     (format!("{:04}-{:02}-{:02}", t.year, t.month, t.day), format!("{:02}:{:02}", t.hour, t.minute))
@@ -777,7 +777,7 @@ pub(crate) fn split_list(s: &str) -> Vec<String> {
 
 /// Bytes as "12 KB" / "3.4 MB".
 pub(crate) fn size_text(bytes: u64) -> String {
-    mailcraft_engine::queries::size_text(bytes)
+    iridium_mail_engine::queries::size_text(bytes)
 }
 
 // ---------------------------------------------------------------------------------------------------------

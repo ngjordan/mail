@@ -7,9 +7,9 @@
 //! Label sheets are measured from the paper's edge (their own margins), so the page setup's margins and the
 //! header and footer do not apply to them. Envelopes use the page setup's margins for the return address.
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::Rect;
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::Rect;
+use iridium_mail_layout::DisplayItem;
 
 use super::text::{self, Style};
 use super::{Frame, MAX_PAGES, PX_PER_IN, Paper};

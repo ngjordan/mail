@@ -10,8 +10,8 @@
 
 use serde_json::{Value, json};
 
-use mailcraft_model::calendar::{Publication, Withdrawal};
-use mailcraft_model::{AccountId, Appointment, DateTime, FolderId};
+use iridium_mail_model::calendar::{Publication, Withdrawal};
+use iridium_mail_model::{AccountId, Appointment, DateTime, FolderId};
 
 use super::pim;
 use super::{file_safe, ics_calendar, props, share_detail, share_items, share_window, target_calendar};
@@ -185,7 +185,7 @@ pub fn run_publish(s: &mut Session, p: &Value) -> CmdResult {
         return Err(CmdError::Params(format!("`{url}` is not a web address to publish to")));
     }
     crate::sync::pim::publication_target(&base, &url).map_err(CmdError::Params)?;
-    // The file as MailCraft last wrote it (an earlier version kept no ETag: `*`, the file is there).
+    // The file as Mail last wrote it (an earlier version kept no ETag: `*`, the file is there).
     let written = |x: &Publication| {
         if x.etag.is_empty() && x.last_published.is_some() { "*".to_owned() } else { x.etag.clone() }
     };
@@ -250,13 +250,13 @@ pub(crate) fn share_invitation(s: &mut Session, p: &Value) -> CmdResult {
     let text = format!(
         "{who} shared the calendar \"{name}\" with you.\n\n\
          Subscribe to it in your calendar app to see it and every later change:\n{}\n\n\
-         In MailCraft: Calendar › Add Calendar › From Internet, then paste this address:\n{url}\n",
+         In Mail: Calendar › Add Calendar › From Internet, then paste this address:\n{url}\n",
         webcal(&url)
     );
     let mut compose = ComposeState {
         to: opt_str(p, "recipients").unwrap_or_default().to_owned(),
         subject: format!("Shared calendar: {name}"),
-        body: mailcraft_model::Doc::from_plain_text(&text),
+        body: iridium_mail_model::Doc::from_plain_text(&text),
         dirty: true,
         ..Default::default()
     };

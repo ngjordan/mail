@@ -6,7 +6,7 @@ use super::*;
 fn tiny_png() -> String {
     use base64::Engine as _;
     let px = vec![255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255];
-    let png = mailcraft_render::Canvas { width: 2, height: 2, pixels: px }.to_png();
+    let png = iridium_mail_render::Canvas { width: 2, height: 2, pixels: px }.to_png();
     base64::engine::general_purpose::STANDARD.encode(png)
 }
 

@@ -3,7 +3,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_search::{Query, parse};
+use iridium_mail_search::{Query, parse};
 use proptest::prelude::*;
 
 /// Query-ish fragments, so generated inputs exercise keys, operators, quotes and parentheses.

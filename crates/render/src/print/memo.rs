@@ -1,11 +1,11 @@
 //! Memo Style: a band with the user's name and a thick rule at the top of every page, then each item: the
 //! header block (bold labels — From, Sent, To, Cc, Subject, Attachments — with wrapped values), a rule, and the
-//! body laid out with `mailcraft-layout` across as many pages as it needs.
+//! body laid out with `iridium-mail-layout` across as many pages as it needs.
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::Color;
-use mailcraft_layout::{DisplayItem, LayoutOptions, layout_doc};
-use mailcraft_model::Doc;
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::Color;
+use iridium_mail_layout::{DisplayItem, LayoutOptions, layout_doc};
+use iridium_mail_model::Doc;
 
 use super::flow::{self, Flow};
 use super::text::{self, Style};

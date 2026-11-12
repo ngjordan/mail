@@ -1,5 +1,5 @@
 //! The Options window (plan/reference/options.md): 14 categories in a left list, each page a list of sections
-//! and settings. Every setting is an engine setting (`mailcraft_engine::settings::DEFS`, read
+//! and settings. Every setting is an engine setting (`iridium_mail_engine::settings::DEFS`, read
 //! with `Session::option`, written with `options.set` on OK and saved with the profile); the page layout is
 //! generated from that schema, with the buttons and notes of each section added here. Buttons open the
 //! matching dialogs or run the matching commands.
@@ -9,7 +9,7 @@ use serde_json::{Map, Value, json};
 
 use super::common::{self, Dlg, Out, btn, footer, muted, primary, take_replies, window, with_state};
 use crate::App;
-use mailcraft_engine::settings::{self, Def, Kind, WEEKDAYS};
+use iridium_mail_engine::settings::{self, Def, Kind, WEEKDAYS};
 
 #[derive(Clone, Copy)]
 enum Act {
@@ -27,7 +27,7 @@ use Act::*;
 
 /// Page descriptions, in window order (ids and titles come from the engine).
 const DESCRIPTIONS: [(&str, &str); 14] = [
-    ("general", "General options for working with MailCraft."),
+    ("general", "General options for working with Mail."),
     ("mail", "Change the settings for messages you create and receive."),
     ("calendar", "Change the settings for calendars, meetings and time zones."),
     ("groups", "Options for working with groups."),
@@ -35,8 +35,8 @@ const DESCRIPTIONS: [(&str, &str); 14] = [
     ("tasks", "Change the settings that track your tasks and to-do items."),
     ("search", "Change how items are searched."),
     ("language", "Set the display, editing and proofing languages."),
-    ("accessibility", "Make MailCraft easier to use."),
-    ("advanced", "More options for working with MailCraft."),
+    ("accessibility", "Make Mail easier to use."),
+    ("advanced", "More options for working with Mail."),
     ("customizeRibbon", "Choose how the ribbon looks."),
     ("quickAccessToolbar", "Choose the commands on the Quick Access Toolbar."),
     ("addIns", "View and manage add-ins."),
@@ -47,7 +47,7 @@ const NEEDS_SERVER: &str = "Needs a mail server; not available for local data fi
 
 /// Sections with no settings of their own, shown after another section: (page, after section, heading).
 const EXTRA_SECTIONS: [(&str, &str, &str); 4] = [
-    ("mail", "Compose messages", "MailCraft panes"),
+    ("mail", "Compose messages", "Mail panes"),
     ("advanced", "Start and exit", "AutoArchive"),
     ("advanced", "Reminders", "Export"),
     ("addIns", "", "Add-ins"),
@@ -57,7 +57,7 @@ const EXTRA_SECTIONS: [(&str, &str, &str); 4] = [
 const BUTTONS: &[(&str, &str, &str, Act)] = &[
     ("mail", "Compose messages", "Signatures...", Dialog("signatures")),
     ("mail", "Compose messages", "Stationery and Fonts...", Dialog("stationery")),
-    ("mail", "MailCraft panes", "Reading Pane...", Dialog("readingPaneOptions")),
+    ("mail", "Mail panes", "Reading Pane...", Dialog("readingPaneOptions")),
     ("mail", "Conversation Clean Up", "Browse...", PickFolder("mail.cleanup.folder")),
     ("mail", "Send messages", "Empty Auto-Complete List", Cmd("compose.emptyAutoComplete")),
     ("calendar", "Calendar options", "Add Holidays...", Cmd("calendar.addHolidays")),
@@ -65,7 +65,7 @@ const BUTTONS: &[(&str, &str, &str, Act)] = &[
     ("tasks", "Task options", "Quick Click...", Cmd("mail.setQuickClickFlag")),
     ("search", "Results", "Indexing Options...", Cmd("search.searchTools")),
     ("accessibility", "Application display options", "Stationery and Fonts...", Dialog("stationery")),
-    ("advanced", "MailCraft panes", "Reading Pane...", Dialog("readingPaneOptions")),
+    ("advanced", "Mail panes", "Reading Pane...", Dialog("readingPaneOptions")),
     ("advanced", "Start and exit", "Browse...", PickFolder("advanced.startFolder")),
     ("advanced", "AutoArchive", "AutoArchive Settings...", Cmd("options.autoArchive")),
     ("advanced", "Export", "Export", Cmd("file.openExport")),
@@ -86,7 +86,7 @@ const NOTES: &[(&str, &str, &str)] = &[
     (
         "groups",
         "User Interface options",
-        "Groups are a service of hosted mail systems; MailCraft has none to show yet.",
+        "Groups are a service of hosted mail systems; Mail has none to show yet.",
     ),
     (
         "advanced",
@@ -94,12 +94,8 @@ const NOTES: &[(&str, &str, &str)] = &[
         "Keep folders small: old items move to an archive folder, or are deleted, on a schedule.",
     ),
     ("customizeRibbon", "Ribbon", "Adding tabs, groups and commands to the ribbon is not available yet."),
-    ("addIns", "Add-ins", "No add-ins are installed. MailCraft does not load add-ins."),
-    (
-        "trustCenter",
-        "Security & more",
-        "MailCraft never loads remote content in messages unless you allow it.",
-    ),
+    ("addIns", "Add-ins", "No add-ins are installed. Mail does not load add-ins."),
+    ("trustCenter", "Security & more", "Mail never loads remote content in messages unless you allow it."),
     (
         "trustCenter",
         "Email Security",
@@ -269,11 +265,13 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
             if let Some(key) = k.strip_prefix("folder:")
                 && let Some(f) = v.as_u64()
             {
-                st.edits
-                    .insert(key.to_owned(), json!(app.s.mailbox.folder_path(mailcraft_model::FolderId(f))));
+                st.edits.insert(
+                    key.to_owned(),
+                    json!(app.s.mailbox.folder_path(iridium_mail_model::FolderId(f))),
+                );
             }
         }
-        window(ctx, app, d, "MailCraft Options", 820.0, |ui, app| {
+        window(ctx, app, d, "Mail Options", 820.0, |ui, app| {
             let mut out = Out::Keep;
             let h = page_height(ui.available_height());
             ui.horizontal_top(|ui| {
@@ -347,7 +345,7 @@ fn apply(ctx: &Context, app: &mut App, st: &OptState) -> Vec<String> {
     let mut errors = Vec::new();
     // A typed key goes with the address it was typed for, in one call that is refused as a whole: a refused
     // address must not leave the key stored for the server that was there before.
-    let url_setting = mailcraft_engine::translate::URL_SETTING;
+    let url_setting = iridium_mail_engine::translate::URL_SETTING;
     let new_key = st.api_key.as_ref().filter(|k| !k.trim().is_empty());
     for (k, v) in &st.edits {
         if app.s.option(k).as_ref() == Some(v) || (new_key.is_some() && k == url_setting) {
@@ -378,7 +376,7 @@ fn apply(ctx: &Context, app: &mut App, st: &OptState) -> Vec<String> {
 /// Options › Language › Translation: the server's API key (kept in the secret store, never shown) and a
 /// Test button that translates a sample through the address and key as typed.
 fn translator_ui(ui: &mut egui::Ui, app: &mut App, st: &mut OptState) {
-    let stored = mailcraft_engine::translate::has_key(&app.s);
+    let stored = iridium_mail_engine::translate::has_key(&app.s);
     let mut key = st.api_key.clone().unwrap_or_default();
     ui.horizontal(|ui| {
         let l = ui.label("API key (if the server asks for one):");
@@ -395,15 +393,15 @@ fn translator_ui(ui: &mut egui::Ui, app: &mut App, st: &mut OptState) {
     let field = |r: &Value, k: &str| r.get(k).and_then(Value::as_str).unwrap_or_default().to_owned();
     let tested =
         |r: &Value| format!("The server translated the sample into {}: {}", field(r, "to"), field(r, "text"));
-    if let Some(r) = mailcraft_engine::translate::take_test_result(&mut app.s) {
+    if let Some(r) = iridium_mail_engine::translate::take_test_result(&mut app.s) {
         st.translator_test = match r {
             Ok(v) => tested(&v),
             Err(e) => format!("Test failed: {e}"),
         };
     }
-    let testing = mailcraft_engine::translate::testing(&app.s);
+    let testing = iridium_mail_engine::translate::testing(&app.s);
     ui.horizontal(|ui| {
-        let url = current_key(app, st, mailcraft_engine::translate::URL_SETTING);
+        let url = current_key(app, st, iridium_mail_engine::translate::URL_SETTING);
         let url = url.as_str().unwrap_or_default().trim().to_owned();
         if ui.add_enabled(!url.is_empty() && !testing, egui::Button::new("Test")).clicked() {
             let mut p = json!({"test": true, "url": url});
@@ -579,7 +577,7 @@ mod tests {
     use super::*;
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn harness(app: App) -> Harness<'static, App> {
         crate::test_harness().with_size(egui::Vec2::new(1200.0, 900.0)).build_ui_state(
@@ -663,7 +661,7 @@ mod tests {
     #[test]
     fn sections_and_time_zone_labels() {
         let mail = sections("mail");
-        let panes = mail.iter().position(|s| s.heading == "MailCraft panes").unwrap();
+        let panes = mail.iter().position(|s| s.heading == "Mail panes").unwrap();
         assert_eq!(mail.get(panes - 1).map(|s| s.heading), Some("Compose messages"));
         assert!(
             sections("accessibility").iter().any(|s| s.defs.iter().any(|d| d.key == "general.screenTips"))
@@ -691,7 +689,7 @@ mod tests {
     /// typed for the new server was stored as the old server's key and later sent there.
     #[test]
     fn a_key_typed_with_a_refused_address_is_not_stored_for_the_old_server() {
-        use mailcraft_engine::translate::{KEY_SECRET, URL_SETTING, has_key};
+        use iridium_mail_engine::translate::{KEY_SECRET, URL_SETTING, has_key};
         let ctx = Context::default();
         let mut app = App::new(sample_session());
         app.run("options.translator", json!({"url": "https://a.example.org", "apiKey": "k-a"})).unwrap();

@@ -11,8 +11,8 @@ use super::common::{
     take_replies, window, with_state,
 };
 use crate::App;
-use mailcraft_engine::search_index::SEARCH_FOLDER_TEMPLATES;
-use mailcraft_model::{FolderId, FolderRole};
+use iridium_mail_engine::search_index::SEARCH_FOLDER_TEMPLATES;
+use iridium_mail_model::{FolderId, FolderRole};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -199,7 +199,7 @@ struct NewFolderState {
 
 /// The "Folder contains" choice (an index into `FOLDER_CONTENTS`) that matches a folder's kind.
 fn contains_index(app: &App, folder: Option<u64>) -> usize {
-    use mailcraft_engine::cmd::folder::{FOLDER_CONTENTS, contents_key};
+    use iridium_mail_engine::cmd::folder::{FOLDER_CONTENTS, contents_key};
     let kind = folder.and_then(|f| app.s.mailbox.folder(FolderId(f))).map(|f| f.kind);
     let key = kind.map_or("mail", contents_key);
     FOLDER_CONTENTS.iter().position(|(k, _, _)| *k == key).unwrap_or(0)
@@ -209,7 +209,7 @@ fn contains_index(app: &App, folder: Option<u64>) -> usize {
 /// calendar, contact, journal, note or task items; the module's items by default) and where it goes (a
 /// folder, or the top of an account when the dialog was opened from the account's root with `account`).
 fn create_folder(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    use mailcraft_engine::cmd::folder::FOLDER_CONTENTS;
+    use iridium_mail_engine::cmd::folder::FOLDER_CONTENTS;
     let uid = d.uid;
     let account = d.u64("account").filter(|_| d.u64("parent").is_none());
     let parent = if account.is_some() { None } else { d.u64("parent").or(Some(app.s.selection.folder.0)) };
@@ -239,7 +239,7 @@ fn create_folder(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                 let fixed = st.sel.and_then(|f| app.s.mailbox.folder(FolderId(f))).is_some_and(|f| {
                     matches!(
                         f.kind,
-                        mailcraft_model::FolderKind::Search | mailcraft_model::FolderKind::SearchRoot
+                        iridium_mail_model::FolderKind::Search | iridium_mail_model::FolderKind::SearchRoot
                     )
                 });
                 ui.add_enabled_ui(!fixed, |ui| {
@@ -353,7 +353,7 @@ fn rename_folder(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 /// "Don't ask me again": with `dontAsk: true` its state goes to the command as `dontAskAgain`; with a
 /// profile setting key, Yes turns that setting on.
 fn confirm(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    let title = if d.str("title").is_empty() { "MailCraft".to_owned() } else { d.str("title") };
+    let title = if d.str("title").is_empty() { "Mail".to_owned() } else { d.str("title") };
     let label =
         |key: &str, default: &str| if d.str(key).is_empty() { default.to_owned() } else { d.str(key) };
     let (yes, no) = (label("yes", "Yes"), label("no", "No"));
@@ -570,7 +570,7 @@ fn open_data_file(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                     if common::browse_button(ui, app) {
                         let filters = [
                             crate::FileFilter::new("Data files", &["mcdata", "pst"]),
-                            crate::FileFilter::new("MailCraft data file", &["mcdata"]),
+                            crate::FileFilter::new("Mail data file", &["mcdata"]),
                             crate::FileFilter::new("PST data file", &["pst"]),
                         ];
                         if let Some(p) = common::browse_open(app, "Open Data File", &filters, &st.path) {
@@ -779,7 +779,7 @@ fn properties(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
             ui.separator();
             let is_default = folder
                 .and_then(|f| app.s.mailbox.folder(FolderId(f)))
-                .is_some_and(mailcraft_model::Folder::is_default);
+                .is_some_and(iridium_mail_model::Folder::is_default);
             match tabs.get(st.tab).copied().unwrap_or("General") {
                 "Calendar Settings" => calendar_tab(ui, app, &mut st.cal, folder, uid),
                 "Address Book" => {
@@ -956,7 +956,7 @@ fn calendar_tab(ui: &mut egui::Ui, app: &mut App, f: &mut CalForm, folder: Optio
         egui::ComboBox::from_id_salt(("cal-props-color", uid)).selected_text(f.color.clone()).show_ui(
             ui,
             |ui| {
-                for c in mailcraft_engine::cmd::calendar::CALENDAR_COLORS {
+                for c in iridium_mail_engine::cmd::calendar::CALENDAR_COLORS {
                     ui.selectable_value(&mut f.color, c.to_owned(), c);
                 }
             },
@@ -983,7 +983,7 @@ fn calendar_tab(ui: &mut egui::Ui, app: &mut App, f: &mut CalForm, folder: Optio
                 f.info = match app.run("calendar.setProperties", json!({"folder": folder, "updateNow": true}))
                 {
                     Some(r) => match r.get("update").and_then(Value::as_str) {
-                        Some("offline") => "MailCraft is working offline.".to_owned(),
+                        Some("offline") => "Mail is working offline.".to_owned(),
                         Some("failed") => "The update failed.".to_owned(),
                         _ => "Updating the calendar...".to_owned(),
                     },
@@ -1006,7 +1006,7 @@ fn calendar_rows(c: &Value) -> Vec<(&'static str, String)> {
     let source = match text("source").as_str() {
         "internet" => "Internet calendar subscription",
         "file" => "Imported from an iCalendar file",
-        _ => "Items created in MailCraft",
+        _ => "Items created in Mail",
     };
     rows.push(("Source:", source.to_owned()));
     if c.get("readOnly").and_then(Value::as_bool) == Some(true) {
@@ -1218,8 +1218,8 @@ fn recover(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                             ui.label(if subject.is_empty() { "(no subject)" } else { subject });
                             let deleted = it.get("deleted").and_then(Value::as_i64).unwrap_or(0);
                             ui.label(if deleted > 0 {
-                                mailcraft_model::ListTime::long_date(
-                                    mailcraft_model::DateTime::from_unix(deleted, 0),
+                                iridium_mail_model::ListTime::long_date(
+                                    iridium_mail_model::DateTime::from_unix(deleted, 0),
                                     tz,
                                 )
                             } else {
@@ -1276,10 +1276,10 @@ fn recover(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     )
 }
 
-/// What Recover Deleted Items can bring back: what was deleted for good in MailCraft on this computer. An
+/// What Recover Deleted Items can bring back: what was deleted for good in Mail on this computer. An
 /// IMAP server keeps no copy of messages it expunged, so those (and ones deleted with another program)
 /// cannot be listed here.
-pub(crate) const RECOVER_SCOPE_NOTE: &str = "Only items deleted for good in MailCraft on this computer are \
+pub(crate) const RECOVER_SCOPE_NOTE: &str = "Only items deleted for good in Mail on this computer are \
      listed. Messages removed on the mail server, or deleted with another program, cannot be recovered here.";
 
 /// Item type shown in the Recover Deleted Items list.

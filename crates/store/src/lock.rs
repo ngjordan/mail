@@ -3,7 +3,7 @@
 //! The lock is a small text file created with `create_new` (atomic on every supported platform):
 //!
 //! ```text
-//! mailcraft-lock 1
+//! iridium-mail-lock 1
 //! pid 4242
 //! time 1791433800
 //! token 4242-1791433800123456789-7
@@ -81,7 +81,7 @@ impl LockInfo {
 
     fn render(&self) -> String {
         let mut s = format!(
-            "mailcraft-lock 1\npid {}\ntime {}\ntoken {}\n",
+            "iridium-mail-lock 1\npid {}\ntime {}\ntoken {}\n",
             self.pid.unwrap_or(0),
             self.time.unwrap_or(0),
             self.token.as_deref().unwrap_or("")

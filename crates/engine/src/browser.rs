@@ -11,10 +11,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use mailcraft_model::ItemId;
+use iridium_mail_model::ItemId;
 
 /// Name prefix of a session's page folder.
-const PREFIX: &str = "mailcraft-pages-";
+const PREFIX: &str = "iridium-mail-pages-";
 
 /// Where the page folders of the profile in `profile_dir` go.
 pub(crate) fn profile_base(profile_dir: &Path) -> PathBuf {

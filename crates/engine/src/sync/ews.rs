@@ -1,4 +1,4 @@
-//! Exchange accounts over Exchange Web Services (EWS; see `mailcraft_net::ews`): folders from FindFolder
+//! Exchange accounts over Exchange Web Services (EWS; see `iridium_mail_net::ews`): folders from FindFolder
 //! (listed again when SyncFolderHierarchy reports a change), mail from SyncFolderItems per folder with its
 //! sync state (new messages downloaded whole as MimeContent; on the first run of a folder only mail received
 //! inside the account's "download mail from the past N months" window), local changes written back with
@@ -19,13 +19,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use mailcraft_net::ews::{EwsAuth, EwsClient, EwsFolder, FlagChange, ItemChange, is_code};
-use mailcraft_net::{ConnectOptions, Credentials, NetError};
+use iridium_mail_net::ews::{EwsAuth, EwsClient, EwsFolder, FlagChange, ItemChange, is_code};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError};
 
 use super::native::{Event, Events, Outgoing};
 use super::*;
 use crate::accounts::{EwsShadow, JmapFolderShadow, prefs};
-use mailcraft_model::{Account, FolderRole};
+use iridium_mail_model::{Account, FolderRole};
 
 /// Changes asked for per SyncFolderItems call.
 const SYNC_PAGE: usize = 256;
@@ -85,7 +85,7 @@ impl EwsConn {
     }
     /// A client (nothing is sent yet).
     pub(crate) fn client(&self) -> Result<EwsClient, NetError> {
-        let http = mailcraft_net::http::HttpClient::new(self.options.clone());
+        let http = iridium_mail_net::http::HttpClient::new(self.options.clone());
         let anchor = Some(self.address.as_str()).filter(|a| !a.is_empty());
         EwsClient::new(&self.url, self.auth.clone(), http, anchor)
     }
@@ -251,7 +251,7 @@ pub(crate) fn build_job(
     let st = s.sync.prefs.data.ews.get(&a.id.0).cloned().unwrap_or_default();
     let outbox = s.mailbox.role_folder(a.id, FolderRole::Outbox);
     let received_after = window
-        .and_then(|(y, m, d)| mailcraft_model::dates::days_from_civil(y, m, d))
+        .and_then(|(y, m, d)| iridium_mail_model::dates::days_from_civil(y, m, d))
         .map(|days| days.saturating_mul(86_400));
     let mut job = EwsJob {
         receive: plan.receive,
@@ -461,7 +461,7 @@ pub(crate) fn parse_time(s: &str) -> Option<i64> {
 }
 
 /// An xs:dateTime as a date-time (UTC when it names no zone).
-pub(crate) fn parse_datetime(s: &str) -> Option<mailcraft_model::DateTime> {
+pub(crate) fn parse_datetime(s: &str) -> Option<iridium_mail_model::DateTime> {
     let s = s.trim();
     let (date_part, rest) = s.split_once('T').unwrap_or((s, ""));
     let (clock, zone) = match rest.find(['Z', 'z', '+']).or_else(|| rest.rfind('-').filter(|i| *i >= 5)) {
@@ -476,10 +476,10 @@ pub(crate) fn parse_datetime(s: &str) -> Option<mailcraft_model::DateTime> {
     } else {
         format!("{date_part}T{clock}{zone}")
     };
-    mailcraft_model::DateTime::parse_rfc5322(&text).ok()
+    iridium_mail_model::DateTime::parse_rfc5322(&text).ok()
 }
 
-fn item_shadow(i: &mailcraft_net::ews::EwsItem, folder: &str) -> EwsShadow {
+fn item_shadow(i: &iridium_mail_net::ews::EwsItem, folder: &str) -> EwsShadow {
     let mut categories = i.categories.clone();
     categories.sort();
     EwsShadow {
@@ -829,7 +829,7 @@ fn sync_folder(
         }
         // Batched by size; a message too large to download stays on the server (reported), so the folder's
         // sync state still moves on.
-        for chunk in fresh.chunks(mailcraft_net::ews::MIME_BATCH) {
+        for chunk in fresh.chunks(iridium_mail_net::ews::MIME_BATCH) {
             if cancel.load(Ordering::SeqCst) {
                 return Ok(());
             }
@@ -886,7 +886,7 @@ fn item_of(s: &Session, account: AccountId, id: &str) -> Option<ItemId> {
 }
 
 /// Applies the server's state to an item (the server wins).
-fn apply_shadow(m: &mut MailItem, sh: &EwsShadow, now: mailcraft_model::DateTime) {
+fn apply_shadow(m: &mut MailItem, sh: &EwsShadow, now: iridium_mail_model::DateTime) {
     let mut flags = Vec::new();
     if sh.read {
         flags.push("\\Seen".to_owned());
@@ -963,7 +963,7 @@ fn apply_folders(
         let role = role_of.get(&f.id).copied().or_else(|| {
             server_parent
                 .is_none()
-                .then(|| mailcraft_net::imap::role_from_name(&f.name))
+                .then(|| iridium_mail_net::imap::role_from_name(&f.name))
                 .flatten()
                 .filter(|r| *r != FolderRole::Inbox && *r != FolderRole::Outbox && !server_roles.contains(r))
         });
@@ -1087,7 +1087,7 @@ fn apply_items(s: &mut Session, account: AccountId, list: Vec<EItem>, new_inbox:
             }
             None => {
                 let Some(raw) = &e.raw else { continue };
-                let mut item = mailcraft_store::import::item_from_raw(raw, folder, now);
+                let mut item = iridium_mail_store::import::item_from_raw(raw, folder, now);
                 let adopt = item.message_id.as_deref().and_then(|mid| local_copy(&s.mailbox, folder, mid));
                 if let Some(local) = adopt {
                     if let Some(m) = s.mailbox.mail.get_mut(local) {
@@ -1238,13 +1238,13 @@ mod tests {
             (true, 2, vec!["a".to_owned(), "b".to_owned()], None)
         );
         let mut n = MailItem::default();
-        apply_shadow(&mut n, &sh, mailcraft_model::DateTime::default());
+        apply_shadow(&mut n, &sh, iridium_mail_model::DateTime::default());
         assert!(n.read && n.is_flagged());
         assert_eq!(n.categories, vec!["a".to_owned(), "b".to_owned()]);
         apply_shadow(
             &mut n,
             &EwsShadow { flag: 1, ..Default::default() },
-            mailcraft_model::DateTime::default(),
+            iridium_mail_model::DateTime::default(),
         );
         assert!(!n.read && matches!(n.flag, FlagState::Complete { .. }) && n.categories.is_empty());
     }

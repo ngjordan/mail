@@ -59,7 +59,7 @@ pub const BODY_FAMILY: &str = "Aptos";
 pub const BODY_SIZE_PT: f32 = 12.0;
 
 /// Font names the compose Font list offers besides installed fonts: the bundled families and the common mail
-/// fonts MailCraft draws with a bundled stand-in (recipients see the named font where it is installed).
+/// fonts Mail draws with a bundled stand-in (recipients see the named font where it is installed).
 pub const MENU_FAMILIES: &[&str] = &[
     "Aptos",
     "Aptos Display",
@@ -242,7 +242,7 @@ enum SystemSource {
     Given(Arc<SystemFonts>),
 }
 
-/// The faces MailCraft measures and draws text with: the bundled faces, faces added with
+/// The faces Mail measures and draws text with: the bundled faces, faces added with
 /// [`FontDb::add_face`] and, for a db made with [`FontDb::with_system`] or [`FontDb::with_installed`], the
 /// installed fonts a document names (loaded on first use, see [`system`]). Ids of bundled and added faces
 /// come first; installed faces get the ids after them in the order they were first used.

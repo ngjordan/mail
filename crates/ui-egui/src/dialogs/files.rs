@@ -11,7 +11,7 @@ use super::common::{
 };
 use super::folders::last_error;
 use crate::App;
-use mailcraft_model::{FolderId, FolderKind, FolderRole};
+use iridium_mail_model::{FolderId, FolderKind, FolderRole};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -20,7 +20,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
         "pstProgress" => pst_progress(ctx, app, d),
         "saveAs" => save_as(ctx, app, d),
         "saveAttachments" => save_attachments(ctx, app, d),
-        mailcraft_engine::cmd::calendar::SAVE_ITEM_FILE => save_item_file(ctx, app, d),
+        iridium_mail_engine::cmd::calendar::SAVE_ITEM_FILE => save_item_file(ctx, app, d),
         _ => return None,
     })
 }
@@ -107,7 +107,7 @@ fn cleanup(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 
 fn deleted_folder(app: &App) -> Option<FolderId> {
     let acct = app.s.current_account()?;
-    app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::DeletedItems)
+    app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::DeletedItems)
 }
 
 fn deleted_size(app: &App) -> u64 {
@@ -253,8 +253,8 @@ pub(crate) const IE_ACTIONS: [IeAction; 12] = [
         key: "importPst",
         label: "Import a PST file (.pst)",
         desc: "Adds the folders, messages, calendar items, contacts, tasks and notes of a PST data file (.pst). \
-               The file is only read. MailCraft does not write PST files: to take mail elsewhere, export it to \
-               MBOX, iCalendar or vCard, or keep it in a MailCraft data file.",
+               The file is only read. Mail does not write PST files: to take mail elsewhere, export it to \
+               MBOX, iCalendar or vCard, or keep it in a Mail data file.",
         pick: MAIL,
         filter: ("PST data file", &["pst"]),
         suggested: "",
@@ -296,7 +296,7 @@ pub(crate) const IE_ACTIONS: [IeAction; 12] = [
 /// A folder the action can use: `current` when it fits, else the current account's folder of the right
 /// kind (Calendar, Contacts), else the first one that fits.
 pub(crate) fn ie_folder(app: &App, action: &IeAction, current: Option<u64>) -> Option<u64> {
-    let fits = |f: &mailcraft_model::Folder| match action.pick {
+    let fits = |f: &iridium_mail_model::Folder| match action.pick {
         Pick::Mail => f.kind == FolderKind::Mail,
         Pick::Kinds(k) => k.contains(&f.kind),
         Pick::Parent | Pick::Any => true,
@@ -377,7 +377,7 @@ struct IeState {
 
 /// What the wizard tells about PST files and export.
 const NO_PST_EXPORT: &str = "PST files can be imported, not written. Export writes MBOX, iCalendar, vCard and CSV \
-     files; Save As writes .eml and .msg files; a MailCraft data file (.mcdata) keeps whole folders.";
+     files; Save As writes .eml and .msg files; a Mail data file (.mcdata) keeps whole folders.";
 
 fn import_export(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let uid = d.uid;
@@ -525,7 +525,7 @@ fn import_export(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 /// The running PST import (or the last one): how far it is, Stop, and when it ends what it did and what it
 /// left out.
 fn pst_progress(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    let st = mailcraft_engine::pst::status(&app.s).unwrap_or_else(|| json!({"running": false}));
+    let st = iridium_mail_engine::pst::status(&app.s).unwrap_or_else(|| json!({"running": false}));
     let running = st.get("running").and_then(Value::as_bool) == Some(true);
     if running {
         ctx.request_repaint_after(std::time::Duration::from_millis(150));
@@ -557,7 +557,7 @@ fn pst_progress(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
             ui.add(egui::ProgressBar::new(fraction.clamp(0.0, 1.0)).show_percentage());
             muted(ui, app, &format!("{done} of {total} items read in {} folders", n(&p, "folders")));
         } else {
-            ui.label(mailcraft_engine::pst::summary(&st));
+            ui.label(iridium_mail_engine::pst::summary(&st));
         }
         if st.get("job").is_some() {
             let c = st.get("counts").cloned().unwrap_or(Value::Null);

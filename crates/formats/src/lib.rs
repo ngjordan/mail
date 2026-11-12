@@ -1,8 +1,8 @@
 //! File formats (layer L3).
 //!
 //! Readers and writers for the files a desktop mail client opens, saves, imports and exports:
-//! - [`eml`]: one RFC 5322 message per file (via `mailcraft-mime`; rebuilt from the item when no source is kept).
-//! - [`mbox`]: mboxrd/mboxo mailboxes (the reader and writer live in `mailcraft-store`; this wraps them for
+//! - [`eml`]: one RFC 5322 message per file (via `iridium-mail-mime`; rebuilt from the item when no source is kept).
+//! - [`mbox`]: mboxrd/mboxo mailboxes (the reader and writer live in `iridium-mail-store`; this wraps them for
 //!   in-memory import/export with caps).
 //! - [`msg`]: MSG item files per [MS-OXMSG] stored in a Compound File Binary container ([MS-CFB], via the
 //!   MIT-licensed `cfb` crate), compressed RTF per [MS-OXRTFCP] and HTML de-encapsulation per [MS-OXRTFEX].
@@ -11,7 +11,7 @@
 //! - [`csv`]: RFC 4180 CSV and the contacts import/export column mapping.
 //! - [`pst`]: PST files per [MS-PST], read only (via the MIT-licensed `outlook-pst` crate), for import and
 //!   for opening one as a data file.
-//! - [`keep`]: server copies of vCards and iCalendar objects kept across an edit (what MailCraft does not
+//! - [`keep`]: server copies of vCards and iCalendar objects kept across an edit (what Mail does not
 //!   model goes back unchanged).
 //!
 //! Every reader is total: hostile input produces an error or a best-effort value, never a panic. Each format

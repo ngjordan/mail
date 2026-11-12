@@ -26,9 +26,9 @@ use super::folder::{current_folder, dialog, resolve_folder};
 use super::search::toggle_token;
 use super::util::{opt_bool, opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Module, Session, always};
-use mailcraft_model::dates::DateGroup;
-use mailcraft_model::thread::ConversationSettings;
-use mailcraft_model::{
+use iridium_mail_model::dates::DateGroup;
+use iridium_mail_model::thread::ConversationSettings;
+use iridium_mail_model::{
     ArrangeBy, FlagState, FolderId, FolderKind, FolderPaneState, FolderRole, Importance, ItemId, ListFilter,
     MailItem, ReadingPanePos, SortOrder, ViewLayout, ViewSettings,
 };
@@ -440,11 +440,11 @@ fn parse_layout(name: &str) -> Option<ViewLayout> {
 }
 
 /// Date-group label of an optional date ("(none)" when absent).
-fn date_label(s: &Session, t: Option<mailcraft_model::DateTime>) -> String {
+fn date_label(s: &Session, t: Option<iridium_mail_model::DateTime>) -> String {
     t.map_or_else(|| "(none)".to_owned(), |t| DateGroup::of(t, s.now(), s.tz_offset_min).label())
 }
 
-fn person(m: Option<&mailcraft_model::Address>) -> String {
+fn person(m: Option<&iridium_mail_model::Address>) -> String {
     match m {
         Some(a) => a.name.as_deref().map(str::trim).filter(|n| !n.is_empty()).unwrap_or(&a.addr).to_owned(),
         None => "(none)".to_owned(),
@@ -486,7 +486,7 @@ pub fn group_label(s: &Session, m: &MailItem, by: ArrangeBy) -> String {
             .to_owned()
         }
         ArrangeBy::Subject => {
-            let t = mailcraft_model::subject::strip_prefixes(&m.subject).trim();
+            let t = iridium_mail_model::subject::strip_prefixes(&m.subject).trim();
             if t.is_empty() { "(no subject)".to_owned() } else { t.to_owned() }
         }
         ArrangeBy::Type => if m.is_draft { "Draft" } else { "Message" }.to_owned(),
@@ -1477,7 +1477,7 @@ pub(crate) fn toggle_todo_bar(s: &mut Session, part: &str) {
 /// The panes Reading View hides, as the status bar's button describes them.
 fn pinned_panes(s: &Session) -> Value {
     json!({
-        "folderPane": s.view.folder_pane != mailcraft_model::FolderPaneState::Off,
+        "folderPane": s.view.folder_pane != iridium_mail_model::FolderPaneState::Off,
         "todoBar": s.view.todo_bar.shown(),
     })
 }
@@ -1495,7 +1495,7 @@ fn normal_view(s: &mut Session, _p: &Value) -> CmdResult {
 }
 
 /// Zoom of the read window of message `id` (its own zoom, else the shared one).
-pub fn read_zoom(s: &Session, id: mailcraft_model::ItemId) -> u16 {
+pub fn read_zoom(s: &Session, id: iridium_mail_model::ItemId) -> u16 {
     s.read_zoom.get(&id).copied().unwrap_or(s.view.zoom)
 }
 
@@ -1509,7 +1509,7 @@ fn zoom(s: &mut Session, p: &Value) -> CmdResult {
         .get("id")
         .and_then(Value::as_u64)
         .or_else(|| crate::cmd::util::opt_ids(p).and_then(|v| v.first().map(|i| i.0)))
-        .map(mailcraft_model::ItemId)
+        .map(iridium_mail_model::ItemId)
         .filter(|i| s.mailbox.mail.contains(*i));
     let Some(pct) = p.get("pct").filter(|v| !v.is_null()) else {
         let current = window.map_or(s.view.zoom, |i| read_zoom(s, i));
@@ -1564,7 +1564,7 @@ fn reminder_window(s: &mut Session, _p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::Notice;
-    use mailcraft_model::{DateTime, ItemId, Mailbox};
+    use iridium_mail_model::{DateTime, ItemId, Mailbox};
 
     fn session() -> Session {
         let mut s = Session::new(Mailbox::new_local("Test"));
@@ -1750,7 +1750,7 @@ mod tests {
         // A read window zooms on its own; Remember my preference makes it everyone's default.
         let id = s
             .mailbox
-            .add_mail(mailcraft_model::MailItem { folder: s.selection.folder, ..Default::default() });
+            .add_mail(iridium_mail_model::MailItem { folder: s.selection.folder, ..Default::default() });
         run(&mut s, "view.zoom", json!({"pct": 200, "id": id.0}));
         assert_eq!((read_zoom(&s, id), s.view.zoom), (200, 150));
         let shown = s.notices.iter().rev().find_map(|n| match n {

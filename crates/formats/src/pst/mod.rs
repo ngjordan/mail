@@ -2,7 +2,7 @@
 //!
 //! The node database, B-trees, blocks (with both block encodings), heaps, property and table contexts and
 //! the messaging objects are read with Microsoft's MIT-licensed `outlook-pst` crate (the [MS-PST]
-//! reference reader). This module walks what it returns and maps it to MailCraft items:
+//! reference reader). This module walks what it returns and maps it to Mail items:
 //! - the folder tree below the IPM subtree, each folder's kind from its container class;
 //! - mail: the properties go through the same mapping as `.msg` items ([`crate::msg`]), so headers, plain,
 //!   HTML and compressed-RTF bodies, recipients, attachments (by value and embedded messages), read state,
@@ -11,7 +11,7 @@
 //! - contacts ([MS-OXOCNTC]), appointments with their recurrence pattern ([MS-OXOCAL] §2.2.1.44, see
 //!   [`pim`]), tasks ([MS-OXOTASK]) and notes ([MS-OXONOTE]).
 //!
-//! Writing PST files is not supported (the crate reads only); export goes to MailCraft data files, EML,
+//! Writing PST files is not supported (the crate reads only); export goes to Mail data files, EML,
 //! MBOX, iCalendar and vCard.
 //!
 //! **Hostile files.** A PST file is untrusted input. Everything the crate does runs under
@@ -33,7 +33,7 @@ mod walk;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
-use mailcraft_model::{Appointment, Contact, DateTime, FolderKind, FolderRole, MailItem, Note, Task};
+use iridium_mail_model::{Appointment, Contact, DateTime, FolderKind, FolderRole, MailItem, Note, Task};
 
 pub use pim::recurrence_rule;
 
@@ -50,7 +50,7 @@ pub const MAX_FOLDER_DEPTH: usize = 64;
 /// Most items read from one file.
 pub const MAX_ITEMS: usize = 5_000_000;
 /// Most attachment bytes read per item (larger ones are skipped and reported); the rebuilt source then
-/// stays below the size of the largest message MailCraft parses.
+/// stays below the size of the largest message Mail parses.
 pub const MAX_ATTACHMENT_BYTES: u64 = 40 << 20;
 /// Most entries kept in [`Report::skipped`] (the count goes on).
 pub const MAX_SKIPPED_LISTED: usize = 1_000;
@@ -64,7 +64,7 @@ pub enum Version {
     Unicode,
 }
 
-/// The header's format: `None` when `head` is not a PST file; an error for a PST format MailCraft cannot
+/// The header's format: `None` when `head` is not a PST file; an error for a PST format Mail cannot
 /// read (4K-page files are written by server caches, not by the desktop program).
 pub fn sniff(head: &[u8]) -> Option<std::result::Result<Version, FormatError>> {
     if head.get(0..4) != Some(MAGIC.as_slice()) {
@@ -179,7 +179,7 @@ pub struct PstFolder {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PstItem {
     /// A message with the RFC 5322 source built for it and its body.
-    Mail(Box<(MailItem, mailcraft_store::Content)>),
+    Mail(Box<(MailItem, iridium_mail_store::Content)>),
     Appointment(Box<Appointment>),
     Contact(Box<Contact>),
     Task(Box<Task>),

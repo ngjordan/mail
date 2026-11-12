@@ -1,7 +1,7 @@
 //! Context menus (keys/menus area): message row, group header, folder, account root, status bar, sort menu.
 //!
 //! Contents follow `plan/reference/context-menus.md` and `message-list.md`; every entry runs a command through
-//! [`App::run`]. Entries for services MailCraft does not have (retention policies, OneNote) are left out.
+//! [`App::run`]. Entries for services Mail does not have (retention policies, OneNote) are left out.
 //! Callers open these from `Response::context_menu(|ui| menus::…(ui, app, …))` (or a `menu_button` for the
 //! arrange menu); the functions draw the menu body.
 
@@ -10,9 +10,9 @@ use std::collections::BTreeSet;
 use egui::{Atom, Button, Color32, Id, Rect, Ui, vec2};
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::quicksteps;
-use mailcraft_engine::queries;
-use mailcraft_model::{
+use iridium_mail_engine::cmd::quicksteps;
+use iridium_mail_engine::queries;
+use iridium_mail_model::{
     AccountId, ArrangeBy, FlagState, FolderId, FolderKind, FolderRole, ItemId, ListFilter, SortOrder,
 };
 
@@ -168,7 +168,7 @@ fn ids_json(ids: &[ItemId]) -> Value {
 struct RecentFolders(Vec<FolderId>);
 
 fn recent_id() -> Id {
-    Id::unique("mailcraft.menus.recentFolders")
+    Id::unique("iridium-mail.menus.recentFolders")
 }
 
 /// Records `folder` as the most recent Move target (the Move dialog should call this too).
@@ -213,7 +213,7 @@ impl Targets {
             });
         }
         let kinds: Vec<Option<&'static str>> =
-            items.iter().map(|m| mailcraft_engine::cmd::mail::follow_up_kind(&app.s, &m.flag)).collect();
+            items.iter().map(|m| iridium_mail_engine::cmd::mail::follow_up_kind(&app.s, &m.flag)).collect();
         let follow_up = match kinds.first() {
             Some(Some(k)) if kinds.iter().all(|x| *x == Some(*k)) => Some(*k),
             _ => None,
@@ -394,7 +394,7 @@ fn block_menu(ui: &mut Ui, app: &mut App, t: &Targets, domain: Option<&str>) {
     cmd(ui, app, "", &label, "mail.block", t.with(json!({"kind": "neverDomain"})));
     // Only for a message that came through a group or mailing list.
     let focus = app.s.selection.focus.filter(|f| t.ids.contains(f)).or_else(|| t.ids.first().copied());
-    let list = focus.and_then(|id| mailcraft_engine::cmd::mail::list_entry_of(&app.s, id)).is_some();
+    let list = focus.and_then(|id| iridium_mail_engine::cmd::mail::list_entry_of(&app.s, id)).is_some();
     cmd_if(
         ui,
         app,
@@ -597,7 +597,7 @@ struct GroupCache {
 
 /// Context menu of a date-group header (acts on every item of the group, which becomes the selection).
 pub fn group_header_menu(ui: &mut Ui, app: &mut App, label: &str) {
-    let cache_id = Id::unique("mailcraft.menus.group");
+    let cache_id = Id::unique("iridium-mail.menus.group");
     let folder = app.s.selection.folder;
     let cached = ui.ctx().data_mut(|d| d.get_temp::<GroupCache>(cache_id));
     let ids = match cached {
@@ -811,7 +811,7 @@ pub fn account_menu(ui: &mut Ui, app: &mut App, account: u32) {
 // Status bar
 
 /// Status bar elements (Customize Status Bar): (key used by `view.statusBar`, label).
-pub const STATUS_BAR_ITEMS: [(&str, &str); 11] = mailcraft_engine::cmd::view::mail::STATUS_ITEMS;
+pub const STATUS_BAR_ITEMS: [(&str, &str); 11] = iridium_mail_engine::cmd::view::mail::STATUS_ITEMS;
 
 /// Which status bar elements are hidden: a copy of the engine's setting (`view.statusBar`, saved with the
 /// profile) refreshed when the settings change.
@@ -836,7 +836,7 @@ impl StatusBarItems {
 }
 
 fn status_id() -> Id {
-    Id::unique("mailcraft.menus.statusBar")
+    Id::unique("iridium-mail.menus.statusBar")
 }
 
 /// Status bar element visibility as last read from the engine (the defaults before the first read).
@@ -851,8 +851,10 @@ pub fn status_bar_items_of(ctx: &egui::Context, app: &App) -> StatusBarItems {
     if cur.rev == Some(rev) {
         return cur;
     }
-    let fresh =
-        StatusBarItems { hidden: mailcraft_engine::cmd::view::mail::status_hidden(&app.s), rev: Some(rev) };
+    let fresh = StatusBarItems {
+        hidden: iridium_mail_engine::cmd::view::mail::status_hidden(&app.s),
+        rev: Some(rev),
+    };
     ctx.data_mut(|d| d.insert_temp(status_id(), fresh.clone()));
     fresh
 }
@@ -867,7 +869,7 @@ pub fn filter_applied(app: &App) -> bool {
     let folder = app.s.selection.folder;
     queries::view_settings(&app.s, folder).filter != ListFilter::All
         || !app.s.view.search.trim().is_empty()
-        || mailcraft_engine::cmd::view::mail::custom_filter(&app.s, folder).is_some()
+        || iridium_mail_engine::cmd::view::mail::custom_filter(&app.s, folder).is_some()
 }
 
 /// `7219` → `"7,219"`.
@@ -890,7 +892,7 @@ pub fn status_bar_menu(ui: &mut Ui, app: &mut App) {
     let filtered = filter_applied(app);
     for (key, label) in STATUS_BAR_ITEMS {
         let value = match key {
-            "quota" => match mailcraft_engine::sync::status_quota(&app.s).and_then(|(_, q)| q.percent()) {
+            "quota" => match iridium_mail_engine::sync::status_quota(&app.s).and_then(|(_, q)| q.percent()) {
                 Some(p) => format!("{p}% full"),
                 None => "Off".to_owned(),
             },
@@ -1044,10 +1046,10 @@ pub fn column_header_menu(ui: &mut Ui, app: &mut App, column: &str) {
     ui.separator();
     cmd(ui, app, "table", "A&dd Columns...", "view.addColumns", json!({}));
     cmd(ui, app, "settings", "&Format Columns...", "view.formatColumns", json!({}));
-    let shown = mailcraft_engine::cmd::view::mail::columns(&app.s, app.s.selection.folder);
+    let shown = iridium_mail_engine::cmd::view::mail::columns(&app.s, app.s.selection.folder);
     let removable = shown.len() > 1 && shown.iter().any(|c| c.id == column);
     cmd_if(ui, app, "minus", "Remo&ve This Column", removable, "view.columns", json!({"remove": column}));
-    let sized = mailcraft_engine::cmd::view::mail::mail_view(&app.s, app.s.selection.folder)
+    let sized = iridium_mail_engine::cmd::view::mail::mail_view(&app.s, app.s.selection.folder)
         .widths
         .contains_key(column);
     cmd_if(ui, app, "", "Automatic W&idth", sized, "view.columns", json!({"widths": {column: null}}));
@@ -1060,7 +1062,7 @@ mod tests {
     use super::*;
     use egui_kittest::Harness;
     use egui_kittest::kittest::{NodeT, Queryable};
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     #[test]
     fn account_root_add_to_favorites_adds_its_inbox() {
@@ -1230,9 +1232,9 @@ mod tests {
 
         let app = App::new(sample_session());
         let mut h = menu_harness(app, status_bar_menu);
-        assert!(mailcraft_engine::cmd::view::mail::status_item_shown(&h.state().s, "viewShortcuts"));
+        assert!(iridium_mail_engine::cmd::view::mail::status_item_shown(&h.state().s, "viewShortcuts"));
         press(&mut h, egui::Key::V);
-        assert!(!mailcraft_engine::cmd::view::mail::status_item_shown(&h.state().s, "viewShortcuts"));
+        assert!(!iridium_mail_engine::cmd::view::mail::status_item_shown(&h.state().s, "viewShortcuts"));
     }
 
     #[test]

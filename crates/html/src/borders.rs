@@ -3,7 +3,7 @@
 //! box leave out.
 
 use crate::css::{self, Props};
-use mailcraft_model::{BorderEdge, BorderLine};
+use iridium_mail_model::{BorderEdge, BorderLine};
 
 /// Sides in CSS box order.
 pub(crate) const SIDES: [&str; 4] = ["top", "right", "bottom", "left"];
@@ -16,7 +16,7 @@ struct Parts {
     /// `Some(None)`: `none` / `hidden`.
     style: Option<Option<BorderLine>>,
     width: Option<f32>,
-    color: Option<Option<mailcraft_geom::Color>>,
+    color: Option<Option<iridium_mail_geom::Color>>,
 }
 
 impl Parts {

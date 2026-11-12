@@ -3,7 +3,7 @@
 //! otherwise: a remote picture can be a tracking pixel.
 //!
 //! - [`request`] queues a picture; at most [`MAX_CONCURRENT`] background threads download
-//!   ([`mailcraft_net::image_fetch::ImageFetcher`]: plain GET, no cookies or referrer, redirects, a deadline, a
+//!   ([`iridium_mail_net::image_fetch::ImageFetcher`]: plain GET, no cookies or referrer, redirects, a deadline, a
 //!   [`MAX_IMAGE_BYTES`] cap) and decode (one at a time, with the body's decode limits). The UI thread never
 //!   waits: [`pump`], called by the body every frame, turns finished pictures into textures, and each finished
 //!   picture requests a repaint.
@@ -73,7 +73,7 @@ mod native {
     use std::collections::{HashMap, VecDeque};
     use std::sync::{Arc, Mutex, MutexGuard};
 
-    use mailcraft_net::image_fetch::{ImageFetcher, image_url};
+    use iridium_mail_net::image_fetch::{ImageFetcher, image_url};
 
     use super::*;
 
@@ -190,7 +190,7 @@ mod native {
     struct Loader(Arc<Mutex<Shared>>);
 
     fn loader(ctx: &egui::Context) -> Arc<Mutex<Shared>> {
-        let id = egui::Id::unique("mailcraft.remote-images");
+        let id = egui::Id::unique("iridium-mail.remote-images");
         ctx.data_mut(|d| Arc::clone(&d.get_temp_mut_or_default::<Loader>(id).0))
     }
 
@@ -252,7 +252,7 @@ mod native {
             drop(s);
             let (shared2, ctx2) = (Arc::clone(&shared), ctx.clone());
             let spawned = std::thread::Builder::new()
-                .name("mailcraft-picture".into())
+                .name("iridium-mail-picture".into())
                 .spawn(move || worker(&shared2, &ctx2, allow_loopback));
             if let Err(e) = spawned {
                 log::warn!("cannot start a picture download thread: {e}");
@@ -304,7 +304,7 @@ mod native {
             match d.image {
                 Some((img, size)) => {
                     let pixels = img.pixels.len();
-                    let name = format!("mailcraft-remote-image-{:016x}", crate::body::source_key(&d.url));
+                    let name = format!("iridium-mail-remote-image-{:016x}", crate::body::source_key(&d.url));
                     let handle = ctx.load_texture(name, img, egui::TextureOptions::LINEAR);
                     s.textures.insert(d.url.clone(), Tex { handle, pixels, used: pass });
                     s.status.insert(d.url.clone(), Status::Ready(size));
@@ -477,7 +477,7 @@ mod tests {
     fn frame(
         ctx: &egui::Context,
         view: &mut BodyView,
-        doc: &mailcraft_model::Doc,
+        doc: &iridium_mail_model::Doc,
         allow: bool,
     ) -> (Vec<egui::Rect>, bool) {
         let opts = BodyOptions { allow_remote: allow, ..BodyOptions::default() };
@@ -497,10 +497,9 @@ mod tests {
                     .items
                     .iter()
                     .filter_map(|i| match i {
-                        mailcraft_layout::DisplayItem::Image { rect, .. } => Some(egui::Rect::from_min_size(
-                            egui::pos2(rect.x, rect.y),
-                            egui::vec2(rect.w, rect.h),
-                        )),
+                        iridium_mail_layout::DisplayItem::Image { rect, .. } => Some(
+                            egui::Rect::from_min_size(egui::pos2(rect.x, rect.y), egui::vec2(rect.w, rect.h)),
+                        ),
                         _ => None,
                     })
                     .collect()
@@ -513,7 +512,7 @@ mod tests {
     fn frames_until(
         ctx: &egui::Context,
         view: &mut BodyView,
-        doc: &mailcraft_model::Doc,
+        doc: &iridium_mail_model::Doc,
         done: impl Fn(&[egui::Rect], bool) -> bool,
     ) -> (Vec<egui::Rect>, bool) {
         let start = Instant::now();
@@ -530,7 +529,7 @@ mod tests {
     fn nothing_is_fetched_until_pictures_are_allowed_then_the_picture_is_drawn() {
         let (base, hits, seen) = picture_server(png(30, 20));
         let url = format!("{base}/logo.png");
-        let doc = mailcraft_html::html_to_doc(&format!("<p>Hi <img src=\"{url}\" alt=\"Logo\"></p>"));
+        let doc = iridium_mail_html::html_to_doc(&format!("<p>Hi <img src=\"{url}\" alt=\"Logo\"></p>"));
         let ctx = egui::Context::default();
         native::allow_loopback(&ctx);
         let mut view = BodyView::default();
@@ -574,7 +573,7 @@ mod tests {
     fn sizes_follow_attributes_and_fit_the_pane() {
         let (base, _hits, _seen) = picture_server(png(1000, 500));
         let wide = format!("{base}/wide.png");
-        let doc = mailcraft_html::html_to_doc(&format!(
+        let doc = iridium_mail_html::html_to_doc(&format!(
             "<p><img src=\"{wide}\"></p><p><img src=\"{base}/w.png\" width=\"100\"></p><p><img src=\"{base}/missing.png\" alt=\"Gone\"></p>"
         ));
         let ctx = egui::Context::default();
@@ -607,7 +606,7 @@ mod tests {
         for i in 0..(MAX_PER_MESSAGE + 50) {
             html.push_str(&format!("<img src=\"{base}/p{i}.png\">"));
         }
-        let doc = mailcraft_html::html_to_doc(&format!("<p>{html}</p>"));
+        let doc = iridium_mail_html::html_to_doc(&format!("<p>{html}</p>"));
         let ctx = egui::Context::default();
         native::allow_loopback(&ctx);
         let mut view = BodyView::default();

@@ -1,10 +1,10 @@
 //! Rebuilds the bundled en-US word lists in `assets/dictionaries/` from the public-domain Moby Words II lists
-//! (Project Gutenberg ebook #3201) plus the MailCraft supplement.
+//! (Project Gutenberg ebook #3201) plus the Mail supplement.
 //!
 //! ```text
 //! # download into an empty folder:
 //! #   https://www.gutenberg.org/files/3201/files/{crosswd,crswd-d,common,names,places,freq,freq-int}.txt
-//! cargo run -p mailcraft-proof --example build_dictionary -- <moby-folder> assets/dictionaries
+//! cargo run -p iridium-mail-proof --example build_dictionary -- <moby-folder> assets/dictionaries
 //! ```
 //!
 //! Output (all sorted, one word per line, `\n` line ends):

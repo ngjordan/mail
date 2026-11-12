@@ -2,10 +2,10 @@
 
 use std::cell::Cell;
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_model::rich::{Align, LineRule, ListKind};
-use mailcraft_model::{Block, BorderJoin, Inline, ParaStyle, TextStyle, UnderlineKind};
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_model::rich::{Align, LineRule, ListKind};
+use iridium_mail_model::{Block, BorderJoin, Inline, ParaStyle, TextStyle, UnderlineKind};
 
 use crate::border::{draw_para_box, para_insets};
 

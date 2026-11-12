@@ -4,10 +4,10 @@
 // Test-only crate: helper functions outside `#[test]` may fail loudly.
 #![allow(clippy::expect_used)]
 
-use mailcraft_engine::queries::{list_rows, visible_item_ids};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_engine::{CmdError, CmdResult, CommandSpec, Notice, Registry, Session, always};
-use mailcraft_model::{FlagState, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_engine::queries::{list_rows, visible_item_ids};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_engine::{CmdError, CmdResult, CommandSpec, Notice, Registry, Session, always};
+use iridium_mail_model::{FlagState, FolderId, FolderRole, ItemId, Mailbox};
 use serde_json::{Value, json};
 
 fn role(s: &Session, r: FolderRole) -> FolderId {
@@ -87,7 +87,7 @@ fn move_flag_categorize_and_undo_each() {
     let row = list_rows(&s)
         .into_iter()
         .find_map(|r| match r {
-            mailcraft_engine::queries::ListRow::Item(i) if i.id == id => Some(i),
+            iridium_mail_engine::queries::ListRow::Item(i) if i.id == id => Some(i),
             _ => None,
         })
         .expect("row");
@@ -123,7 +123,7 @@ fn new_command_clears_redo_and_undo_is_bounded() {
 
 fn mutate_then_panic(s: &mut Session, _: &Value) -> CmdResult {
     s.mailbox.mail.clear();
-    s.pending_ops.push(mailcraft_store::Op::Replace(Box::default()));
+    s.pending_ops.push(iridium_mail_store::Op::Replace(Box::default()));
     let v: Vec<u8> = Vec::new();
     // A deliberate out-of-bounds access: the guard must catch it and restore the mailbox.
     #[allow(clippy::indexing_slicing)]
@@ -133,7 +133,7 @@ fn mutate_then_panic(s: &mut Session, _: &Value) -> CmdResult {
 
 fn mutate_then_fail(s: &mut Session, _: &Value) -> CmdResult {
     s.mailbox.mail.clear();
-    s.pending_ops.push(mailcraft_store::Op::Replace(Box::default()));
+    s.pending_ops.push(iridium_mail_store::Op::Replace(Box::default()));
     Err(CmdError::Failed("nope".into()))
 }
 
@@ -176,9 +176,10 @@ fn reopen_renames_the_legacy_local_account() {
     let dir = tempfile::tempdir().expect("tempdir");
     {
         let mut s = Session::open(dir.path()).expect("open new store");
-        s.mailbox.accounts[0].display_name = mailcraft_model::mailbox::LEGACY_LOCAL_ACCOUNT_NAME.to_owned();
-        s.mailbox.accounts[0].sender_name = mailcraft_model::mailbox::LEGACY_LOCAL_ACCOUNT_NAME.to_owned();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.mailbox.accounts[0].display_name =
+            iridium_mail_model::mailbox::LEGACY_LOCAL_ACCOUNT_NAME.to_owned();
+        s.mailbox.accounts[0].sender_name = iridium_mail_model::mailbox::LEGACY_LOCAL_ACCOUNT_NAME.to_owned();
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
     }
     let s = Session::open(dir.path()).expect("reopen");
     assert_eq!(s.mailbox.accounts[0].display_name, "Local Folders");
@@ -197,7 +198,7 @@ fn store_journal_survives_reopen() {
         // Load the sample into the store, then change it through commands.
         let sample = sample_session();
         s.mailbox = sample.mailbox.clone();
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         s.select_default_folder();
         let id = find(&s, "Analytics summary");
         s.run("nav.selectItem", &json!({"id": id.0})).expect("select");
@@ -244,10 +245,10 @@ fn protected_data_files_are_written_with_600000_rounds() {
         .expect("new data file");
     let bytes = std::fs::read(&file).expect("written");
     let v: Value = serde_json::from_slice(&bytes).expect("json");
-    assert_eq!(v["rounds"], mailcraft_engine::datafile::PASSWORD_ROUNDS);
+    assert_eq!(v["rounds"], iridium_mail_engine::datafile::PASSWORD_ROUNDS);
     assert!(v["rounds"].as_u64().is_some_and(|r| r >= 600_000));
     assert_eq!(v["version"], 2);
-    assert!(mailcraft_engine::datafile::unseal(&bytes, "pw-strong-1").is_ok());
+    assert!(iridium_mail_engine::datafile::unseal(&bytes, "pw-strong-1").is_ok());
 }
 
 /// Regression (honest-parity audit, commit 10): New Appointment/Contact/Task from the Mail module used to pass the
@@ -264,9 +265,9 @@ fn new_items_from_mail_do_not_pass_the_mail_folder() {
         });
         let params = params.expect("dialog opened");
         // The module's own folder (the window the module opens), never the selected mail folder.
-        let folder = params.get("folder").and_then(|f| f.as_u64()).map(mailcraft_model::FolderId);
+        let folder = params.get("folder").and_then(|f| f.as_u64()).map(iridium_mail_model::FolderId);
         let kind_of = folder.and_then(|f| s.mailbox.folder(f)).map(|f| f.kind);
-        assert!(kind_of.is_some_and(|k| k != mailcraft_model::FolderKind::Mail), "{kind}: {params}");
+        assert!(kind_of.is_some_and(|k| k != iridium_mail_model::FolderKind::Mail), "{kind}: {params}");
         assert_ne!(folder, Some(s.selection.folder), "{kind}");
     }
     s.notices.clear();

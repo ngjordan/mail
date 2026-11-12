@@ -1,6 +1,6 @@
 [package]
-name = "mailcraft-testmail"
-description = "Local in-process IMAP4rev1/rev2 and SMTP submission test servers for MailCraft tests (dev/test only; never contacts real servers)"
+name = "iridium-mail-testmail"
+description = "Local in-process IMAP4rev1/rev2 and SMTP submission test servers for Mail tests (dev/test only; never contacts real servers)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

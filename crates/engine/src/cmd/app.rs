@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use crate::cmd::util::{dialog, mail_targets, opt_folder, opt_str};
 use crate::queries;
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::{FolderKind, ItemId, MailItem};
+use iridium_mail_model::{FolderKind, ItemId, MailItem};
 
 /// Longest text accepted by Copy (characters); longer text is truncated.
 const MAX_CLIPBOARD_CHARS: usize = 1_000_000;
@@ -251,14 +251,14 @@ pub fn clipboard_text(s: &Session, ids: &[ItemId]) -> String {
         if !out.is_empty() {
             out.push('\n');
         }
-        let who = |a: &mailcraft_model::Address| match &a.name {
+        let who = |a: &iridium_mail_model::Address| match &a.name {
             Some(n) if !n.trim().is_empty() => format!("{n} <{}>", a.addr),
             _ => a.addr.clone(),
         };
         if let Some(f) = &m.from {
             out.push_str(&format!("From: {}\n", who(f)));
         }
-        out.push_str(&format!("Received: {}\n", mailcraft_model::ListTime::long_date(m.received, tz)));
+        out.push_str(&format!("Received: {}\n", iridium_mail_model::ListTime::long_date(m.received, tz)));
         if !m.to.is_empty() {
             out.push_str(&format!("To: {}\n", m.to.iter().map(who).collect::<Vec<_>>().join("; ")));
         }

@@ -1,6 +1,6 @@
 //! Hostile input: nothing in the crate panics, and every reported range is a valid char-boundary slice.
 
-use mailcraft_proof::{SpellOptions, Speller, looks_like_address, tokenize};
+use iridium_mail_proof::{SpellOptions, Speller, looks_like_address, tokenize};
 use proptest::prelude::*;
 
 fn speller() -> &'static Speller {
@@ -48,7 +48,7 @@ proptest! {
             ignore_internet_and_file_addresses: grammar,
             flag_repeated_words: true,
             main_dictionary_only: caps,
-            refinements: if caps { mailcraft_proof::Refinements::ALL } else { mailcraft_proof::Refinements::NONE },
+            refinements: if caps { iridium_mail_proof::Refinements::ALL } else { iridium_mail_proof::Refinements::NONE },
         });
         for issue in s.check_text_with_suggestions(&text, 2) {
             prop_assert!(issue.start <= issue.end);

@@ -73,7 +73,7 @@ fn slow_frame_line(total: f64, parts: &[(&'static str, f64)]) -> String {
 
 /// Reports a frame of an item window (read or compose) with its own OS window: always its first frame, later
 /// ones when slow. `total` is the whole time the main window waited for it, `content` the part spent in
-/// MailCraft's drawing of it; the rest is creating the window and handing the frame to the system.
+/// Mail's drawing of it; the rest is creating the window and handing the frame to the system.
 pub fn item_window_frame(title: &str, first: bool, total: f64, content: f64) {
     if first || total >= SLOW_MS {
         log::debug!("{}", item_window_line(title, first, total, content));

@@ -247,10 +247,10 @@ fn all_conditions_must_match_and_exceptions_cancel() {
 #[test]
 fn describe_matches_observed_example() {
     let rule = Rule {
-        name: "MailCraft test".into(),
+        name: "Mail test".into(),
         enabled: true,
-        conditions: vec![RuleCondition::SubjectContains(words(&["[MailCraft test]"]))],
-        actions: vec![RuleAction::NewItemAlert("[MailCraft test]".into()), RuleAction::MarkAsRead],
+        conditions: vec![RuleCondition::SubjectContains(words(&["[Mail test]"]))],
+        actions: vec![RuleAction::NewItemAlert("[Mail test]".into()), RuleAction::MarkAsRead],
         ..Default::default()
     };
     let names = |_: FolderId| String::new();
@@ -258,13 +258,13 @@ fn describe_matches_observed_example() {
         rule.describe(&names),
         [
             "Apply this rule after the message arrives",
-            "with [MailCraft test] in the subject",
-            "display [MailCraft test] in the New Item Alert window",
+            "with [Mail test] in the subject",
+            "display [Mail test] in the New Item Alert window",
             "and mark it as read",
         ]
     );
     assert!(rule.is_client_only());
-    assert_eq!(rule.list_label(), "MailCraft test  (client-only)");
+    assert_eq!(rule.list_label(), "Mail test  (client-only)");
 }
 
 #[test]

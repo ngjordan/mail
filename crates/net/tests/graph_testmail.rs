@@ -1,16 +1,16 @@
-//! The Microsoft Graph client against the fake Graph mail service of `mailcraft-testmail` (HTTPS on
+//! The Microsoft Graph client against the fake Graph mail service of `iridium-mail-testmail` (HTTPS on
 //! 127.0.0.1, synthetic users; nothing reaches a real Microsoft service).
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_model::FolderRole;
-use mailcraft_net::graph::GraphClient;
-use mailcraft_net::graph::mail::{FileAttachment, FlagStatus, MessagePatch, UPLOAD_CHUNK};
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::{ConnectOptions, NetError};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_model::FolderRole;
+use iridium_mail_net::graph::GraphClient;
+use iridium_mail_net::graph::mail::{FileAttachment, FlagStatus, MessagePatch, UPLOAD_CHUNK};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::{ConnectOptions, NetError};
+use iridium_mail_testmail::{Config, TestServers};
 
 const USER: &str = "alice@example.com";
 const PASS: &str = "alice-graph-pw";
@@ -48,7 +48,7 @@ fn delta_all(
     c: &GraphClient,
     folder: &str,
     link: Option<&str>,
-) -> (Vec<mailcraft_net::graph::mail::GraphMessage>, String) {
+) -> (Vec<iridium_mail_net::graph::mail::GraphMessage>, String) {
     let mut out = Vec::new();
     let mut page = c.messages_delta(folder, link, None).unwrap();
     let mut rounds = 0;

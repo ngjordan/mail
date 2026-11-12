@@ -8,8 +8,8 @@ use serde_json::{Map, Value, json};
 
 use super::defs::{CmdRef, Item, ItemKind};
 use crate::{App, Surface};
-use mailcraft_engine::Module;
-use mailcraft_model::{
+use iridium_mail_engine::Module;
+use iridium_mail_model::{
     ArrangeBy, BodyFormat, FolderPaneState, Importance, ListFilter, ReadingPanePos, ViewLayout,
 };
 
@@ -27,7 +27,7 @@ pub struct Mem {
 }
 
 pub fn mem_id(surface: Surface) -> egui::Id {
-    egui::Id::unique(("mailcraft-ribbon-mem", super::surface_key(surface)))
+    egui::Id::unique(("iridium-mail-ribbon-mem", super::surface_key(surface)))
 }
 
 pub fn load_mem(ctx: &egui::Context, surface: Surface) -> Mem {
@@ -72,31 +72,31 @@ pub fn flip_mem(mem: &mut Mem, spec: &str) {
 
 /// Whether `term` is one of the query's terms (quoted values with spaces count as one term).
 fn token_on(search: &str, term: &str) -> bool {
-    mailcraft_engine::cmd::search::terms(search).iter().any(|t| t.eq_ignore_ascii_case(term))
+    iridium_mail_engine::cmd::search::terms(search).iter().any(|t| t.eq_ignore_ascii_case(term))
 }
 
-fn current_view(app: &App) -> mailcraft_model::ViewSettings {
-    mailcraft_engine::queries::view_settings(&app.s, app.s.selection.folder)
+fn current_view(app: &App) -> iridium_mail_model::ViewSettings {
+    iridium_mail_engine::queries::view_settings(&app.s, app.s.selection.folder)
 }
 
 /// The selected folder's module view (contacts, tasks and notes folders).
 fn module_here(
     app: &App,
 ) -> Option<(
-    mailcraft_engine::cmd::view::modules::ModuleKind,
-    mailcraft_engine::cmd::view::modules::ModuleView,
+    iridium_mail_engine::cmd::view::modules::ModuleKind,
+    iridium_mail_engine::cmd::view::modules::ModuleView,
 )> {
-    mailcraft_engine::cmd::view::modules::current(&app.s, app.s.selection.folder)
+    iridium_mail_engine::cmd::view::modules::current(&app.s, app.s.selection.folder)
 }
 
 /// The module item the main window has selected (People, Tasks, Notes).
-fn module_item(app: &App, surface: Surface) -> Option<mailcraft_model::ItemId> {
+fn module_item(app: &App, surface: Surface) -> Option<iridium_mail_model::ItemId> {
     if surface != Surface::Main
         || !matches!(app.s.view.module, Module::People | Module::Tasks | Module::Notes)
     {
         return None;
     }
-    app.ui.module_selection.map(mailcraft_model::ItemId)
+    app.ui.module_selection.map(iridium_mail_model::ItemId)
 }
 
 /// Tags state of the selected contact or task (`pim:private`, `pim:high`, `pim:low`, `pim:flagged`; contacts
@@ -107,8 +107,8 @@ fn pim_on(app: &App, surface: Surface, arg: &str) -> bool {
     if let Some(t) = mb.tasks.get(&id) {
         return match arg {
             "private" => t.private,
-            "high" => t.priority == mailcraft_model::TaskPriority::High,
-            "low" => t.priority == mailcraft_model::TaskPriority::Low,
+            "high" => t.priority == iridium_mail_model::TaskPriority::High,
+            "low" => t.priority == iridium_mail_model::TaskPriority::Low,
             "flagged" => !t.is_complete() && (t.due.is_some() || t.start.is_some()),
             _ => false,
         };
@@ -119,8 +119,8 @@ fn pim_on(app: &App, surface: Surface, arg: &str) -> bool {
             || std::iter::once(c).chain(app.s.selection.items.iter().filter_map(|i| mb.contacts.get(i)));
         return match arg {
             "private" => c.private,
-            "flagged" => matches!(c.flag, mailcraft_model::FlagState::Flagged { .. }),
-            "hasFlag" => selected().any(|c| c.flag != mailcraft_model::FlagState::None),
+            "flagged" => matches!(c.flag, iridium_mail_model::FlagState::Flagged { .. }),
+            "hasFlag" => selected().any(|c| c.flag != iridium_mail_model::FlagState::None),
             "hasCategories" => selected().any(|c| !c.categories.is_empty()),
             _ => false,
         };
@@ -128,10 +128,10 @@ fn pim_on(app: &App, surface: Surface, arg: &str) -> bool {
     // A flagged message row of the To-Do List.
     if let Some(m) = mb.mail.get(id) {
         return match arg {
-            "private" => m.sensitivity == mailcraft_model::Sensitivity::Private,
+            "private" => m.sensitivity == iridium_mail_model::Sensitivity::Private,
             "high" => m.importance == Importance::High,
             "low" => m.importance == Importance::Low,
-            "flagged" => matches!(m.flag, mailcraft_model::FlagState::Flagged { .. }),
+            "flagged" => matches!(m.flag, iridium_mail_model::FlagState::Flagged { .. }),
             _ => false,
         };
     }
@@ -141,21 +141,21 @@ fn pim_on(app: &App, surface: Surface, arg: &str) -> bool {
 /// View › Color in the Calendar: the current calendar's colour (`calcolor:<Name>`, spaces as `_`; Automatic
 /// when none is set).
 fn calcolor_on(app: &App, arg: &str) -> bool {
-    use mailcraft_engine::cmd::calendar::{pim, props};
+    use iridium_mail_engine::cmd::calendar::{pim, props};
     let Some(f) = pim::current_folder(&app.s, pim::Kind::Appointment) else { return false };
     let color = props::read(&app.s.mailbox, f).color.unwrap_or_else(|| "Automatic".to_owned());
     color.replace(' ', "_").eq_ignore_ascii_case(arg)
 }
 
-fn focused_mail(app: &App, surface: Surface) -> Option<&mailcraft_model::MailItem> {
+fn focused_mail(app: &App, surface: Surface) -> Option<&iridium_mail_model::MailItem> {
     let id = match surface {
-        Surface::Read(id) => mailcraft_model::ItemId(id),
+        Surface::Read(id) => iridium_mail_model::ItemId(id),
         _ => app.s.selection.focus.or_else(|| app.s.selection.items.first().copied())?,
     };
     app.s.mailbox.mail.get(id)
 }
 
-fn compose(app: &App, surface: Surface) -> Option<&mailcraft_engine::compose::ComposeState> {
+fn compose(app: &App, surface: Surface) -> Option<&iridium_mail_engine::compose::ComposeState> {
     match surface {
         Surface::Compose(id) => app.s.composes.get(&id),
         _ => None,
@@ -163,16 +163,18 @@ fn compose(app: &App, surface: Surface) -> Option<&mailcraft_engine::compose::Co
 }
 
 /// The drawing a message's Shape Format tab works on.
-fn selected_drawing(c: &mailcraft_engine::compose::ComposeState) -> Option<&mailcraft_model::rich::Drawing> {
-    c.selected_drawing.and_then(|id| mailcraft_engine::cmd::drawing::find(&c.body.drawings, id))
+fn selected_drawing(
+    c: &iridium_mail_engine::compose::ComposeState,
+) -> Option<&iridium_mail_model::rich::Drawing> {
+    c.selected_drawing.and_then(|id| iridium_mail_engine::cmd::drawing::find(&c.body.drawings, id))
 }
 
 /// Shape Effects and Text Effects galleries (`fx:presets`, `fx:shadows`, `fx:reflections`, `fx:glows`,
 /// `fx:softEdges`, `fx:bevels`, `fx:rotations`, `fx:warps`), checked against the selected drawing's shape
 /// effects, or its text effects with `text` (a group's: its first drawing's, which formatting goes to).
 fn fx_items(app: &App, surface: Surface, kind: &str, text: bool) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::drawing as dr;
-    use mailcraft_engine::cmd::insert::drawing as ins;
+    use iridium_mail_engine::cmd::drawing as dr;
+    use iridium_mail_engine::cmd::insert::drawing as ins;
     let c = compose(app, surface);
     let d = c.and_then(dr::format_source);
     let preset = c.zip(d).and_then(|(c, d)| dr::preset_of(d, c, text));
@@ -220,7 +222,7 @@ fn fx_items(app: &App, surface: Surface, kind: &str, text: bool) -> Vec<DynItem>
             .flat_map(|a| dr::GLOW_SIZES.iter().map(move |sz| (a, *sz)))
             .map(|(a, size)| {
                 let key = format!("accent{a}");
-                let col = c.and_then(|c| mailcraft_engine::cmd::format::theme_color(c, &key, 0));
+                let col = c.and_then(|c| iridium_mail_engine::cmd::format::theme_color(c, &key, 0));
                 let on = fx
                     .glow
                     .as_ref()
@@ -305,22 +307,22 @@ pub fn is_on(app: &App, surface: Surface, mem: &Mem, spec: &str) -> bool {
         "favorites" => v.favorites_visible,
         // Follow Up › Today … No Date: checked for the entry the item's flag came from.
         "followup" => focused_mail(app, surface)
-            .and_then(|m| mailcraft_engine::cmd::mail::follow_up_kind(&app.s, &m.flag))
+            .and_then(|m| iridium_mail_engine::cmd::mail::follow_up_kind(&app.s, &m.flag))
             .is_some_and(|k| k == arg),
         // Send / Receive › Work Offline, as the engine keeps it.
         "offline" => v.work_offline,
         // Folder › Show All Folders A to Z, as the engine keeps it.
-        "allaz" => mailcraft_engine::cmd::folder::show_all_az_on(&app.s),
+        "allaz" => iridium_mail_engine::cmd::folder::show_all_az_on(&app.s),
         "favorite" => {
             app.s.mailbox.folders.get(&app.s.selection.folder).is_some_and(|f| f.favorite_pos.is_some())
         }
         "conversations" => current_view(app).conversations,
         // Conversation Settings of the selected folder, as the engine keeps them.
-        "conv" => mailcraft_engine::queries::conversation_settings(&app.s, app.s.selection.folder)
+        "conv" => iridium_mail_engine::queries::conversation_settings(&app.s, app.s.selection.folder)
             .get(arg)
             .unwrap_or(false),
         "focused" => current_view(app).focused_inbox,
-        "reverse" => current_view(app).order == mailcraft_model::SortOrder::Ascending,
+        "reverse" => current_view(app).order == iridium_mail_model::SortOrder::Ascending,
         "tighter" => current_view(app).tighter_spacing,
         "groups" => current_view(app).show_in_groups,
         // A tasks folder keeps its own message preview (the task notes); mail folders their view settings.
@@ -331,7 +333,7 @@ pub fn is_on(app: &App, surface: Surface, mem: &Mem, spec: &str) -> bool {
         "pim" => pim_on(app, surface, arg),
         // Tasks Home › Follow Up: the entry the selected To-Do List row's dates came from.
         "taskflag" => module_item(app, surface)
-            .and_then(|id| mailcraft_engine::cmd::tasks::follow_up_state(&app.s, id))
+            .and_then(|id| iridium_mail_engine::cmd::tasks::follow_up_state(&app.s, id))
             .is_some_and(|k| k == arg),
         // The arrangement of a contacts or tasks folder (the module's Arrange By menu).
         "marr" => module_here(app).is_some_and(|(k, st)| st.arrangement(k) == Some(arg)),
@@ -364,8 +366,8 @@ pub fn is_on(app: &App, surface: Surface, mem: &Mem, spec: &str) -> bool {
         }
         // Send / Receive › Download Preferences as the engine shows them (the current account's, else the
         // defaults for new accounts): the mode (`dl:<mode>`) and On Slow Connections Download Only Headers.
-        "dl" => mailcraft_engine::sync::cmds::shown_preferences(&app.s).0 == arg,
-        "slowHeaders" => mailcraft_engine::sync::cmds::shown_preferences(&app.s).1,
+        "dl" => iridium_mail_engine::sync::cmds::shown_preferences(&app.s).0 == arg,
+        "slowHeaders" => iridium_mail_engine::sync::cmds::shown_preferences(&app.s).1,
         "ignored" => focused_mail(app, surface).is_some_and(|m| m.ignored),
         "cat" => focused_mail(app, surface)
             .is_some_and(|m| m.categories.iter().any(|c| c.eq_ignore_ascii_case(arg))),
@@ -382,10 +384,11 @@ pub fn is_on(app: &App, surface: Surface, mem: &Mem, spec: &str) -> bool {
     }
 }
 
-fn compose_on(c: &mailcraft_engine::compose::ComposeState, name: &str, arg: &str) -> bool {
+fn compose_on(c: &iridium_mail_engine::compose::ComposeState, name: &str, arg: &str) -> bool {
     // Character toggles are on when every selected character has the format (the typing style at a caret);
     // heading text counts as bold unless it was made plain.
-    let all = |f: fn(&mailcraft_model::TextStyle) -> Option<bool>| c.selection_all(|s, _| f(s) == Some(true));
+    let all =
+        |f: fn(&iridium_mail_model::TextStyle) -> Option<bool>| c.selection_all(|s, _| f(s) == Some(true));
     match name {
         "bold" => c.selection_all(|s, heading| s.bold == Some(true) || (heading && s.bold != Some(false))),
         "italic" => all(|s| s.italic),
@@ -397,7 +400,7 @@ fn compose_on(c: &mailcraft_engine::compose::ComposeState, name: &str, arg: &str
         "table" => c.cell_at_caret().is_some(),
         "signature" => c.signature.as_ref().is_some_and(|s| s.name.eq_ignore_ascii_case(arg)),
         "align" => {
-            use mailcraft_model::rich::Align;
+            use iridium_mail_model::rich::Align;
             matches!(
                 (arg, c.para_at_caret().align),
                 ("left", Align::Start)
@@ -407,10 +410,10 @@ fn compose_on(c: &mailcraft_engine::compose::ComposeState, name: &str, arg: &str
             )
         }
         "bullets" => {
-            matches!(c.list_at_caret(), Some((_, mailcraft_model::rich::ListKind::Bullet)))
+            matches!(c.list_at_caret(), Some((_, iridium_mail_model::rich::ListKind::Bullet)))
         }
         "numbering" => {
-            matches!(c.list_at_caret(), Some((_, mailcraft_model::rich::ListKind::Numbered { .. })))
+            matches!(c.list_at_caret(), Some((_, iridium_mail_model::rich::ListKind::Numbered { .. })))
         }
         "imp" => matches!((arg, c.importance), ("high", Importance::High) | ("low", Importance::Low)),
         "fmt" => matches!(
@@ -439,19 +442,21 @@ fn compose_on(c: &mailcraft_engine::compose::ComposeState, name: &str, arg: &str
         "editorpane" => c.editor.editor_pane,
         "applystyles" => c.editor.apply_styles,
         "inlist" => c.list_at_caret().is_some(),
-        "numlist" => matches!(c.list_at_caret(), Some((_, mailcraft_model::rich::ListKind::Numbered { .. }))),
+        "numlist" => {
+            matches!(c.list_at_caret(), Some((_, iridium_mail_model::rich::ListKind::Numbered { .. })))
+        }
         "listfilter" => {
             let f = c.editor.list_gallery_filter.as_str();
             if f.is_empty() { arg == "all" } else { f == arg }
         }
-        "flagged" => c.flag != mailcraft_model::FlagState::None || c.recipient_flag.is_some(),
+        "flagged" => c.flag != iridium_mail_model::FlagState::None || c.recipient_flag.is_some(),
         "lightcanvas" => c.light_canvas,
         // Shape Format: the selected drawing's layout, text direction and point editing.
         "editPoints" => c.edit_points.is_some(),
         "alignMargin" => c.align_to_margin,
         "alignSelected" => !c.align_to_margin,
-        "wrap" => selected_drawing(c).is_some_and(|d| mailcraft_engine::cmd::drawing::wrap_name(d) == arg),
-        "textDir" => mailcraft_engine::cmd::drawing::format_source(c).is_some_and(|d| {
+        "wrap" => selected_drawing(c).is_some_and(|d| iridium_mail_engine::cmd::drawing::wrap_name(d) == arg),
+        "textDir" => iridium_mail_engine::cmd::drawing::format_source(c).is_some_and(|d| {
             let now = match (d.vertical, d.text_flow.as_str()) {
                 (_, "up") => "up",
                 (_, "stacked") => "stacked",
@@ -462,7 +467,7 @@ fn compose_on(c: &mailcraft_engine::compose::ComposeState, name: &str, arg: &str
         }),
         "vote" => c.voting.eq_ignore_ascii_case(arg),
         "save" => {
-            use mailcraft_engine::compose::SaveSentTo;
+            use iridium_mail_engine::compose::SaveSentTo;
             matches!((arg, &c.save_sent), ("default", SaveSentTo::Default) | ("none", SaveSentTo::DoNotSave))
         }
         _ => false,
@@ -474,14 +479,14 @@ pub fn combo_value(app: &App, surface: Surface, spec: Option<&str>) -> String {
     let Some(c) = compose(app, surface) else {
         return String::new();
     };
-    let font = |s: &mailcraft_model::TextStyle| {
+    let font = |s: &iridium_mail_model::TextStyle| {
         s.font_family
             .clone()
             .or_else(|| c.body.base.font_family.clone())
-            .unwrap_or_else(|| mailcraft_fonts::BODY_FAMILY.to_owned())
+            .unwrap_or_else(|| iridium_mail_fonts::BODY_FAMILY.to_owned())
     };
-    let size = |s: &mailcraft_model::TextStyle| {
-        let pt = s.size_pt.or(c.body.base.size_pt).unwrap_or(mailcraft_fonts::BODY_SIZE_PT);
+    let size = |s: &iridium_mail_model::TextStyle| {
+        let pt = s.size_pt.or(c.body.base.size_pt).unwrap_or(iridium_mail_fonts::BODY_SIZE_PT);
         if (pt.fract()).abs() < 0.01 { format!("{pt:.0}") } else { format!("{pt:.1}") }
     };
     // Shape Format › Size: the selected drawing's height and width.
@@ -498,8 +503,8 @@ pub fn combo_value(app: &App, surface: Surface, spec: Option<&str>) -> String {
 /// What a font / size box shows: the value of the first selected char, or blank when the selection mixes
 /// values (like word processors); the caret's typing style when nothing is selected.
 fn selection_value(
-    c: &mailcraft_engine::compose::ComposeState,
-    value: impl Fn(&mailcraft_model::TextStyle) -> String,
+    c: &iridium_mail_engine::compose::ComposeState,
+    value: impl Fn(&iridium_mail_model::TextStyle) -> String,
 ) -> String {
     if c.selection.is_collapsed() {
         return value(&c.style_at_caret());
@@ -542,8 +547,8 @@ pub fn arrange_key(a: ArrangeBy) -> &'static str {
     }
 }
 
-fn scope_name(sc: mailcraft_engine::SearchScope) -> &'static str {
-    use mailcraft_engine::SearchScope as S;
+fn scope_name(sc: iridium_mail_engine::SearchScope) -> &'static str {
+    use iridium_mail_engine::SearchScope as S;
     match sc {
         S::AllMailboxes => "allMailboxes",
         S::CurrentMailbox => "currentMailbox",
@@ -554,7 +559,7 @@ fn scope_name(sc: mailcraft_engine::SearchScope) -> &'static str {
 }
 
 /// Name of the Styles gallery entry matching the paragraph at the caret ("Normal", "Heading 1"…).
-fn current_style(c: &mailcraft_engine::compose::ComposeState) -> String {
+fn current_style(c: &iridium_mail_engine::compose::ComposeState) -> String {
     let path = &c.selection.focus.path;
     let mut blocks = &c.body.blocks;
     let mut block = None;
@@ -566,14 +571,14 @@ fn current_style(c: &mailcraft_engine::compose::ComposeState) -> String {
         block = Some(b);
         match (b, tail) {
             (
-                mailcraft_model::Block::Quote { blocks: inner }
-                | mailcraft_model::Block::Container { blocks: inner, .. },
+                iridium_mail_model::Block::Quote { blocks: inner }
+                | iridium_mail_model::Block::Container { blocks: inner, .. },
                 t,
             ) if !t.is_empty() => {
                 blocks = inner;
                 rest = t;
             }
-            (mailcraft_model::Block::List { items, .. }, [item, t @ ..]) if !t.is_empty() => {
+            (iridium_mail_model::Block::List { items, .. }, [item, t @ ..]) if !t.is_empty() => {
                 match items.get(*item) {
                     Some(inner) => {
                         blocks = inner;
@@ -582,7 +587,7 @@ fn current_style(c: &mailcraft_engine::compose::ComposeState) -> String {
                     None => break,
                 }
             }
-            (mailcraft_model::Block::Table { rows, .. }, [row, cell, t @ ..]) if !t.is_empty() => {
+            (iridium_mail_model::Block::Table { rows, .. }, [row, cell, t @ ..]) if !t.is_empty() => {
                 match rows.get(*row).and_then(|r| r.get(*cell)) {
                     Some(cell) => {
                         blocks = &cell.blocks;
@@ -595,8 +600,8 @@ fn current_style(c: &mailcraft_engine::compose::ComposeState) -> String {
         }
     }
     match block {
-        Some(mailcraft_model::Block::Heading { level, .. }) => format!("Heading {level}"),
-        Some(mailcraft_model::Block::Paragraph { .. }) => "Normal".to_owned(),
+        Some(iridium_mail_model::Block::Heading { level, .. }) => format!("Heading {level}"),
+        Some(iridium_mail_model::Block::Paragraph { .. }) => "Normal".to_owned(),
         _ => String::new(),
     }
 }
@@ -732,7 +737,7 @@ pub const SOURCES: [&str; 93] = [
 ];
 
 /// Swatch bytes of a colour.
-fn swatch(c: mailcraft_geom::Color) -> Option<[u8; 3]> {
+fn swatch(c: iridium_mail_geom::Color) -> Option<[u8; 3]> {
     Some([c.r, c.g, c.b])
 }
 
@@ -740,12 +745,12 @@ fn swatch(c: mailcraft_geom::Color) -> Option<[u8; 3]> {
 /// theme elsewhere): the base colour of each column (`key` = None) or the five shades of column `key`.
 /// Template variables: `$theme` (column key) and `$tint` (percent, positive lighter).
 fn theme_items(app: &App, surface: Surface, key: Option<&str>) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::format::{THEME_COLUMNS, theme_color};
+    use iridium_mail_engine::cmd::format::{THEME_COLUMNS, theme_color};
     let fallback;
     let c = match compose(app, surface) {
         Some(c) => c,
         None => {
-            fallback = mailcraft_engine::compose::ComposeState::default();
+            fallback = iridium_mail_engine::compose::ComposeState::default();
             &fallback
         }
     };
@@ -794,10 +799,10 @@ fn paragraph_spacing_items(app: &App, surface: Surface) -> Vec<DynItem> {
 
 /// The standard Font Color swatches.
 fn font_colors() -> Vec<DynItem> {
-    mailcraft_engine::cmd::format::FONT_COLORS
+    iridium_mail_engine::cmd::format::FONT_COLORS
         .iter()
         .filter_map(|(name, hex)| {
-            let col = mailcraft_geom::Color::parse_hex(hex)?;
+            let col = iridium_mail_geom::Color::parse_hex(hex)?;
             Some(DynItem {
                 label: (*name).to_owned(),
                 icon: "",
@@ -812,13 +817,13 @@ fn font_colors() -> Vec<DynItem> {
 /// Font Color items; with the menu's High-contrast only on, the colours that are hard to read on the page
 /// are left out.
 fn readable_only(app: &App, surface: Surface, items: Vec<DynItem>) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::format::is_readable_text;
+    use iridium_mail_engine::cmd::format::is_readable_text;
     if !compose(app, surface).is_some_and(|c| c.editor.font_high_contrast_only) {
         return items;
     }
     items
         .into_iter()
-        .filter(|i| i.swatch.is_none_or(|[r, g, b]| is_readable_text(mailcraft_geom::Color::rgb(r, g, b))))
+        .filter(|i| i.swatch.is_none_or(|[r, g, b]| is_readable_text(iridium_mail_geom::Color::rgb(r, g, b))))
         .collect()
 }
 
@@ -840,7 +845,7 @@ fn shading_colors() -> Vec<DynItem> {
     SHADING_COLORS
         .iter()
         .filter_map(|(name, hex)| {
-            let col = mailcraft_geom::Color::parse_hex(hex)?;
+            let col = iridium_mail_geom::Color::parse_hex(hex)?;
             Some(DynItem {
                 label: (*name).to_owned(),
                 icon: "",
@@ -854,24 +859,24 @@ fn shading_colors() -> Vec<DynItem> {
 
 /// Shading colours; with its High-contrast only on, the colours text is hard to read on are hidden.
 fn shading_only(app: &App, surface: Surface, items: Vec<DynItem>) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::format::is_high_contrast;
+    use iridium_mail_engine::cmd::format::is_high_contrast;
     if !compose(app, surface).is_some_and(|c| c.editor.shading_high_contrast_only) {
         return items;
     }
     items
         .into_iter()
-        .filter(|i| i.swatch.is_none_or(|[r, g, b]| is_high_contrast(mailcraft_geom::Color::rgb(r, g, b))))
+        .filter(|i| i.swatch.is_none_or(|[r, g, b]| is_high_contrast(iridium_mail_geom::Color::rgb(r, g, b))))
         .collect()
 }
 
 /// Text Highlight Color pens; with High-contrast only on, the pens that leave text hard to read are hidden.
 fn highlight_pens(app: &App, surface: Surface) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::format::{HIGHLIGHT_COLORS, is_high_contrast};
+    use iridium_mail_engine::cmd::format::{HIGHLIGHT_COLORS, is_high_contrast};
     let hc = compose(app, surface).is_some_and(|c| c.editor.high_contrast_only);
     HIGHLIGHT_COLORS
         .iter()
         .filter_map(|(name, hex)| {
-            let col = mailcraft_geom::Color::parse_hex(hex)?;
+            let col = iridium_mail_geom::Color::parse_hex(hex)?;
             if hc && !is_high_contrast(col) {
                 return None;
             }
@@ -901,7 +906,7 @@ fn style_items(app: &App, surface: Surface) -> Vec<DynItem> {
     };
     let current = current_style(c);
     let mut out: Vec<DynItem> = STYLES.iter().map(|s| item(s, current.eq_ignore_ascii_case(s))).collect();
-    for v in mailcraft_engine::cmd::format::styles_list(c) {
+    for v in iridium_mail_engine::cmd::format::styles_list(c) {
         let Some(name) = v.get("name").and_then(Value::as_str) else { continue };
         let on = v.get("current").and_then(Value::as_bool).unwrap_or(false);
         match out.iter_mut().find(|d| d.label.eq_ignore_ascii_case(name)) {
@@ -924,7 +929,7 @@ fn theme_font_items(app: &App, surface: Surface) -> Vec<DynItem> {
     let c = match compose(app, surface) {
         Some(c) => c,
         None => {
-            fallback = mailcraft_engine::compose::ComposeState::default();
+            fallback = iridium_mail_engine::compose::ComposeState::default();
             &fallback
         }
     };
@@ -975,7 +980,7 @@ pub const HEADING_VAR: &str = "$heading";
 /// picking it applies it again), the List Library and the saved list styles (`$style`).
 fn multilevel_gallery_items(app: &App, surface: Surface) -> Vec<DynItem> {
     let Some(c) = compose(app, surface) else { return Vec::new() };
-    let g = mailcraft_engine::cmd::format::multilevel_gallery_data(&app.s, c.id);
+    let g = iridium_mail_engine::cmd::format::multilevel_gallery_data(&app.s, c.id);
     let shown: Vec<&str> = g
         .get("shown")
         .and_then(Value::as_array)
@@ -1027,7 +1032,7 @@ fn multilevel_gallery_items(app: &App, surface: Surface) -> Vec<DynItem> {
 
 /// Change Styles › Style Set: the sets saved with Save as a New Style Set.
 fn saved_style_set_items(app: &App) -> Vec<DynItem> {
-    mailcraft_engine::cmd::format::saved_style_sets(&app.s)
+    iridium_mail_engine::cmd::format::saved_style_sets(&app.s)
         .into_iter()
         .map(|set| DynItem {
             vars: vec![("$name", json!(set.name))],
@@ -1041,7 +1046,7 @@ fn saved_style_set_items(app: &App) -> Vec<DynItem> {
 
 /// Change View: the saved views usable in the selected mail folder (checked: the one it shows).
 fn mail_view_items(app: &App) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::view::mail::{current_view_name, views_for};
+    use iridium_mail_engine::cmd::view::mail::{current_view_name, views_for};
     let folder = app.s.selection.folder;
     let current = current_view_name(&app.s, folder);
     views_for(&app.s, folder)
@@ -1057,8 +1062,8 @@ fn mail_view_items(app: &App) -> Vec<DynItem> {
 }
 
 /// The master category list by name (the Categorize and Categorized menus list it alphabetically).
-fn sorted_categories(app: &App) -> Vec<&mailcraft_model::Category> {
-    let mut v: Vec<&mailcraft_model::Category> = app.s.mailbox.categories.iter().collect();
+fn sorted_categories(app: &App) -> Vec<&iridium_mail_model::Category> {
+    let mut v: Vec<&iridium_mail_model::Category> = app.s.mailbox.categories.iter().collect();
     v.sort_by_cached_key(|c| c.name.to_lowercase());
     v
 }
@@ -1072,7 +1077,7 @@ fn block_items(app: &App, surface: Surface, gallery: &str) -> Vec<DynItem> {
     let Some(c) = compose(app, surface) else {
         return Vec::new();
     };
-    mailcraft_engine::cmd::insert::gallery_entries(&app.s, c.id, gallery)
+    iridium_mail_engine::cmd::insert::gallery_entries(&app.s, c.id, gallery)
         .into_iter()
         .map(|b| DynItem {
             label: b.name.chars().take(60).collect(),
@@ -1111,7 +1116,7 @@ fn window_items(app: &App, surface: Surface) -> Vec<DynItem> {
 
 /// Saved theme parts from the profile: `colors`, `fonts` or `themes`.
 fn saved_theme_items(app: &App, part: &str) -> Vec<DynItem> {
-    let saved = mailcraft_engine::cmd::compose::saved_themes(&app.s);
+    let saved = iridium_mail_engine::cmd::compose::saved_themes(&app.s);
     let item = |name: &str, swatch: Option<[u8; 3]>| DynItem {
         label: name.to_owned(),
         icon: if swatch.is_some() { "" } else { "view" },
@@ -1124,7 +1129,7 @@ fn saved_theme_items(app: &App, part: &str) -> Vec<DynItem> {
             .colors
             .iter()
             .map(|c| {
-                item(&c.name, c.colors.get(mailcraft_engine::compose::ACCENT1).copied().and_then(swatch))
+                item(&c.name, c.colors.get(iridium_mail_engine::compose::ACCENT1).copied().and_then(swatch))
             })
             .collect(),
         "fonts" => saved.fonts.iter().map(|c| item(&c.name, None)).collect(),
@@ -1134,8 +1139,8 @@ fn saved_theme_items(app: &App, part: &str) -> Vec<DynItem> {
 
 /// Change View / Current View gallery of a module: its built-in views, then the views saved for the selected
 /// folder (or for every folder of the module); checked: the view the folder shows.
-fn module_view_items(app: &App, kind: mailcraft_engine::cmd::view::modules::ModuleKind) -> Vec<DynItem> {
-    use mailcraft_engine::cmd::view::modules;
+fn module_view_items(app: &App, kind: iridium_mail_engine::cmd::view::modules::ModuleKind) -> Vec<DynItem> {
+    use iridium_mail_engine::cmd::view::modules;
     let folder = app.s.selection.folder;
     let icon = match kind {
         modules::ModuleKind::People => "people",
@@ -1161,14 +1166,14 @@ fn module_view_items(app: &App, kind: mailcraft_engine::cmd::view::modules::Modu
 }
 
 /// The Calendar's view as the engine keeps it for the current calendar (the default view before any change).
-fn calendar_view_state(app: &App) -> mailcraft_model::calendar::CalendarViewState {
-    mailcraft_engine::cmd::calendar::views::saved_view(&app.s).map(|(v, _)| v).unwrap_or_default()
+fn calendar_view_state(app: &App) -> iridium_mail_model::calendar::CalendarViewState {
+    iridium_mail_engine::cmd::calendar::views::saved_view(&app.s).map(|(v, _)| v).unwrap_or_default()
 }
 
 /// `calview:<part>`: the Calendar view's toggles and choices (`overlay`, `workingHours`, `tighter`,
 /// `timeScale.<minutes>`, `rp.<right|bottom|off>`, `dailyTaskList.<normal|minimized|off>`).
 fn calview_on(app: &App, arg: &str) -> bool {
-    use mailcraft_model::calendar::DailyTaskList;
+    use iridium_mail_model::calendar::DailyTaskList;
     let v = calendar_view_state(app);
     let (part, value) = arg.split_once('.').unwrap_or((arg, ""));
     match part {
@@ -1194,8 +1199,8 @@ fn calview_on(app: &App, arg: &str) -> bool {
 
 /// `notesIcon:<large|small|list>`: the Notes folder shows its Icon view with that arrangement.
 fn notes_icon_on(app: &App, arg: &str) -> bool {
-    use mailcraft_engine::cmd::notes::IconMode;
-    use mailcraft_engine::cmd::view::modules;
+    use iridium_mail_engine::cmd::notes::IconMode;
+    use iridium_mail_engine::cmd::view::modules;
     let folder = app.s.selection.folder;
     let Some((modules::ModuleKind::Notes, st)) = modules::current(&app.s, folder) else { return false };
     st.view == "Icon"
@@ -1248,7 +1253,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
                 .mailbox
                 .folders
                 .values()
-                .filter(|f| f.kind == mailcraft_model::FolderKind::Calendar)
+                .filter(|f| f.kind == iridium_mail_model::FolderKind::Calendar)
                 .map(|f| (f.role.is_none(), f.name.clone(), f.id.0))
                 .collect();
             cals.sort();
@@ -1276,17 +1281,20 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
                 on: false,
             })
             .chain(std::iter::once(DynItem {
-                label: mailcraft_model::QuickStep::CREATE_NEW.to_owned(),
+                label: iridium_mail_model::QuickStep::CREATE_NEW.to_owned(),
                 icon: "plus",
                 swatch: None,
-                vars: vec![("$id", json!("new")), ("$name", json!(mailcraft_model::QuickStep::CREATE_NEW))],
+                vars: vec![
+                    ("$id", json!("new")),
+                    ("$name", json!(iridium_mail_model::QuickStep::CREATE_NEW)),
+                ],
                 on: false,
             }))
             .collect(),
         "categories" => {
             let item = focused_mail(app, surface);
             let pim: Option<&Vec<String>> = module_item(app, surface)
-                .and_then(|id| mailcraft_engine::cmd::calendar::pim::categories(&app.s.mailbox, id));
+                .and_then(|id| iridium_mail_engine::cmd::calendar::pim::categories(&app.s.mailbox, id));
             sorted_categories(app)
                 .into_iter()
                 .map(|c| {
@@ -1311,7 +1319,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
             .into_iter()
             .map(|c| {
                 let rgb = c.color.rgb();
-                let term = mailcraft_engine::cmd::search::token("category", &c.name);
+                let term = iridium_mail_engine::cmd::search::token("category", &c.name);
                 DynItem {
                     label: c.name.clone(),
                     icon: "category-tag",
@@ -1322,7 +1330,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
             })
             .collect(),
         // Search Tools › Locations to Search: checked = All Mailboxes / All Items search the store.
-        "searchStores" => mailcraft_engine::cmd::search::locations(&app.s)
+        "searchStores" => iridium_mail_engine::cmd::search::locations(&app.s)
             .into_iter()
             .map(|(key, label, on)| DynItem {
                 label,
@@ -1371,11 +1379,11 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
         // Notes › Move and Tasks › Move: the folders notes (tasks) were last moved to.
         "recentNoteFolders" | "recentTaskFolders" => {
             let kind = if source == "recentTaskFolders" {
-                mailcraft_model::FolderKind::Tasks
+                iridium_mail_model::FolderKind::Tasks
             } else {
-                mailcraft_model::FolderKind::Notes
+                iridium_mail_model::FolderKind::Notes
             };
-            mailcraft_engine::recent_move_folders(&app.s, kind)
+            iridium_mail_engine::recent_move_folders(&app.s, kind)
                 .into_iter()
                 .filter_map(|f| app.s.mailbox.folder(f).map(|x| (f, x.name.clone())))
                 .map(|(f, name)| DynItem {
@@ -1388,7 +1396,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
                 .collect()
         }
         // Send/Receive Groups menu: the user-defined groups (All Accounts is a fixed item).
-        "srGroups" => mailcraft_engine::sync::groups::groups(&app.s)
+        "srGroups" => iridium_mail_engine::sync::groups::groups(&app.s)
             .iter()
             .map(|g| DynItem {
                 label: g.name.clone(),
@@ -1428,7 +1436,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
         }
         // Insert › Shapes and Shape Format › Change Shape: the gallery's shapes of one category.
         _ if source.starts_with("shapes:") => {
-            use mailcraft_engine::cmd::insert::shapes::{CATEGORIES, SHAPES};
+            use iridium_mail_engine::cmd::insert::shapes::{CATEGORIES, SHAPES};
             let cat = source.strip_prefix("shapes:").unwrap_or("");
             let current = compose(app, surface)
                 .and_then(|c| c.selected_drawing.and_then(|id| c.body.drawings.iter().find(|d| d.id == id)))
@@ -1524,7 +1532,7 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
         // Link ▾: web documents linked recently (picking one links it), then the recent files (picking one
         // attaches it: a link to a file on this computer would not open for the recipients).
         "recentFilesLink" => {
-            let links = mailcraft_engine::cmd::compose::recent_links(&app.s);
+            let links = iridium_mail_engine::cmd::compose::recent_links(&app.s);
             let files = crate::compose::recent_files(app);
             let mut out = Vec::new();
             if !links.is_empty() {
@@ -1549,9 +1557,9 @@ pub fn dyn_items(app: &App, surface: Surface, source: &str) -> Vec<DynItem> {
             }));
             out
         }
-        "views:people" => module_view_items(app, mailcraft_engine::cmd::view::modules::ModuleKind::People),
-        "views:tasks" => module_view_items(app, mailcraft_engine::cmd::view::modules::ModuleKind::Tasks),
-        "views:notes" => module_view_items(app, mailcraft_engine::cmd::view::modules::ModuleKind::Notes),
+        "views:people" => module_view_items(app, iridium_mail_engine::cmd::view::modules::ModuleKind::People),
+        "views:tasks" => module_view_items(app, iridium_mail_engine::cmd::view::modules::ModuleKind::Tasks),
+        "views:notes" => module_view_items(app, iridium_mail_engine::cmd::view::modules::ModuleKind::Notes),
         _ => Vec::new(),
     }
 }
@@ -1688,7 +1696,7 @@ pub fn disabled(app: &App, surface: Surface, cmd: &str) -> Option<&'static str> 
         && (spec.params.contains("\"ids\"")
             || (spec.params.contains("\"id\"") && cmd.split('.').next() == Some("review")))
     {
-        let item = mailcraft_model::ItemId(item);
+        let item = iridium_mail_model::ItemId(item);
         return if app.s.mailbox.mail.contains(item) {
             app.s.enabled_for(cmd, &[item])
         } else {
@@ -1698,7 +1706,7 @@ pub fn disabled(app: &App, surface: Surface, cmd: &str) -> Option<&'static str> 
     // Calendar view commands that do not apply to the arrangement shown (Time Scale in Month view).
     if surface == Surface::Main
         && app.s.view.module == Module::Calendar
-        && let Some(why) = mailcraft_engine::cmd::calendar::view_enabled(&calendar_view_state(app), cmd)
+        && let Some(why) = iridium_mail_engine::cmd::calendar::view_enabled(&calendar_view_state(app), cmd)
     {
         return Some(why);
     }
@@ -1721,7 +1729,7 @@ pub fn run(ctx: &egui::Context, app: &mut App, surface: Surface, mem: &mut Mem, 
             .get(&act.cmd)
             .is_some_and(|s| s.params.contains("\"ids\"") || (review && s.params.contains("\"id\"")));
         let selected = app.s.selection.items.iter().any(|i| i.0 == item);
-        let exists = app.s.mailbox.mail.contains(mailcraft_model::ItemId(item));
+        let exists = app.s.mailbox.mail.contains(iridium_mail_model::ItemId(item));
         if !takes_ids && !selected && exists && act.cmd.starts_with("mail.") {
             let _ = app.run("nav.selectItem", json!({"id": item}));
         }
@@ -1744,7 +1752,7 @@ pub fn run(ctx: &egui::Context, app: &mut App, surface: Surface, mem: &mut Mem, 
     // Calendar commands (and View-tab commands while the Calendar shows) go through the modules area so the
     // calendar's view state goes in and comes back in the same frame.
     let calendar_view = act.cmd.starts_with("calendar.")
-        || (act.cmd.starts_with("view.") && app.s.view.module == mailcraft_engine::Module::Calendar);
+        || (act.cmd.starts_with("view.") && app.s.view.module == iridium_mail_engine::Module::Calendar);
     let result = if surface == Surface::Main && calendar_view {
         crate::modules::calendar_command(ctx, app, &act.cmd, params)
     } else {
@@ -1783,7 +1791,7 @@ pub fn run(ctx: &egui::Context, app: &mut App, surface: Surface, mem: &mut Mem, 
 /// its icon; `None` for other controls or outside a compose window.
 pub fn face_color(app: &App, surface: Surface, cmd: &str) -> Option<[u8; 3]> {
     let c = compose(app, surface)?;
-    let col = mailcraft_engine::cmd::format::face_color(c, cmd)?;
+    let col = iridium_mail_engine::cmd::format::face_color(c, cmd)?;
     Some([col.r, col.g, col.b])
 }
 
@@ -1793,7 +1801,7 @@ fn item_label(app: &App, surface: Surface, it: &Item) -> String {
     if it.cmd.id == "format.indent"
         && let Some(level) = it.label.strip_prefix("Level ").and_then(|n| n.trim().parse::<usize>().ok())
         && let Some(c) = compose(app, surface)
-        && let Some(marker) = mailcraft_engine::cmd::format::level_markers(c).get(level.saturating_sub(1))
+        && let Some(marker) = iridium_mail_engine::cmd::format::level_markers(c).get(level.saturating_sub(1))
     {
         return format!("{}    {marker}", it.label);
     }
@@ -1901,7 +1909,7 @@ pub fn expand_items(app: &App, surface: Surface, mem: &Mem, items: &[Item]) -> V
 }
 
 /// Why the quick step named by `vars` (`$id`) cannot run on this surface's items: a read window acts on its
-/// one message, the main window on the selection (see `mailcraft_engine::cmd::quicksteps::blocked_for`).
+/// one message, the main window on the selection (see `iridium_mail_engine::cmd::quicksteps::blocked_for`).
 pub(crate) fn quick_step_blocked(
     app: &App,
     surface: Surface,
@@ -1913,7 +1921,7 @@ pub(crate) fn quick_step_blocked(
         Surface::Read(_) => 1,
         _ => app.s.selection.items.len().max(usize::from(app.s.selection.focus.is_some())),
     };
-    mailcraft_engine::cmd::quicksteps::blocked_for(step, count, false)
+    iridium_mail_engine::cmd::quicksteps::blocked_for(step, count, false)
 }
 
 /// A menu entry ready to draw.
@@ -1948,12 +1956,12 @@ pub enum Resolved {
 #[cfg(test)]
 mod compose_state_tests {
     use super::*;
-    use mailcraft_engine::compose::{ComposeKind, ComposeState, DocPos};
-    use mailcraft_engine::{Session, model::Mailbox};
+    use iridium_mail_engine::compose::{ComposeKind, ComposeState, DocPos};
+    use iridium_mail_engine::{Session, model::Mailbox};
 
-    fn app_with(body: mailcraft_model::Doc) -> (App, u64) {
+    fn app_with(body: iridium_mail_model::Doc) -> (App, u64) {
         let mut mb = Mailbox::new_local("Local");
-        mb.add_signature("Formal", mailcraft_model::Doc::from_plain_text("Regards")).unwrap();
+        mb.add_signature("Formal", iridium_mail_model::Doc::from_plain_text("Regards")).unwrap();
         let mut s = Session::new(mb);
         let cid = s.open_compose(ComposeState { kind: ComposeKind::New, body, ..ComposeState::default() });
         (App::new(s), cid)
@@ -1967,9 +1975,9 @@ mod compose_state_tests {
 
     #[test]
     fn character_toggles_follow_the_whole_selection() {
-        use mailcraft_model::{Block, Inline, TextStyle};
+        use iridium_mail_model::{Block, Inline, TextStyle};
         let bold = TextStyle { bold: Some(true), ..TextStyle::default() };
-        let body = mailcraft_model::Doc {
+        let body = iridium_mail_model::Doc {
             blocks: vec![
                 Block::Paragraph {
                     style: Default::default(),
@@ -2004,10 +2012,10 @@ mod compose_state_tests {
 
     #[test]
     fn font_boxes_go_blank_on_a_mixed_selection() {
-        use mailcraft_model::{Block, Inline, TextStyle};
+        use iridium_mail_model::{Block, Inline, TextStyle};
         let big =
             TextStyle { size_pt: Some(20.0), font_family: Some("Carlito".into()), ..TextStyle::default() };
-        let body = mailcraft_model::Doc {
+        let body = iridium_mail_model::Doc {
             blocks: vec![Block::Paragraph {
                 style: Default::default(),
                 inlines: vec![
@@ -2032,7 +2040,7 @@ mod compose_state_tests {
 
     #[test]
     fn shading_face_colour_bar_and_high_contrast_only() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         // The faces show the colour they apply: the defaults first, then the last colour picked.
         assert_eq!(face_color(&app, s, "format.shading"), Some([0, 0, 0]));
@@ -2054,7 +2062,7 @@ mod compose_state_tests {
     /// enabled and then refused; they save text only, so they need selected text.
     #[test]
     fn save_selection_to_text_only_galleries_needs_selected_text() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("Some words"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("Some words"));
         let s = Surface::Compose(cid);
         let save_item = |app: &App, menu: &str| -> Option<Option<&'static str>> {
             expand_items(app, s, &Mem::default(), crate::ribbon::defs::defs().menu(menu).unwrap())
@@ -2082,7 +2090,7 @@ mod compose_state_tests {
 
     #[test]
     fn list_level_items_need_a_list_and_show_their_markers() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         let levels = |app: &App| {
             expand_items(app, s, &Mem::default(), crate::ribbon::defs::defs().menu("listLevels").unwrap())
@@ -2114,7 +2122,7 @@ mod compose_state_tests {
     /// web-link path was reachable only from the CLI).
     #[test]
     fn link_menu_picks_a_recent_web_document() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         let url = "https://www.example.com/team/Q3 plan.docx";
         app.run("insert.link", json!({"compose": cid, "url": url, "text": "plan"}));
@@ -2138,13 +2146,13 @@ mod compose_state_tests {
         let c = &app.s.composes[&cid];
         assert!(c.attachments.is_empty(), "a web document is linked, not attached");
         assert!(c.body.to_plain_text().contains("Q3 plan.docx"), "{}", c.body.to_plain_text());
-        let links = mailcraft_engine::cmd::compose::recent_links(&app.s);
+        let links = iridium_mail_engine::cmd::compose::recent_links(&app.s);
         assert_eq!(links, [url], "picked again: still one entry");
     }
 
     #[test]
     fn signature_and_recent_file_sources() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         let sigs = dyn_items(&app, s, "signatures");
         assert_eq!(sigs.len(), 1);
@@ -2152,7 +2160,7 @@ mod compose_state_tests {
         app.run("compose.signature", json!({"compose": cid, "name": "Formal"}));
         assert!(dyn_items(&app, s, "signatures")[0].on);
         assert!(is_on(&app, s, &Mem::default(), "signature:Formal"));
-        let dir = std::env::temp_dir().join(format!("mailcraft-state-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("iridium-mail-state-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("notes.txt").to_string_lossy().into_owned();
         std::fs::write(&path, b"x").unwrap();
@@ -2168,7 +2176,7 @@ mod compose_state_tests {
 
     #[test]
     fn shape_format_galleries_and_states_follow_the_selected_drawing() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         let mem = Mem::default();
         app.run("insert.shape", json!({"compose": cid, "kind": "rectangle"}));
@@ -2184,7 +2192,7 @@ mod compose_state_tests {
         let glows = dyn_items(&app, s, "fx:glows");
         assert_eq!(glows.len(), 24);
         assert!(glows.iter().all(|g| g.swatch.is_some()));
-        assert_eq!(dyn_items(&app, s, "fx:presets").len(), mailcraft_engine::cmd::drawing::PRESETS);
+        assert_eq!(dyn_items(&app, s, "fx:presets").len(), iridium_mail_engine::cmd::drawing::PRESETS);
         // Wrap Text and Text Direction check the current choice.
         assert!(is_on(&app, s, &mem, "wrap:front"));
         app.run("drawing.wrapText", json!({"compose": cid, "wrap": "square"}));
@@ -2200,7 +2208,7 @@ mod compose_state_tests {
 
     #[test]
     fn effect_presets_are_checked_and_a_group_shows_its_drawings_effects() {
-        let (mut app, cid) = app_with(mailcraft_model::Doc::from_plain_text("x"));
+        let (mut app, cid) = app_with(iridium_mail_model::Doc::from_plain_text("x"));
         let s = Surface::Compose(cid);
         let checked = |app: &App, src: &str| -> Vec<String> {
             dyn_items(app, s, src).into_iter().filter(|d| d.on).map(|d| d.label).collect()
@@ -2221,8 +2229,8 @@ mod compose_state_tests {
         app.run("drawing.group", json!({"compose": cid}));
         let c = &app.s.composes[&cid];
         let g = c.selected_drawing.unwrap();
-        let kind = mailcraft_engine::cmd::drawing::find(&c.body.drawings, g).unwrap().kind;
-        assert_eq!(kind, mailcraft_model::rich::DrawingKind::Group);
+        let kind = iridium_mail_engine::cmd::drawing::find(&c.body.drawings, g).unwrap().kind;
+        assert_eq!(kind, iridium_mail_model::rich::DrawingKind::Group);
         assert_eq!(checked(&app, "fx:presets"), ["Preset 1"]);
         assert_eq!(checked(&app, "fx:shadows"), ["Outer: Down and Right"]);
     }

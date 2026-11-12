@@ -3,8 +3,8 @@
 
 use std::io::{Cursor, Read, Write};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::{Appointment, DateTime, Recurrence};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::{Appointment, DateTime, Recurrence};
 
 use crate::ics::{self, ImportOptions, Rrule, rrule, value};
 use crate::msg::{self, AttachmentContent, MsgAttachment, MsgMessage, rtfhtml};
@@ -473,14 +473,14 @@ fn long_by_lists_expand_quickly() {
 /// An organisation card (no person name) reads back without its name split into first/middle/last.
 #[test]
 fn organisation_vcard_round_trips() {
-    let c = mailcraft_model::Contact {
+    let c = iridium_mail_model::Contact {
         company: "Acme Widgets Inc".into(),
         emails: vec!["sales@example.com".into()],
         file_as: "Acme Widgets Inc".into(),
         ..Default::default()
     };
     // A card with only an address: FN falls back to it.
-    let e = mailcraft_model::Contact {
+    let e = iridium_mail_model::Contact {
         emails: vec!["info@example.org".into()],
         file_as: "info@example.org".into(),
         ..Default::default()

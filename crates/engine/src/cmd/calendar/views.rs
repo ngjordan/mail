@@ -16,11 +16,11 @@ use super::pim::{self, Kind};
 use super::{TIME_SCALES, props, tz};
 use crate::cmd::util::opt_str;
 use crate::{CmdError, CmdResult, Module, Session};
-use mailcraft_model::calendar::{
+use iridium_mail_model::calendar::{
     CalendarColumn, CalendarCurrentView, CalendarMode, CalendarTimeZones, CalendarViewState,
 };
-use mailcraft_model::{FolderId, FolderKind, ReadingPanePos, dates};
-use mailcraft_store::Op;
+use iridium_mail_model::{FolderId, FolderKind, ReadingPanePos, dates};
+use iridium_mail_store::Op;
 
 /// View commands [`module_view`] answers in the Calendar module.
 pub const MODULE_VIEW_IDS: [&str; 10] = [
@@ -647,9 +647,9 @@ fn apply_settings(v: &mut CalendarViewState, p: &Value) -> Result<(), CmdError> 
     }
     if let Some(d) = opt_str(p, "dailyTaskList") {
         v.daily_task_list = match d {
-            "normal" => mailcraft_model::calendar::DailyTaskList::Normal,
-            "minimized" => mailcraft_model::calendar::DailyTaskList::Minimized,
-            "off" => mailcraft_model::calendar::DailyTaskList::Off,
+            "normal" => iridium_mail_model::calendar::DailyTaskList::Normal,
+            "minimized" => iridium_mail_model::calendar::DailyTaskList::Minimized,
+            "off" => iridium_mail_model::calendar::DailyTaskList::Off,
             o => {
                 return Err(CmdError::Params(format!(
                     "`dailyTaskList` must be normal, minimized or off, not `{o}`"
@@ -849,7 +849,7 @@ pub fn second_zone(s: &mut Session, unix: i64) -> Option<(String, i32)> {
         let label = option(s, "calendar.secondTimeZoneLabel")
             .and_then(|v| v.as_str().map(str::to_owned))
             .filter(|l| !l.trim().is_empty())
-            .unwrap_or_else(|| mailcraft_formats::ics::tz::fixed_tzid(off));
+            .unwrap_or_else(|| iridium_mail_formats::ics::tz::fixed_tzid(off));
         return Some((label, off));
     }
     None

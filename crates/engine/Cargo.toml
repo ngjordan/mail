@@ -1,6 +1,6 @@
 [package]
-name = "mailcraft-engine"
-description = "MailCraft engine: session, undo, command registry, feature catalog, sample mailbox"
+name = "iridium-mail-engine"
+description = "Mail engine: session, undo, command registry, feature catalog, sample mailbox"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,23 +10,23 @@ rust-version.workspace = true
 # Tests only: a change record that disagrees with the whole-mailbox comparison fails the test instead of
 # being logged (`changes.rs`). The engine's own dev-dependency on itself turns it on for its integration tests.
 strict-change-check = []
-# `Session::queue_imap_results`: IMAP results made up without a server, for `apps/mailcraft-bench` only. Never
+# `Session::queue_imap_results`: IMAP results made up without a server, for `apps/iridium-mail-bench` only. Never
 # enabled by the app, CLI or MCP builds (it injects deltas, `reset` and vanished UIDs as if a server sent them).
 synthetic-sync = []
 
 [dependencies]
-mailcraft-geom.workspace = true
-mailcraft-mime.workspace = true
-mailcraft-model.workspace = true
-mailcraft-store.workspace = true
-mailcraft-html.workspace = true
-mailcraft-layout.workspace = true
-mailcraft-fonts.workspace = true
-mailcraft-proof.workspace = true
-mailcraft-formats.workspace = true
-mailcraft-search.workspace = true
-mailcraft-render.workspace = true
-mailcraft-smime.workspace = true
+iridium-mail-geom.workspace = true
+iridium-mail-mime.workspace = true
+iridium-mail-model.workspace = true
+iridium-mail-store.workspace = true
+iridium-mail-html.workspace = true
+iridium-mail-layout.workspace = true
+iridium-mail-fonts.workspace = true
+iridium-mail-proof.workspace = true
+iridium-mail-formats.workspace = true
+iridium-mail-search.workspace = true
+iridium-mail-render.workspace = true
+iridium-mail-smime.workspace = true
 base64.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -36,15 +36,15 @@ zeroize.workspace = true
 
 # Protocol clients and the sync worker threads: native only (the browser build has no sockets or threads).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-mailcraft-net.workspace = true
+iridium-mail-net.workspace = true
 tempfile.workspace = true
 
 [dev-dependencies]
-mailcraft-engine = { workspace = true, features = ["strict-change-check"] }
+iridium-mail-engine = { workspace = true, features = ["strict-change-check"] }
 proptest.workspace = true
 tempfile.workspace = true
-mailcraft-testmail.workspace = true
-mailcraft-smime = { workspace = true, features = ["testkit"] }
+iridium-mail-testmail.workspace = true
+iridium-mail-smime = { workspace = true, features = ["testkit"] }
 
 [lints]
 workspace = true

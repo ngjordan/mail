@@ -6,17 +6,17 @@
 //! - `MC_LIVE_EWS_CA` (optional): a PEM file with the server's certificate, for a self-signed server,
 //! - `MC_LIVE_EWS_ADDR` (optional): the server's IP address, when its name does not resolve here.
 //!
-//! Run: `cargo test -p mailcraft-net --test live_ews -- --ignored --test-threads=1`. Everything a test creates
+//! Run: `cargo test -p iridium-mail-net --test live_ews -- --ignored --test-threads=1`. Everything a test creates
 //! carries a run tag and is removed at the end; mail goes only to the test mailbox itself.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_net::ConnectOptions;
-use mailcraft_net::ews::autodiscover::{AutodiscoverOptions, Probe, autodiscover};
-use mailcraft_net::ews::{EwsAuth, EwsClient, FlagChange, ItemChange, Signer};
-use mailcraft_net::http::{HttpClient, Url};
+use iridium_mail_net::ConnectOptions;
+use iridium_mail_net::ews::autodiscover::{AutodiscoverOptions, Probe, autodiscover};
+use iridium_mail_net::ews::{EwsAuth, EwsClient, FlagChange, ItemChange, Signer};
+use iridium_mail_net::http::{HttpClient, Url};
 
 struct Live {
     url: String,
@@ -37,7 +37,7 @@ fn live() -> Option<Live> {
     }
     if let Some(addr) = get("MC_LIVE_EWS_ADDR") {
         let host = Url::parse(&url).expect("URL").host;
-        mailcraft_net::transport::set_host_address(&host, Some(addr.parse().expect("IP address")));
+        iridium_mail_net::transport::set_host_address(&host, Some(addr.parse().expect("IP address")));
     }
     Some(Live { url, user: get("MC_LIVE_EWS_USER")?, pass: get("MC_LIVE_EWS_PASS")?, opts })
 }

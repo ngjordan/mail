@@ -22,7 +22,7 @@
 
 use std::collections::BTreeSet;
 
-use mailcraft_model::{FocusClass, ItemId, MailItem};
+use iridium_mail_model::{FocusClass, ItemId, MailItem};
 
 use crate::Session;
 
@@ -110,7 +110,7 @@ pub fn known(s: &Session) -> Known {
 
 /// The Message-ID key the mail table matches by (no brackets, lower-case).
 fn bare_id(v: &str) -> String {
-    mailcraft_model::message_id_key(v)
+    iridium_mail_model::message_id_key(v)
 }
 
 /// True for an address whose local part says it takes no replies ("noreply@", "no-reply@",
@@ -123,7 +123,7 @@ pub fn is_no_reply(addr: &str) -> bool {
 }
 
 /// The bulk-mail header among `head`, if any (step 5 of the module docs).
-pub fn bulk_header(head: &mailcraft_mime::Headers) -> Option<&'static str> {
+pub fn bulk_header(head: &iridium_mail_mime::Headers) -> Option<&'static str> {
     if head.get("List-Id").is_some_and(|v| !v.trim().is_empty()) {
         return Some("List-Id");
     }
@@ -147,7 +147,7 @@ pub fn bulk_header(head: &mailcraft_mime::Headers) -> Option<&'static str> {
 }
 
 /// The class of new message `m` (with its header section `head` when the source is at hand).
-pub fn classify(m: &MailItem, head: Option<&mailcraft_mime::Headers>, k: &Known) -> (FocusClass, Reason) {
+pub fn classify(m: &MailItem, head: Option<&iridium_mail_mime::Headers>, k: &Known) -> (FocusClass, Reason) {
     let from = m.from.as_ref().map(|a| a.addr.trim().to_lowercase()).unwrap_or_default();
     if !from.is_empty() {
         if k.focused_senders.contains(&from) {
@@ -187,11 +187,11 @@ pub fn on_new_mail(s: &mut Session, ids: &[ItemId]) -> Vec<ItemId> {
         return Vec::new();
     }
     let k = known(s);
-    let graph: BTreeSet<mailcraft_model::AccountId> = s
+    let graph: BTreeSet<iridium_mail_model::AccountId> = s
         .mailbox
         .accounts
         .iter()
-        .filter(|a| a.kind == mailcraft_model::AccountKind::Graph)
+        .filter(|a| a.kind == iridium_mail_model::AccountKind::Graph)
         .map(|a| a.id)
         .collect();
     let mut decided: Vec<(ItemId, FocusClass)> = Vec::new();
@@ -230,15 +230,15 @@ pub fn on_new_mail(s: &mut Session, ids: &[ItemId]) -> Vec<ItemId> {
 mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
-    use mailcraft_model::FolderRole;
+    use iridium_mail_model::FolderRole;
     use serde_json::json;
 
     fn arrive(s: &mut Session, raw: &str) -> ItemId {
         let raw = raw.replace('\n', "\r\n");
-        let msg = mailcraft_mime::parse(raw.as_bytes()).unwrap();
+        let msg = iridium_mail_mime::parse(raw.as_bytes()).unwrap();
         let mut item = MailItem::from_message(&msg, raw.as_bytes(), s.now());
         item.folder = role(s, FolderRole::Inbox);
-        s.add_message(item, &mailcraft_store::Content::source(raw.into_bytes())).unwrap()
+        s.add_message(item, &iridium_mail_store::Content::source(raw.into_bytes())).unwrap()
     }
 
     fn class(s: &mut Session, raw: &str) -> (FocusClass, Reason) {
@@ -309,7 +309,7 @@ mod tests {
         let id = ItemId(s.mailbox.alloc_id());
         s.mailbox.contacts.insert(
             id,
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id,
                 first_name: "Gus".into(),
                 last_name: "Hale".into(),
@@ -368,7 +368,7 @@ mod tests {
         // Junk and odd input never panics.
         let mut m = MailItem::default();
         assert_eq!(classify(&m, None, &Known::default()).1, Reason::Default);
-        m.from = Some(mailcraft_model::Address::new(None, "@"));
+        m.from = Some(iridium_mail_model::Address::new(None, "@"));
         let _ = classify(&m, None, &Known::default());
         assert!(!is_no_reply(""));
         assert!(is_no_reply("No.Reply@example.com"));

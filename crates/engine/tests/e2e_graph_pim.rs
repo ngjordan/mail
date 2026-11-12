@@ -2,17 +2,17 @@
 //! Graph service (HTTPS, 127.0.0.1, synthetic users; nothing reaches a real Microsoft service): contact
 //! folders and contacts, To Do lists and tasks, calendars with series, exceptions, cancelled occurrences and
 //! time zones, both ways and from delta links; meetings scheduled by the service (invitations, updates,
-//! cancellations, answers through the event actions, no iTIP mail from MailCraft); other people's calendars
+//! cancellations, answers through the event actions, no iTIP mail from Mail); other people's calendars
 //! below Shared Calendars.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, DateTime, FolderId, FolderKind, FolderRole, ItemId, Mailbox};
-use mailcraft_net::graph::GraphClient;
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, DateTime, FolderId, FolderKind, FolderRole, ItemId, Mailbox};
+use iridium_mail_net::graph::GraphClient;
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -75,8 +75,8 @@ fn session_with_alice(srv: &TestServers) -> (Session, AccountId) {
 
 /// Another client of `user`'s mailbox (the test's own Graph client).
 fn client(srv: &TestServers, pw: &str) -> GraphClient {
-    let opts = mailcraft_net::ConnectOptions::trusting(srv.cert_der.clone());
-    GraphClient::new(&srv.graph_url(), pw, mailcraft_net::http::HttpClient::new(opts)).unwrap()
+    let opts = iridium_mail_net::ConnectOptions::trusting(srv.cert_der.clone());
+    GraphClient::new(&srv.graph_url(), pw, iridium_mail_net::http::HttpClient::new(opts)).unwrap()
 }
 
 fn at(y: i32, mo: u8, d: u8, h: u8) -> i64 {
@@ -265,7 +265,7 @@ fn graph_todo_lists_synchronise_with_task_folders() {
     let tasks = s.mailbox.role_folder(a, FolderRole::Tasks).unwrap();
     let t = s.mailbox.tasks.values().find(|t| t.subject == "Order toner").expect("the service's task");
     assert_eq!(t.folder, tasks);
-    assert_eq!(t.priority, mailcraft_engine::model::task::TaskPriority::High);
+    assert_eq!(t.priority, iridium_mail_engine::model::task::TaskPriority::High);
     assert_eq!(t.body.trim(), "Two cartridges");
     assert!(t.due.is_some());
     let toner_here = t.id;
@@ -315,7 +315,7 @@ fn graph_todo_lists_synchronise_with_task_folders() {
     assert_eq!(writes, 0);
 }
 
-fn calendar_items(s: &Session, folder: FolderId) -> Vec<&mailcraft_engine::model::Appointment> {
+fn calendar_items(s: &Session, folder: FolderId) -> Vec<&iridium_mail_engine::model::Appointment> {
     s.mailbox.appointments.values().filter(|a| a.folder == folder).collect()
 }
 
@@ -456,7 +456,7 @@ fn graph_meetings_are_scheduled_by_the_service() {
         "{inv:?}"
     );
     let reqs = requests_since(&srv, n);
-    assert!(!reqs.iter().any(|r| r.contains("sendMail")), "no iTIP mail went from MailCraft: {reqs:?}");
+    assert!(!reqs.iter().any(|r| r.contains("sendMail")), "no iTIP mail went from Mail: {reqs:?}");
     assert!(
         srv.messages(BOB, "INBOX")
             .unwrap()

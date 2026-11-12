@@ -7,8 +7,8 @@
 # X11 and Mesa libraries (pkg install libxkbcommon wayland mesa-libs).
 #
 # Output (ARCH from `uname -m`, e.g. amd64 or arm64; VERSION from Cargo.toml):
-#   mailcraft-VERSION-freebsd-ARCH.tar.gz   bin/ and share/ laid out for /usr/local
-#   mailcraft-VERSION.pkg                   with `pkg` available: install with `pkg add ./mailcraft-….pkg`
+#   iridium-mail-VERSION-freebsd-ARCH.tar.gz   bin/ and share/ laid out for /usr/local
+#   iridium-mail-VERSION.pkg                   with `pkg` available: install with `pkg add ./iridium-mail-….pkg`
 #                                           (it records no dependencies; install the libraries above)
 set -euo pipefail
 # shellcheck source=packaging/env.sh
@@ -32,8 +32,8 @@ arch="$(uname -m)"
 if [ "$build" = 1 ]; then
 	cargo_profile="$profile"
 	[ "$profile" = "debug" ] && cargo_profile="dev"
-	mc_log "cargo build --profile $cargo_profile (git $MAILCRAFT_GIT_HASH, $MAILCRAFT_BUILD_DATE)"
-	(cd "$MC_ROOT" && cargo build --locked --profile "$cargo_profile" -p mailcraft -p mailcraft-cli)
+	mc_log "cargo build --profile $cargo_profile (git $IRIDIUM_MAIL_GIT_HASH, $IRIDIUM_MAIL_BUILD_DATE)"
+	(cd "$MC_ROOT" && cargo build --locked --profile "$cargo_profile" -p iridium-mail -p iridium-mail-cli)
 fi
 bin_dir="$(mc_bin_dir "" "$profile")"
 
@@ -42,7 +42,7 @@ rm -rf "$work"
 mkdir -p "$work" "$out"
 out="$(cd "$out" && pwd)"
 
-name="mailcraft-$MC_VERSION-freebsd-$arch"
+name="iridium-mail-$MC_VERSION-freebsd-$arch"
 "$MC_ROOT/packaging/stage-unix.sh" "$bin_dir" "$work/$name"
 mc_tar_gz "$out/$name.tar.gz" "$work/$name"
 mc_log "wrote $out/$name.tar.gz"
@@ -53,11 +53,11 @@ if command -v pkg >/dev/null 2>&1; then
 	"$MC_ROOT/packaging/stage-unix.sh" "$bin_dir" "$root/usr/local"
 	(cd "$root/usr/local" && find . -type f | sed 's|^\./||' | sort) >"$work/plist"
 	cat >"$work/+MANIFEST" <<MANIFEST
-name: mailcraft
+name: iridium-mail
 version: "$MC_VERSION"
-origin: mail/mailcraft
+origin: mail/iridium-mail
 comment: "$APP_SUMMARY"
-desc: "MailCraft is an open-source desktop mail client written in Rust, with calendar, people, tasks and notes. Includes mailcraft-cli."
+desc: "Mail is an open-source desktop mail client written in Rust, with calendar, people, tasks and notes. Includes iridium-mail-cli."
 maintainer: "$MAINTAINER"
 www: "$HOMEPAGE"
 prefix: /usr/local
@@ -66,7 +66,7 @@ licenses: [MIT, APACHE20]
 categories: [mail]
 MANIFEST
 	pkg create -M "$work/+MANIFEST" -p "$work/plist" -r "$root" -o "$out"
-	mc_log "wrote $out/mailcraft-$MC_VERSION.pkg"
+	mc_log "wrote $out/iridium-mail-$MC_VERSION.pkg"
 else
 	mc_log "pkg not found (not on FreeBSD?): skipping the .pkg"
 fi

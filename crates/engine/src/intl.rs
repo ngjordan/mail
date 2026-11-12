@@ -10,13 +10,13 @@
 //!   sending refuses it ([`idn_problem`]).
 //! - "Use English for message headers on replies and forwards and for forward notifications": on (default),
 //!   the quoted header block of a reply or forward says From / Sent / To / Subject; off, it uses the preferred
-//!   authoring language (Options › Language) when MailCraft knows its words (French, Spanish, German), dates
+//!   authoring language (Options › Language) when Mail knows its words (French, Spanish, German), dates
 //!   included ([`header_labels`], [`sent_date`]).
 //! - "Allow UTF-8 support for the mailto: protocol": `mailto:` links (RFC 6068) decode their percent-encoded
 //!   octets as UTF-8 when on, as Windows-1252 when off ([`parse_mailto`], `mail.newFromMailto`).
 
-use mailcraft_mime::{Address, MessageBuilder};
-use mailcraft_model::DateTime;
+use iridium_mail_mime::{Address, MessageBuilder};
+use iridium_mail_model::DateTime;
 
 use crate::Session;
 use crate::settings::Settings;
@@ -61,7 +61,7 @@ pub(crate) fn apply_outgoing(s: &Session, b: &mut MessageBuilder) {
                 continue;
             }
             let Ok(text) = std::str::from_utf8(&a.data) else { continue };
-            if let Some(bytes) = mailcraft_mime::charset::encode(text, &cs) {
+            if let Some(bytes) = iridium_mail_mime::charset::encode(text, &cs) {
                 let base = a.mime_type.split(';').next().unwrap_or("text/vcard").trim().to_owned();
                 a.data = bytes;
                 a.mime_type = format!("{base}; charset={}", cs.to_ascii_lowercase());
@@ -69,8 +69,8 @@ pub(crate) fn apply_outgoing(s: &Session, b: &mut MessageBuilder) {
         }
     }
     if st.bool("advanced.idn") {
-        let ascii = |m: &mut mailcraft_mime::Mailbox| {
-            if let Ok(a) = mailcraft_mime::idn::addr_to_ascii(&m.addr) {
+        let ascii = |m: &mut iridium_mail_mime::Mailbox| {
+            if let Ok(a) = iridium_mail_mime::idn::addr_to_ascii(&m.addr) {
                 m.addr = a;
             }
         };
@@ -100,14 +100,14 @@ pub(crate) fn idn_problem(s: &Session, fields: &[&str]) -> Option<String> {
     let mut invalid = Vec::new();
     let entries = fields.iter().flat_map(|f| crate::cmd::compose::split_recipients(f));
     for entry in entries {
-        for a in mailcraft_mime::parse_address_list(entry) {
+        for a in iridium_mail_mime::parse_address_list(entry) {
             for m in a.mailboxes() {
-                if !mailcraft_mime::idn::has_idn(&m.addr) {
+                if !iridium_mail_mime::idn::has_idn(&m.addr) {
                     continue;
                 }
                 if !allow {
                     off.push(m.addr.clone());
-                } else if mailcraft_mime::idn::addr_to_ascii(&m.addr).is_err() {
+                } else if iridium_mail_mime::idn::addr_to_ascii(&m.addr).is_err() {
                     invalid.push(m.addr.clone());
                 }
             }
@@ -154,7 +154,7 @@ enum Lang {
     De,
 }
 
-/// English (the default, and every language MailCraft has no header words for).
+/// English (the default, and every language Mail has no header words for).
 pub const ENGLISH: HeaderLabels = HeaderLabels {
     from: "From:",
     sent: "Sent:",
@@ -271,7 +271,7 @@ const GERMAN: HeaderLabels = HeaderLabels {
 const ALL: [&HeaderLabels; 4] = [&ENGLISH, &FRENCH, &SPANISH, &GERMAN];
 
 /// The header words replies and forwards use: English while "Use English for message headers" is on,
-/// else those of the preferred authoring language (English when MailCraft has none for it).
+/// else those of the preferred authoring language (English when Mail has none for it).
 pub fn header_labels(st: &Settings) -> &'static HeaderLabels {
     if st.bool("advanced.englishHeaders") {
         return &ENGLISH;
@@ -289,9 +289,9 @@ pub fn header_labels(st: &Settings) -> &'static HeaderLabels {
 /// 04:30", "jueves, 8 de octubre de 2026 4:30", "Donnerstag, 8. Oktober 2026 04:30".
 pub fn sent_date(t: DateTime, offset_min: i32, l: &HeaderLabels) -> String {
     if l.lang == Lang::En {
-        return mailcraft_model::ListTime::long(t, offset_min);
+        return iridium_mail_model::ListTime::long(t, offset_min);
     }
-    let lt = mailcraft_model::dates::LocalTime::of(t, offset_min);
+    let lt = iridium_mail_model::dates::LocalTime::of(t, offset_min);
     let wd = usize::try_from(lt.day_number.saturating_add(4).rem_euclid(7)).unwrap_or(0);
     let weekday = l.weekdays.get(wd).copied().unwrap_or("");
     let month = l.months.get(usize::from(lt.month.saturating_sub(1))).copied().unwrap_or("");
@@ -300,17 +300,17 @@ pub fn sent_date(t: DateTime, offset_min: i32, l: &HeaderLabels) -> String {
         Lang::Fr => format!("{weekday} {d} {month} {y} {h:02}:{m:02}"),
         Lang::Es => format!("{weekday}, {d} de {month} de {y} {h}:{m:02}"),
         Lang::De => format!("{weekday}, {d}. {month} {y} {h:02}:{m:02}"),
-        Lang::En => mailcraft_model::ListTime::long(t, offset_min),
+        Lang::En => iridium_mail_model::ListTime::long(t, offset_min),
     }
 }
 
-/// True when `line` starts a quoted header block in any language MailCraft writes ("From: …", "De : …").
+/// True when `line` starts a quoted header block in any language Mail writes ("From: …", "De : …").
 pub fn is_header_start(line: &str) -> bool {
     let t = line.trim_start();
     ALL.iter().any(|l| t.starts_with(l.from))
 }
 
-/// True when `line` is the separator above a plain-text original in any language MailCraft writes.
+/// True when `line` is the separator above a plain-text original in any language Mail writes.
 pub fn is_original_separator(line: &str) -> bool {
     let t = line.trim();
     ALL.iter().any(|l| t == l.original)
@@ -352,7 +352,7 @@ fn pct_decode(s: &str, utf8: bool) -> String {
     if utf8 {
         String::from_utf8_lossy(&out).into_owned()
     } else {
-        mailcraft_mime::charset::decode(&out, "windows-1252")
+        iridium_mail_mime::charset::decode(&out, "windows-1252")
     }
 }
 
@@ -482,11 +482,11 @@ mod tests {
     fn outgoing_encodings_follow_the_options() {
         let mut s = sample_session();
         let mut b = MessageBuilder {
-            from: Some(mailcraft_mime::Mailbox::new(Some("Me"), "me@example.com")),
-            to: vec![Address::Mailbox(mailcraft_mime::Mailbox::new(None, "ann@bücher.example"))],
+            from: Some(iridium_mail_mime::Mailbox::new(Some("Me"), "me@example.com")),
+            to: vec![Address::Mailbox(iridium_mail_mime::Mailbox::new(None, "ann@bücher.example"))],
             subject: "Menu".into(),
             text: Some("Café crème".into()),
-            attachments: vec![mailcraft_mime::AttachmentSpec {
+            attachments: vec![iridium_mail_mime::AttachmentSpec {
                 filename: "ann.vcf".into(),
                 mime_type: "text/vcard".into(),
                 data: "BEGIN:VCARD\r\nFN:Zoë\r\nEND:VCARD\r\n".as_bytes().to_vec(),
@@ -519,13 +519,13 @@ mod tests {
         assert!(raw.contains("text/plain; charset=\"iso-8859-1\""), "{raw}");
         assert!(raw.contains("Caf=E9 cr=E8me"), "{raw}");
         assert!(raw.contains("text/vcard; charset=windows-1252"), "{raw}");
-        let parsed = mailcraft_mime::parse(raw.as_bytes()).unwrap();
+        let parsed = iridium_mail_mime::parse(raw.as_bytes()).unwrap();
         assert_eq!(parsed.text_body().as_deref().map(str::trim), Some("Café crème"));
         // An HTML body (the default compose format) declares the charset it goes out in.
-        let html = mailcraft_html::doc_to_html(&mailcraft_model::Doc::from_plain_text("Café crème"));
+        let html = iridium_mail_html::doc_to_html(&iridium_mail_model::Doc::from_plain_text("Café crème"));
         assert!(html.contains("<meta charset=\"utf-8\">"), "{html}");
         let with_html = MessageBuilder { html: Some(html), ..b.clone() };
-        let parsed = mailcraft_mime::parse(sent(&s, &with_html).as_bytes()).unwrap();
+        let parsed = iridium_mail_mime::parse(sent(&s, &with_html).as_bytes()).unwrap();
         let body = parsed.html_body().unwrap();
         assert!(body.contains("<meta charset=\"iso-8859-1\">") && !body.contains("utf-8"), "{body}");
         assert!(body.contains("Café crème"), "{body}");

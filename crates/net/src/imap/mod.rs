@@ -14,7 +14,7 @@ pub use parse::{
 };
 pub use seqset::SeqSet;
 
-use mailcraft_model::FolderRole;
+use iridium_mail_model::FolderRole;
 
 /// Maps RFC 6154 special-use attributes (and `INBOX`) to a folder role.
 pub fn role_from_attributes(name: &str, attributes: &[String]) -> Option<FolderRole> {

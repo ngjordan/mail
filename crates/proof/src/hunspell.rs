@@ -1,5 +1,5 @@
 //! Hunspell-format dictionaries: a word list (`.dic`) plus affix rules (`.aff`), the format most open
-//! spelling dictionaries are distributed in. MailCraft bundles only its English word lists; dictionaries for
+//! spelling dictionaries are distributed in. Mail bundles only its English word lists; dictionaries for
 //! other languages are read at run time from the ones installed on the computer ([`find_dictionaries`],
 //! [`dictionary_dirs`]), so no third-party dictionary is shipped.
 //!
@@ -819,7 +819,7 @@ pub fn dictionary_dirs() -> Vec<PathBuf> {
         dirs.push(PathBuf::from("/usr/local/share/hunspell"));
     } else if cfg!(target_os = "windows") {
         if let Some(a) = std::env::var_os("LOCALAPPDATA") {
-            dirs.push(PathBuf::from(a).join("MailCraft").join("dictionaries"));
+            dirs.push(PathBuf::from(a).join("Mail").join("dictionaries"));
         }
     } else {
         for d in [
@@ -1054,7 +1054,7 @@ mod tests {
 
     #[test]
     fn finds_installed_dictionaries() {
-        let dir = std::env::temp_dir().join(format!("mailcraft-hunspell-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("iridium-mail-hunspell-{}", std::process::id()));
         let other = dir.join("other");
         std::fs::create_dir_all(&other).unwrap();
         std::fs::write(dir.join("fr_FR.aff"), AFF).unwrap();

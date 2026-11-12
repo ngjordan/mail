@@ -13,8 +13,8 @@ use serde_json::{Value, json};
 
 use super::{pim, tz};
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_formats::ics::value::local_secs;
-use mailcraft_model::{Appointment, BusyStatus, ItemId};
+use iridium_mail_formats::ics::value::local_secs;
+use iridium_mail_model::{Appointment, BusyStatus, ItemId};
 
 /// Most years added in one go.
 pub const MAX_YEARS: i64 = 30;
@@ -255,7 +255,7 @@ pub(super) fn run_add_holidays(s: &mut Session, p: &Value) -> CmdResult {
         return Err(CmdError::Params("choose at least one country".into()));
     }
     let clock = tz::Clock::of(s);
-    let this_year = mailcraft_formats::ics::value::civil(clock.local(s.now().unix)).0;
+    let this_year = iridium_mail_formats::ics::value::civil(clock.local(s.now().unix)).0;
     let year = |key: &str, default: i64| -> Result<i64, CmdError> {
         match p.get(key) {
             None | Some(Value::Null) => Ok(default),
@@ -278,8 +278,11 @@ pub(super) fn run_add_holidays(s: &mut Session, p: &Value) -> CmdResult {
         let name = country_name(code).unwrap_or(code);
         for y in from..=to {
             for (holiday, day) in holidays(code, y) {
-                let uid =
-                    format!("holiday-{}-{day}-{}@mailcraft.local", code.to_ascii_lowercase(), slug(holiday));
+                let uid = format!(
+                    "holiday-{}-{day}-{}@iridium-mail.local",
+                    code.to_ascii_lowercase(),
+                    slug(holiday)
+                );
                 let exists = s
                     .mailbox
                     .appointments
@@ -326,7 +329,7 @@ mod tests {
     use super::*;
 
     fn ymd(day: i64) -> (i64, u8, u8) {
-        let (y, m, d, ..) = mailcraft_formats::ics::value::civil(day * pim::DAY_SECS);
+        let (y, m, d, ..) = iridium_mail_formats::ics::value::civil(day * pim::DAY_SECS);
         (y, m, d)
     }
 
@@ -382,7 +385,7 @@ mod tests {
         assert_eq!(canada.location, "Canada");
         assert_eq!(canada.categories, [HOLIDAY_CATEGORY]);
         assert_eq!(canada.end.unix - canada.start.unix, pim::DAY_SECS);
-        let inbox = super::super::tests::role(&s, mailcraft_model::FolderRole::Inbox);
+        let inbox = super::super::tests::role(&s, iridium_mail_model::FolderRole::Inbox);
         let again =
             s.run("calendar.addHolidays", &json!({"countries": ["ca"], "from": 2026, "to": 2027})).unwrap();
         assert_eq!(again["alreadyThere"], 12);

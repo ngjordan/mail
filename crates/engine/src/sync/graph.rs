@@ -38,16 +38,16 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use mailcraft_net::graph::GraphClient;
-use mailcraft_net::graph::mail::{
+use iridium_mail_net::graph::GraphClient;
+use iridium_mail_net::graph::mail::{
     FileAttachment, FlagStatus, GraphMessage, MAX_INLINE_REQUEST, MailFolder, MessagePatch,
 };
-use mailcraft_net::{ConnectOptions, Credentials, NetError};
+use iridium_mail_net::{ConnectOptions, Credentials, NetError};
 
 use super::native::{Event, Events, Outgoing};
 use super::*;
 use crate::accounts::{GraphFolderShadow, GraphShadow, prefs};
-use mailcraft_model::{Account, FocusClass, FolderRole, Importance};
+use iridium_mail_model::{Account, FocusClass, FolderRole, Importance};
 
 /// Most delta pages read for one folder in one run (the rest continues next time).
 const MAX_PAGES: usize = 2_000;
@@ -87,7 +87,7 @@ impl GraphConn {
         &self.base
     }
     pub(crate) fn connect(&self, cancel: Option<&Arc<AtomicBool>>) -> Result<GraphClient, NetError> {
-        let http = mailcraft_net::http::HttpClient::new(self.options.clone());
+        let http = iridium_mail_net::http::HttpClient::new(self.options.clone());
         let mut c = GraphClient::new(&self.base, &self.token, http)?;
         c.page_size = PAGE_SIZE;
         Ok(match cancel {
@@ -262,16 +262,16 @@ fn shadow_of(m: &MailItem, folder: &str) -> GraphShadow {
 }
 
 /// `YYYY-MM-DDTHH:MM:SS` in UTC, as Graph's `dateTimeTimeZone` takes it.
-fn utc(d: &mailcraft_model::DateTime) -> String {
+fn utc(d: &iridium_mail_model::DateTime) -> String {
     let c = d.civil(0);
     format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}", c.year, c.month, c.day, c.hour, c.minute, c.second)
 }
 
 /// A `dateTimeTimeZone.dateTime` the service sent (UTC, maybe with a fraction of a second).
-fn graph_time(s: &str) -> Option<mailcraft_model::DateTime> {
+fn graph_time(s: &str) -> Option<iridium_mail_model::DateTime> {
     let t = s.trim();
     let head = t.get(..19).filter(|h| h.contains('T')).unwrap_or(t);
-    mailcraft_model::DateTime::parse_rfc5322(head).ok()
+    iridium_mail_model::DateTime::parse_rfc5322(head).ok()
 }
 
 /// A flag date as the shadow keeps it (the service's text in the form [`utc`] gives).
@@ -556,7 +556,7 @@ pub(crate) struct GraphEnd {
 /// `Bcc` on).
 fn outgoing_mime(m: &Outgoing) -> Vec<u8> {
     let raw = crate::cmd::compose::strip_submit_headers(&m.raw);
-    let named: BTreeSet<String> = match mailcraft_mime::parse(&raw) {
+    let named: BTreeSet<String> = match iridium_mail_mime::parse(&raw) {
         Ok(msg) => msg
             .to()
             .iter()
@@ -579,25 +579,25 @@ fn outgoing_mime(m: &Outgoing) -> Vec<u8> {
 
 /// Files of `raw` too large to go in one request with the message: the message without them, and them.
 fn split_large(raw: &[u8]) -> Option<(Vec<u8>, Vec<FileAttachment>)> {
-    let mut msg = mailcraft_mime::parse(raw).ok()?;
+    let mut msg = iridium_mail_mime::parse(raw).ok()?;
     let mut files = Vec::new();
-    fn take(p: &mut mailcraft_mime::Part, files: &mut Vec<FileAttachment>, depth: usize) {
+    fn take(p: &mut iridium_mail_mime::Part, files: &mut Vec<FileAttachment>, depth: usize) {
         if depth > 16 {
             return;
         }
-        if let mailcraft_mime::PartBody::Multipart(parts) = &mut p.body {
+        if let iridium_mail_mime::PartBody::Multipart(parts) = &mut p.body {
             let mut keep = Vec::new();
             for mut c in std::mem::take(parts) {
-                let big = matches!(&c.body, mailcraft_mime::PartBody::Leaf(d) if d.len() > 256 * 1024);
+                let big = matches!(&c.body, iridium_mail_mime::PartBody::Leaf(d) if d.len() > 256 * 1024);
                 if c.is_attachment() && big {
-                    if let mailcraft_mime::PartBody::Leaf(d) =
-                        std::mem::replace(&mut c.body, mailcraft_mime::PartBody::Leaf(Vec::new()))
+                    if let iridium_mail_mime::PartBody::Leaf(d) =
+                        std::mem::replace(&mut c.body, iridium_mail_mime::PartBody::Leaf(Vec::new()))
                     {
                         files.push(FileAttachment {
                             name: c.filename.clone().unwrap_or_else(|| "attachment".into()),
                             content_type: c.content_type.mime_type.clone(),
                             content_id: c.content_id.clone(),
-                            inline: c.disposition == mailcraft_mime::Disposition::Inline,
+                            inline: c.disposition == iridium_mail_mime::Disposition::Inline,
                             data: d,
                         });
                     }
@@ -659,7 +659,7 @@ fn send_one(c: &GraphClient, m: &Outgoing) -> Result<(), NetError> {
     sent
 }
 
-/// The folders of `list` below (and including) the service's Outbox: they stay out of MailCraft (it keeps
+/// The folders of `list` below (and including) the service's Outbox: they stay out of Mail (it keeps
 /// its own Outbox).
 fn outbox_tree(list: &[MailFolder]) -> BTreeSet<String> {
     let mut out: BTreeSet<String> =
@@ -772,11 +772,11 @@ fn local_changes(
             Err(NetError::Graph { status: 409, .. }) => {
                 let path = match &parent {
                     Some(p) => {
-                        format!("/me/mailFolders/{}/childFolders?$top=100", mailcraft_net::graph::seg(p))
+                        format!("/me/mailFolders/{}/childFolders?$top=100", iridium_mail_net::graph::seg(p))
                     }
                     None => "/me/mailFolders?$top=100".to_owned(),
                 };
-                c.get_all(&path, mailcraft_net::graph::mail::MAX_FOLDERS)?
+                c.get_all(&path, iridium_mail_net::graph::mail::MAX_FOLDERS)?
                     .iter()
                     .filter_map(MailFolder::from_json)
                     .find(|f| f.display_name.eq_ignore_ascii_case(name))
@@ -1370,7 +1370,7 @@ fn apply_messages(
             }
             None => {
                 let Some(raw) = &g.raw else { continue };
-                let mut item = mailcraft_store::import::item_from_raw(raw, local, now);
+                let mut item = iridium_mail_store::import::item_from_raw(raw, local, now);
                 // A local copy waiting for this message (sent or uploaded here): adopt it.
                 let adopt = item.message_id.as_deref().and_then(|mid| local_copy(&s.mailbox, local, mid));
                 if let Some(l) = adopt {
@@ -1552,7 +1552,7 @@ mod tests {
         let a = shadow_of(&m, "F1");
         assert_eq!(a.categories, vec!["Blue category".to_owned(), "Red category".to_owned()]);
         assert_eq!((a.flag.as_str(), a.importance.as_str()), ("notFlagged", "high"));
-        let due = mailcraft_model::DateTime::parse_rfc5322("Fri, 9 Oct 2026 17:00:00 +0000").unwrap();
+        let due = iridium_mail_model::DateTime::parse_rfc5322("Fri, 9 Oct 2026 17:00:00 +0000").unwrap();
         m.flag =
             FlagState::Flagged { label: "Follow up".into(), start: None, due: Some(due), reminder: None };
         m.read = false;
@@ -1580,7 +1580,7 @@ mod tests {
 
     #[test]
     fn envelope_recipients_missing_from_the_header_become_bcc() {
-        let raw = b"From: a@example.com\r\nTo: b@example.org\r\nX-MailCraft-Submit-Notify: x\r\nSubject: s\r\n\r\nhi\r\n";
+        let raw = b"From: a@example.com\r\nTo: b@example.org\r\nX-Mail-Submit-Notify: x\r\nSubject: s\r\n\r\nhi\r\n";
         let m = Outgoing {
             item: ItemId(1),
             from: "a@example.com".into(),
@@ -1589,7 +1589,7 @@ mod tests {
         };
         let out = String::from_utf8(outgoing_mime(&m)).unwrap();
         assert!(out.starts_with("Bcc: hidden@example.net\r\n"), "{out}");
-        assert!(!out.contains("X-MailCraft-Submit"), "{out}");
+        assert!(!out.contains("X-Mail-Submit"), "{out}");
     }
 
     #[test]
@@ -1613,7 +1613,7 @@ mod tests {
     fn graph_session() -> (Session, AccountId) {
         let mut s = Session::new(Mailbox::new_local("Local Folders"));
         let a = s.mailbox.add_account(Account {
-            kind: mailcraft_model::AccountKind::Graph,
+            kind: iridium_mail_model::AccountKind::Graph,
             address: "alice@example.com".into(),
             display_name: "alice@example.com".into(),
             ..Default::default()
@@ -1689,7 +1689,7 @@ mod tests {
     /// Regression: new start or due days of a message already flagged were never sent, nor taken in.
     #[test]
     fn flag_days_of_a_flagged_message_go_both_ways() {
-        let day = |d: &str| mailcraft_model::DateTime::parse_rfc5322(d).unwrap();
+        let day = |d: &str| iridium_mail_model::DateTime::parse_rfc5322(d).unwrap();
         let mut m = MailItem {
             flag: FlagState::Flagged {
                 label: "Follow up".into(),

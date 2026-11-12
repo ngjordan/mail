@@ -4,8 +4,8 @@
 //! dates, % complete, folder, categories, priority, modified, flag…), grouped by the view's arrangement
 //! (collapsible), with Conditional Formatting, a header click to sort, a quick "new task" box, the task
 //! notes as message preview and a reading pane (right, bottom or off). The rows, their filter, order and
-//! groups come from the engine (`mailcraft_engine::cmd::tasks::view_rows`), the columns from
-//! `mailcraft_engine::cmd::view::table`; View commands change them.
+//! groups come from the engine (`iridium_mail_engine::cmd::tasks::view_rows`), the columns from
+//! `iridium_mail_engine::cmd::view::table`; View commands change them.
 
 use egui::{
     Align, Align2, CornerRadius, FontId, Id, Key, Modifiers, Rect, RichText, Role, ScrollArea, Sense, Stroke,
@@ -13,10 +13,10 @@ use egui::{
 };
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::calendar::pim::Kind;
-use mailcraft_engine::cmd::view::modules::{ModuleKind, ModuleView, RowKind, ViewRow, arrange_label};
-use mailcraft_model::task::TaskRequestState;
-use mailcraft_model::{FlagState, FolderId, FolderKind, ItemId, TaskPriority, TaskStatus};
+use iridium_mail_engine::cmd::calendar::pim::Kind;
+use iridium_mail_engine::cmd::view::modules::{ModuleKind, ModuleView, RowKind, ViewRow, arrange_label};
+use iridium_mail_model::task::TaskRequestState;
+use iridium_mail_model::{FlagState, FolderId, FolderKind, ItemId, TaskPriority, TaskStatus};
 
 use super::common::{
     DAY, ModState, a11y, change_view, child, collapsed_labels, current_folder, day_string, draw_check,
@@ -27,7 +27,7 @@ use super::common::{
 use super::editors;
 use super::table as mt;
 use crate::App;
-use mailcraft_engine::cmd::view::table;
+use iridium_mail_engine::cmd::view::table;
 
 const ROW_H: f32 = 30.0;
 
@@ -54,7 +54,7 @@ impl Row {
 
 fn row_of(app: &App, r: &ViewRow) -> Option<Row> {
     let tz = tz(app);
-    let day = |d: Option<mailcraft_model::DateTime>| d.map(|d| local_secs(d, tz).div_euclid(DAY));
+    let day = |d: Option<iridium_mail_model::DateTime>| d.map(|d| local_secs(d, tz).div_euclid(DAY));
     let (subject, due, done, priority) = match r.kind {
         RowKind::Task => {
             let t = app.s.mailbox.tasks.get(&r.id)?;
@@ -67,9 +67,9 @@ fn row_of(app: &App, r: &ViewRow) -> Option<Row> {
                 _ => None,
             };
             let prio = match m.importance {
-                mailcraft_model::Importance::High => TaskPriority::High,
-                mailcraft_model::Importance::Low => TaskPriority::Low,
-                mailcraft_model::Importance::Normal => TaskPriority::Normal,
+                iridium_mail_model::Importance::High => TaskPriority::High,
+                iridium_mail_model::Importance::Low => TaskPriority::Low,
+                iridium_mail_model::Importance::Normal => TaskPriority::Normal,
             };
             (m.subject.clone(), due, false, prio)
         }
@@ -79,7 +79,7 @@ fn row_of(app: &App, r: &ViewRow) -> Option<Row> {
                 FlagState::Flagged { due, .. } => day(*due),
                 _ => None,
             };
-            (mailcraft_engine::cmd::people::display_name(c), due, false, TaskPriority::Normal)
+            (iridium_mail_engine::cmd::people::display_name(c), due, false, TaskPriority::Normal)
         }
         RowKind::Note => return None,
     };
@@ -98,7 +98,7 @@ fn row_of(app: &App, r: &ViewRow) -> Option<Row> {
 /// Rows of the current tasks folder's view.
 pub(super) fn rows(app: &App) -> Vec<Row> {
     let Some(folder) = current_folder(app, Kind::Task) else { return Vec::new() };
-    mailcraft_engine::cmd::tasks::view_rows(&app.s, folder).iter().filter_map(|r| row_of(app, r)).collect()
+    iridium_mail_engine::cmd::tasks::view_rows(&app.s, folder).iter().filter_map(|r| row_of(app, r)).collect()
 }
 
 /// Applies the legacy To-Do List / folder switch (`modules::set_tasks_todo`) once.
@@ -157,7 +157,7 @@ fn folder_pane(ui: &mut Ui, app: &mut App, view: &ModuleView) {
     if let (Some(f), _) = folder_rows(ui, app, FolderKind::Tasks, current, None) {
         select_folder(app, f);
         // A folder shows its own tasks: the To-Do List view spans every folder.
-        let v = mailcraft_engine::cmd::view::modules::state(&app.s, f, ModuleKind::Tasks);
+        let v = iridium_mail_engine::cmd::view::modules::state(&app.s, f, ModuleKind::Tasks);
         if v.view == "To-Do List" {
             change_view(app, "Simple List");
         }
@@ -226,11 +226,11 @@ fn open_row(app: &mut App, st: &mut ModState, row: &Row) {
 /// (so light and dark themes stay legible), else the chosen colour.
 pub(crate) fn option_color(app: &App, key: &str, theme: egui::Color32) -> egui::Color32 {
     let v = app.s.settings.text(key);
-    let default = mailcraft_engine::settings::def(key).map(|d| d.default_value());
+    let default = iridium_mail_engine::settings::def(key).map(|d| d.default_value());
     if default.as_ref().and_then(Value::as_str) == Some(v.as_str()) {
         return theme;
     }
-    mailcraft_geom::Color::parse_hex(&v).map_or(theme, |c| egui::Color32::from_rgb(c.r, c.g, c.b))
+    iridium_mail_geom::Color::parse_hex(&v).map_or(theme, |c| egui::Color32::from_rgb(c.r, c.g, c.b))
 }
 
 fn toggle_complete(app: &mut App, row: &Row) {
@@ -410,9 +410,9 @@ fn row_ui(
     st: &mut ModState,
     row: &Row,
     laid: &[mt::Laid],
-    rules: &[mailcraft_engine::cmd::view::mail::FormatRule],
+    rules: &[iridium_mail_engine::cmd::view::mail::FormatRule],
     preview: u8,
-    other: &mailcraft_model::view::TableOther,
+    other: &iridium_mail_model::view::TableOther,
 ) {
     let body = preview_text(app, row, preview);
     let extra = if body.is_empty() { 0.0 } else { 15.0 * body.lines().count() as f32 + 2.0 };
@@ -574,7 +574,7 @@ fn row_menu(ui: &mut Ui, app: &mut App, st: &mut ModState, r: &Row) {
     // Flagged messages and contacts take the same commands as tasks (the Tasks commands hand them to Mail
     // and People).
     ui.menu_button("Follow Up", |ui| {
-        let on = mailcraft_engine::cmd::tasks::follow_up_state(&app.s, r.id);
+        let on = iridium_mail_engine::cmd::tasks::follow_up_state(&app.s, r.id);
         for (kind, label) in [
             ("today", "Today"),
             ("tomorrow", "Tomorrow"),
@@ -671,7 +671,7 @@ fn details(ui: &mut Ui, app: &mut App, st: &mut ModState, row: &Row) {
         }
         let Some(t) = app.s.mailbox.tasks.get(&row.id).cloned() else { return };
         let tz = tz(app);
-        let date = |d: Option<mailcraft_model::DateTime>| {
+        let date = |d: Option<iridium_mail_model::DateTime>| {
             d.map(|d| long_date(local_secs(d, tz).div_euclid(DAY))).unwrap_or_else(|| "None".into())
         };
         info(ui, app, "Due", &date(t.due));
@@ -707,7 +707,7 @@ fn details(ui: &mut Ui, app: &mut App, st: &mut ModState, row: &Row) {
             let text = if r.regenerate_days > 0 {
                 format!("{} day(s) after each task is completed", r.regenerate_days)
             } else {
-                mailcraft_engine::cmd::calendar::recurrence::pattern_text(&r.rrule)
+                iridium_mail_engine::cmd::calendar::recurrence::pattern_text(&r.rrule)
                     .unwrap_or_else(|| r.rrule.clone())
             };
             info(ui, app, "Recurrence", &text);
@@ -804,7 +804,7 @@ fn flagged_body(ui: &mut Ui, app: &App, row: &Row) {
 /// Due-date group of the To-Do List (kept for the To-Do Bar and tests; the engine groups the views).
 #[cfg(test)]
 pub(super) fn group_of(due: Option<i64>, now: i64) -> &'static str {
-    mailcraft_engine::cmd::view::modules::date_group(due, now, "Overdue").1
+    iridium_mail_engine::cmd::view::modules::date_group(due, now, "Overdue").1
 }
 
 #[cfg(test)]
@@ -825,7 +825,7 @@ mod tests {
 
     #[test]
     fn todo_and_folder_rows() {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         let tasks =
             app.s.mailbox.folders.values().find(|f| f.kind == FolderKind::Tasks).map(|f| f.id).unwrap();
         app.run("nav.selectFolder", json!({"folder": tasks.0}));

@@ -9,8 +9,8 @@
 
 use std::collections::HashSet;
 
-use mailcraft_model::rich::{Drawing, WrapStyle, inline_drawing_id};
-use mailcraft_model::{Block, Doc, Inline};
+use iridium_mail_model::rich::{Drawing, WrapStyle, inline_drawing_id};
+use iridium_mail_model::{Block, Doc, Inline};
 
 use super::{ComposeState, EditRun, EditSnapshot, MAX_EDIT_UNDO};
 use crate::compose::DocPos;
@@ -82,7 +82,7 @@ pub fn repoint_placeholders(blocks: &mut [Block], old: u32, new: u32) {
             if let Inline::Image { src, .. } = i
                 && inline_drawing_id(src) == Some(old)
             {
-                *src = format!("{}{new}", mailcraft_model::rich::INLINE_DRAWING_PREFIX);
+                *src = format!("{}{new}", iridium_mail_model::rich::INLINE_DRAWING_PREFIX);
             }
             true
         });
@@ -288,7 +288,7 @@ impl ComposeState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::ParaStyle;
+    use iridium_mail_model::ParaStyle;
 
     fn placeholder(id: u32) -> Inline {
         Inline::Image { src: format!("drawing:{id}"), alt: String::new(), width: None, height: None }

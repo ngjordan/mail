@@ -357,13 +357,15 @@ mod tests {
     #[test]
     fn dictionary() {
         let (mut m, _) = mb();
-        assert!(m.add_to_dictionary("MailCraft"));
-        assert!(!m.add_to_dictionary("mailcraft"));
+        assert!(m.add_to_dictionary("Mail"));
+        // The same word in another case is already there: the dictionary is
+        // case-insensitive, so it is not added twice.
+        assert!(!m.add_to_dictionary("MAIL"));
         assert!(!m.add_to_dictionary("two words"));
         assert!(!m.add_to_dictionary(""));
-        assert!(m.in_dictionary("MAILCRAFT"));
-        assert!(m.remove_from_dictionary("mailcraft"));
-        assert!(!m.in_dictionary("MailCraft"));
+        assert!(m.in_dictionary("mail"));
+        assert!(m.remove_from_dictionary("MAIL"));
+        assert!(!m.in_dictionary("Mail"));
     }
 
     #[test]

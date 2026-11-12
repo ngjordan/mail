@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use super::common::{self, Dlg, Out, btn, footer, muted, primary, window, with_state};
 use super::compose_dlg::cmd;
 use crate::App;
-use mailcraft_engine::compose::{ListFormat, NumberStyle, multilevel_formats};
+use iridium_mail_engine::compose::{ListFormat, NumberStyle, multilevel_formats};
 
 /// Levels a multilevel list defines.
 const LEVELS: usize = 9;

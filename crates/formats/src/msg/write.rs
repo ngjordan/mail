@@ -3,8 +3,8 @@
 use std::io::{Cursor, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::{Importance, Sensitivity};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::{Importance, Sensitivity};
 
 use super::props::*;
 use super::{AttachmentContent, MAX_EMBED_DEPTH, MsgMessage};
@@ -164,7 +164,7 @@ fn write_message(cf: &mut Cf, base: &str, m: &MsgMessage, top: bool, depth: usiz
     let class = if m.message_class.trim().is_empty() { "IPM.Note" } else { m.message_class.trim() };
     o.string(PID_MESSAGE_CLASS, class);
     o.string(PID_SUBJECT, &m.subject);
-    o.string(PID_NORMALIZED_SUBJECT, mailcraft_model::subject::strip_prefixes(&m.subject));
+    o.string(PID_NORMALIZED_SUBJECT, iridium_mail_model::subject::strip_prefixes(&m.subject));
     let author = m.from.as_ref().or(m.sender.as_ref());
     if let Some(a) = author {
         sender_props(

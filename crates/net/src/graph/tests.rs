@@ -2,7 +2,7 @@ use super::mail::*;
 use super::*;
 use crate::http::testserver::{json as reply, serve};
 use crate::transport::ConnectOptions;
-use mailcraft_model::FolderRole;
+use iridium_mail_model::FolderRole;
 use serde_json::json;
 
 fn client(base: &str) -> GraphClient {

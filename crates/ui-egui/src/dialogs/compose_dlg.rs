@@ -355,7 +355,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
                         let Some(data) = crate::compose::clipboard_image() else {
                             return Err("The clipboard no longer holds a picture.".to_owned());
                         };
-                        let b64 = mailcraft_mime::transfer::encode_base64_flat(&data);
+                        let b64 = iridium_mail_mime::transfer::encode_base64_flat(&data);
                         return cmd(app, "format.pasteSpecial", with(json!({"as": "image", "image": b64})))
                             .map(|_| None);
                     }
@@ -550,7 +550,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
             |app, v| cmd(app, "compose.attachFile", with(json!({"path": v.s("path")}))).map(|_| None),
         ),
         "themes" | "customizeTheme" => {
-            use mailcraft_engine::compose::{
+            use iridium_mail_engine::compose::{
                 COLOR_GALLERY_LEN, THEME_COLOR_SETS, THEME_EFFECTS, THEME_FONT_SETS, THEMES,
             };
             let part = if d.str("part").is_empty() { "all".to_owned() } else { d.str("part") };
@@ -695,13 +695,13 @@ struct ColorsState {
 
 /// Create New Theme Colors: one colour button per theme slot, a sample row, and a name.
 fn customize_colors(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    use mailcraft_engine::compose::THEME_COLOR_SLOTS;
+    use iridium_mail_engine::compose::THEME_COLOR_SLOTS;
     let uid = d.uid;
     let palette: Vec<[u8; 3]> = d
         .arr("palette")
         .iter()
         .filter_map(Value::as_str)
-        .filter_map(mailcraft_geom::Color::parse_hex)
+        .filter_map(iridium_mail_geom::Color::parse_hex)
         .map(|c| [c.r, c.g, c.b])
         .collect();
     let compose = d.u64("compose");
@@ -932,7 +932,7 @@ fn translate(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                 ui.horizontal(|ui| {
                     ui.label("Translate to:");
                     let tags: Vec<&str> =
-                        mailcraft_engine::translate::LANGUAGES.iter().map(|(t, _)| *t).collect();
+                        iridium_mail_engine::translate::LANGUAGES.iter().map(|(t, _)| *t).collect();
                     common::combo(ui, ("trl", uid), &mut lang, &tags, 100.0);
                 });
                 st.pick = Some(lang);
@@ -1060,7 +1060,7 @@ fn modify_style(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let current_font = Some(d.str("font"))
         .filter(|f| !f.is_empty())
         .or_else(|| Some(d.str("shownFont")).filter(|f| !f.is_empty()))
-        .unwrap_or_else(|| mailcraft_fonts::BODY_FAMILY.to_owned());
+        .unwrap_or_else(|| iridium_mail_fonts::BODY_FAMILY.to_owned());
     if !fonts.iter().any(|f| f.eq_ignore_ascii_case(&current_font)) {
         fonts.insert(0, current_font.clone());
     }
@@ -1086,7 +1086,7 @@ fn modify_style(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         .get("size")
         .and_then(Value::as_f64)
         .or_else(|| d.get("shownSize").and_then(Value::as_f64))
-        .unwrap_or(f64::from(mailcraft_fonts::BODY_SIZE_PT));
+        .unwrap_or(f64::from(iridium_mail_fonts::BODY_SIZE_PT));
     let form = Form::new(format!("Modify Style: {name}"), fields)
         .width(460.0)
         .init("newName", json!(name))
@@ -1139,7 +1139,7 @@ const MODIFY_STYLE_PROPS: [&str; 10] =
 
 fn word_count(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     // "Include text boxes and shapes" (on by default; remembered while the dialog is open).
-    let include_id = egui::Id::unique(("mailcraft-wordcount-drawings", d.uid));
+    let include_id = egui::Id::unique(("iridium-mail-wordcount-drawings", d.uid));
     let mut include = ctx.data(|m| m.get_temp::<bool>(include_id)).unwrap_or(true);
     let drawings = d.get("drawings").cloned().unwrap_or(Value::Null);
     let has_drawings = drawings.get("words").and_then(Value::as_u64).unwrap_or(0) > 0
@@ -1230,7 +1230,7 @@ struct SendCalendar {
 pub(crate) const SPECIFY_DATES: &str = "Specify dates";
 
 fn send_calendar(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    use mailcraft_engine::cmd::insert::{
+    use iridium_mail_engine::cmd::insert::{
         CALENDAR_DETAILS, CALENDAR_LAYOUTS, CALENDAR_RANGES, calendar_folders,
     };
     let uid = d.uid;

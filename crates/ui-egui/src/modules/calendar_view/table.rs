@@ -9,12 +9,12 @@ use std::collections::BTreeSet;
 use egui::{CornerRadius, FontId, Id, Rect, Role, ScrollArea, Sense, Stroke, Ui, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::calendar::{
+use iridium_mail_engine::cmd::calendar::{
     CalendarColumn, CalendarCurrentView, describe_recurrence, occurrences, props,
 };
-use mailcraft_model::calendar::CalendarViewState;
-use mailcraft_model::view::{FilterText, ItemStyle, rule_style, rules_active, rules_need_body};
-use mailcraft_model::{Appointment, DateTime, FolderId, ItemId};
+use iridium_mail_model::calendar::CalendarViewState;
+use iridium_mail_model::view::{FilterText, ItemStyle, rule_style, rules_active, rules_need_body};
+use iridium_mail_model::{Appointment, DateTime, FolderId, ItemId};
 
 use super::super::common::{DAY, ModState, a11y, clock, empty_message, paint_text_clipped, short_date};
 use super::super::editors;

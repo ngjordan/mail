@@ -1,4 +1,4 @@
-//! MailCraft's user interface (layer L6): a classic desktop mail shell on egui.
+//! Mail's user interface (layer L6): a classic desktop mail shell on egui.
 //!
 //! Behaviour and geometry follow the black-box notes in `plan/reference/` (layout.md, responsive.md,
 //! folders.md, message-list.md, reading-pane.md, compose.md, read-window.md, ribbon-*.md, backstage.md,
@@ -37,8 +37,8 @@ pub mod widgets;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use mailcraft_engine::{Module, Notice, Session};
-use mailcraft_model::{ItemId, ReadingPanePos};
+use iridium_mail_engine::{Module, Notice, Session};
+use iridium_mail_model::{ItemId, ReadingPanePos};
 use serde_json::{Value, json};
 
 /// The test harness every UI test builds on. egui_kittest 0.37 added two checks that are off here, as they
@@ -101,7 +101,7 @@ pub struct UiState {
     /// Selected item ids in non-mail modules.
     pub module_selection: Option<u64>,
     /// Local control-channel port requested on the command line (`--control-port N`) or through
-    /// `MAILCRAFT_CONTROL_PORT`; `None` = control channel off. Read by `control` (native builds only).
+    /// `IRIDIUM_MAIL_CONTROL_PORT`; `None` = control channel off. Read by `control` (native builds only).
     pub control_port: Option<u16>,
     /// To-Do Bar parts shown (calendar, people, tasks), mirrored each frame from the session's view state.
     pub todo_bar_parts: (bool, bool, bool),
@@ -261,7 +261,7 @@ impl ShellLayout {
 }
 
 pub(crate) fn shell_id() -> egui::Id {
-    egui::Id::unique("mailcraft_shell_state")
+    egui::Id::unique("iridium_mail_shell_state")
 }
 
 /// Reads and updates the shell state of `ctx`.
@@ -284,7 +284,7 @@ pub(crate) fn search_select(params: &Value) -> Option<(usize, usize)> {
 
 /// The bundled app icon (our own artwork).
 pub const APP_ICON_SVG: &[u8] =
-    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/app-icon/mailcraft.svg"));
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/app-icon/iridium-mail.svg"));
 
 /// Rasterises [`APP_ICON_SVG`] at `size`×`size`: straight (non-premultiplied) RGBA, as window icons want.
 pub fn app_icon_rgba(size: u32) -> Option<(Vec<u8>, u32, u32)> {
@@ -358,9 +358,9 @@ pub fn face_key(family: &str, weight: u16, italic: bool) -> String {
 }
 
 /// The bundled font database (built once; immutable).
-fn font_db() -> &'static mailcraft_fonts::FontDb {
-    static DB: std::sync::OnceLock<mailcraft_fonts::FontDb> = std::sync::OnceLock::new();
-    DB.get_or_init(mailcraft_fonts::FontDb::bundled)
+fn font_db() -> &'static iridium_mail_fonts::FontDb {
+    static DB: std::sync::OnceLock<iridium_mail_fonts::FontDb> = std::sync::OnceLock::new();
+    DB.get_or_init(iridium_mail_fonts::FontDb::bundled)
 }
 
 /// egui font family for a CSS-style family list, weight and style, resolved against the bundled faces with
@@ -377,7 +377,7 @@ pub fn font_family(families: &str, weight: u16, italic: bool) -> egui::FontFamil
 
 /// Semibold UI font (headers, unread subjects).
 pub fn ui_semibold() -> egui::FontFamily {
-    font_family(mailcraft_fonts::UI_FAMILY, 600, false)
+    font_family(iridium_mail_fonts::UI_FAMILY, 600, false)
 }
 
 impl App {
@@ -385,7 +385,7 @@ impl App {
         // Internet calendars are fetched on the UI's worker threads (`modules::calendar_background`).
         s.sync.background_calendars = true;
         // Translations go to the translation server on a worker thread, so a slow server never freezes the
-        // window (`mailcraft_engine::translate`).
+        // window (`iridium_mail_engine::translate`).
         s.background_translate = true;
         let theme = theme::Theme::for_dark(s.view.dark);
         App { s, ui: UiState::default(), theme, icons: icons::Icons::default(), files: None }
@@ -404,8 +404,8 @@ impl App {
             ctx.request_repaint();
         }
         if self.s.sync_busy()
-            || mailcraft_engine::translate::busy(&self.s)
-            || mailcraft_engine::search_index::indexing(&self.s)
+            || iridium_mail_engine::translate::busy(&self.s)
+            || iridium_mail_engine::search_index::indexing(&self.s)
         {
             ctx.request_repaint_after(std::time::Duration::from_millis(SYNC_BUSY_REPAINT_MS));
         } else if !self.s.sync_status().accounts.is_empty() {
@@ -463,7 +463,7 @@ impl App {
             return None;
         }
         let ids = self.s.target_ids(params);
-        let purged = mailcraft_engine::cmd::mail::purged_by_delete(&self.s, &ids);
+        let purged = iridium_mail_engine::cmd::mail::purged_by_delete(&self.s, &ids);
         if purged == 0 {
             return None;
         }
@@ -475,7 +475,7 @@ impl App {
             format!("{purged} of the {} selected items will be permanently deleted.", ids.len())
         };
         let list: Vec<u64> = ids.iter().map(|i| i.0).collect();
-        dialogs::confirm(self, "MailCraft", &text, id, json!({"ids": list, "confirm": true}));
+        dialogs::confirm(self, "Mail", &text, id, json!({"ids": list, "confirm": true}));
         Some(json!({"dialog": "confirm"}))
     }
 
@@ -515,7 +515,7 @@ impl App {
     pub fn ui(&mut self, ctx: &egui::Context) {
         let mut root = egui::Ui::new(
             ctx.clone(),
-            egui::Id::unique("mailcraft_root"),
+            egui::Id::unique("iridium_mail_root"),
             egui::UiBuilder::new().layer_id(egui::LayerId::background()).max_rect(ctx.content_rect()),
         );
         self.ui_root(&mut root);
@@ -529,7 +529,7 @@ impl App {
         self.ui.egui_ctx = Some(ctx.clone());
         self.ui.embedded_viewports = ctx.embed_viewports();
         // The main window was asked to close (its close button, or File › Exit): a message with unsaved
-        // Edit Message changes asks first and MailCraft stays open.
+        // Edit Message changes asks first and Mail stays open.
         if ctx.input(|i| i.viewport().close_requested()) && !edit_message::may_exit(&ctx, self) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         }
@@ -555,7 +555,8 @@ impl App {
         let rect = ctx.content_rect();
         let frame = self.frame_for(rect.width(), rect.height());
         self.track_single_pane(&ctx, &frame);
-        let mut window = ui.new_child(egui::UiBuilder::new().id_salt("mailcraft_main_window").max_rect(rect));
+        let mut window =
+            ui.new_child(egui::UiBuilder::new().id_salt("iridium_mail_main_window").max_rect(rect));
         window.set_clip_rect(rect);
         chrome::main_window(&mut window, self, &frame);
         timer.lap("main window");
@@ -682,11 +683,11 @@ impl App {
     }
 
     /// Options › Mail › Message arrival › "Show an envelope icon in the taskbar": while new mail waits
-    /// ([`mailcraft_engine::new_mail::envelope`]) the window icon carries an envelope badge (the taskbar, dock
+    /// ([`iridium_mail_engine::new_mail::envelope`]) the window icon carries an envelope badge (the taskbar, dock
     /// or window list shows it where the platform uses the window icon; the browser build has none) and the
     /// status bar shows an envelope ([`chrome::status_bar`]).
     fn sync_envelope(&mut self, ctx: &egui::Context) {
-        let on = mailcraft_engine::new_mail::envelope(&self.s) > 0;
+        let on = iridium_mail_engine::new_mail::envelope(&self.s) > 0;
         let applied = with_shell(ctx, |st| st.applied_envelope);
         if applied == Some(on) || (applied.is_none() && !on) {
             // The app opens with the plain icon already set.
@@ -774,7 +775,7 @@ impl App {
         ctx.request_repaint_after(std::time::Duration::from_secs_f64((next - now).clamp(0.05, 10.0)));
         let bottom = if self.s.view.status_bar { theme::size::STATUS_BAR } else { 0.0 } + 16.0;
         let theme = self.theme.clone();
-        egui::Area::new(egui::Id::unique("mailcraft_toasts"))
+        egui::Area::new(egui::Id::unique("iridium_mail_toasts"))
             .order(egui::Order::Tooltip)
             .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -bottom))
             .interactable(true)
@@ -842,7 +843,7 @@ pub fn font_definitions() -> egui::FontDefinitions {
         list.extend(fallback_prop.iter().cloned());
         defs.families.insert(FontFamily::Name((*family).into()), list);
     }
-    let ui_key = face_key(mailcraft_fonts::UI_FAMILY, 400, false);
+    let ui_key = face_key(iridium_mail_fonts::UI_FAMILY, 400, false);
     if defs.font_data.contains_key(&ui_key) {
         let mut list = vec![ui_key];
         list.extend(fallback_prop.iter().cloned());

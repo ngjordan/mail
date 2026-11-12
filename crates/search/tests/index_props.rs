@@ -2,7 +2,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_search::{Context, Doc, DocKind, Filter, Index, Level, Person, matches, parse};
+use iridium_mail_search::{Context, Doc, DocKind, Filter, Index, Level, Person, matches, parse};
 use proptest::prelude::*;
 
 const NOW: i64 = 1_791_547_200;

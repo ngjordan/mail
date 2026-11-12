@@ -1,13 +1,13 @@
 //! Bench-like test: index a synthetic mailbox and time queries. Release builds index 50,000 messages
 //! (budget: 10 s to index, 50 ms per query); debug builds use 5,000 with looser limits.
 //!
-//! `cargo test --release -p mailcraft-search --test perf -- --nocapture` prints the timings.
+//! `cargo test --release -p iridium-mail-search --test perf -- --nocapture` prints the timings.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use std::time::{Duration, Instant};
 
-use mailcraft_search::{Context, Doc, Filter, Index, Person, parse};
+use iridium_mail_search::{Context, Doc, Filter, Index, Person, parse};
 
 const NOW: i64 = 1_791_547_200;
 

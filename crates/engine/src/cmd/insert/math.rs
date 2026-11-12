@@ -1,6 +1,6 @@
 //! Insert › Equation: a small linear math notation laid out in two dimensions and drawn as a picture.
 //!
-//! Notation (a subset of the usual "linear format" conventions, written for MailCraft):
+//! Notation (a subset of the usual "linear format" conventions, written for Mail):
 //! - `a/b` fraction; `x^2` superscript; `x_i` subscript (both: `x_i^2`); `√x` or `√(…)` square root;
 //! - `( … )` groups; a group used as a fraction part or script loses its parentheses (`(a+b)/2`);
 //! - letters are italic variables; `sin cos tan log ln exp lim max min det` are upright function names;
@@ -8,12 +8,12 @@
 //! - `∑ ∏` take their `_` and `^` limits below and above, `∫` beside.
 //!
 //! Layout is in px on a baseline (y grows downwards, the baseline at 0); text is shaped with the bundled
-//! serif face through `mailcraft-layout` and the picture is rasterised with the shape renderer.
+//! serif face through `iridium-mail-layout` and the picture is rasterised with the shape renderer.
 
 use super::{Mask, dev, text_list, translate};
-use mailcraft_geom::{Color, Point};
-use mailcraft_layout::{DisplayItem, DisplayList};
-use mailcraft_model::TextStyle;
+use iridium_mail_geom::{Color, Point};
+use iridium_mail_layout::{DisplayItem, DisplayList};
+use iridium_mail_model::TextStyle;
 
 /// Longest equation text accepted (characters).
 pub const MAX_EQUATION: usize = 400;
@@ -230,7 +230,7 @@ impl MBox {
 }
 
 struct Ctx<'a> {
-    fonts: &'a mailcraft_fonts::FontDb,
+    fonts: &'a iridium_mail_fonts::FontDb,
 }
 
 impl Ctx<'_> {
@@ -411,7 +411,7 @@ pub fn equation_png(text: &str) -> Option<(Vec<u8>, f32, f32)> {
     if text.trim().is_empty() {
         return None;
     }
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let cx = Ctx { fonts: &fonts };
     let b = cx.lay(&parse(text.trim()), BASE_PT);
     let (w, h) = (b.w + 2.0 * PAD, b.asc + b.desc + 2.0 * PAD);

@@ -2,9 +2,9 @@
 //! calendars in the compose body.
 //!
 //! Shapes, text boxes, WordArt and drawing canvases are floating drawing objects of the body
-//! ([`mailcraft_model::Drawing`], edited by `cmd::drawing`); [`drawing`] draws them and turns them into
+//! ([`iridium_mail_model::Drawing`], edited by `cmd::drawing`); [`drawing`] draws them and turns them into
 //! pictures when the message is sent. Icons, charts, SmartArt, 3D models and object icons are inline PNG
-//! pictures drawn with `mailcraft-render` (every mail program shows PNG; many do not show SVG); charts,
+//! pictures drawn with `iridium-mail-render` (every mail program shows PNG; many do not show SVG); charts,
 //! SmartArt and 3D models keep their recipe, so they can be edited again and follow theme changes. Commands
 //! that need an OS facility (screen capture) or a picker without params open a dialog instead.
 //!
@@ -46,9 +46,9 @@ use crate::compose::{
     BuildingBlock, ComposeAttachment, ComposeState, DocPos, InlineImage, empty_table, table_cell,
 };
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Align, Drawing, TableCell};
-use mailcraft_model::{Block, BusyStatus, DateTime, Doc, Inline, ItemId, ParaStyle, TextStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Align, Drawing, TableCell};
+use iridium_mail_model::{Block, BusyStatus, DateTime, Doc, Inline, ItemId, ParaStyle, TextStyle};
 
 /// Largest picture / object file accepted.
 pub const MAX_PICTURE_BYTES: u64 = 50 * 1024 * 1024;
@@ -313,7 +313,7 @@ fn shape(s: &mut Session, p: &Value) -> CmdResult {
         .ok_or_else(|| CmdError::Disabled("no compose".into()))?;
     let mut d = drawing::new_shape(&theme, kind);
     if let Some(col) = opt_str(p, "color") {
-        let col = mailcraft_html::parse_css_color(col)
+        let col = iridium_mail_html::parse_css_color(col)
             .ok_or_else(|| CmdError::Params(format!("`{col}` is not a colour")))?;
         if shapes::is_line_shape(kind) {
             d.outline = Some(col);
@@ -382,7 +382,7 @@ fn redraw(g: &crate::compose::GeneratedPicture, theme: &crate::compose::Resolved
                 .spec
                 .get("color")
                 .and_then(Value::as_str)
-                .and_then(mailcraft_html::parse_css_color)
+                .and_then(iridium_mail_html::parse_css_color)
                 .unwrap_or_else(|| theme.color(crate::compose::ACCENT1));
             shape_png(&text("shape"), color, theme.effects)?.0
         }
@@ -465,7 +465,7 @@ pub(crate) fn redraw_generated(c: &mut ComposeState) -> usize {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// Raster graphics: shapes, WordArt and SmartArt are drawn with mailcraft-render into coverage masks,
+// Raster graphics: shapes, WordArt and SmartArt are drawn with iridium-mail-render into coverage masks,
 // composited here with the theme's colours and effects, and inserted as PNG (every mail client shows PNG;
 // many do not show SVG).
 // ---------------------------------------------------------------------------------------------------------
@@ -515,14 +515,16 @@ impl Mask {
 
     /// The display list's ink as coverage (rendered black on transparent).
     fn from_list(
-        list: &mailcraft_layout::DisplayList,
+        list: &iridium_mail_layout::DisplayList,
         w: usize,
         h: usize,
-        fonts: &mailcraft_fonts::FontDb,
+        fonts: &iridium_mail_fonts::FontDb,
     ) -> Mask {
         let (Ok(wu), Ok(hu)) = (u32::try_from(w), u32::try_from(h)) else { return Mask::new(0, 0) };
         let canvas =
-            mailcraft_render::render(list, fonts, wu, hu, RASTER_SCALE, Color::rgba(0, 0, 0, 0), &|_| None);
+            iridium_mail_render::render(list, fonts, wu, hu, RASTER_SCALE, Color::rgba(0, 0, 0, 0), &|_| {
+                None
+            });
         let mut m = Mask::new(w, h);
         if canvas.pixels.len() == m.a.len().saturating_mul(4) {
             for (dst, px) in m.a.iter_mut().zip(canvas.pixels.as_chunks::<4>().0) {
@@ -665,7 +667,7 @@ impl Img {
                 pixels.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
             }
         }
-        let canvas = mailcraft_render::Canvas {
+        let canvas = iridium_mail_render::Canvas {
             width: u32::try_from(self.w).unwrap_or(0),
             height: u32::try_from(self.h).unwrap_or(0),
             pixels,
@@ -681,9 +683,9 @@ fn dev(v: f32) -> usize {
 
 /// Display list filling the polygon `pts` (logical px): one rectangle span per device row (even-odd rule),
 /// antialiased by the renderer at the span ends.
-fn polygon_list(pts: &[(f32, f32)], list: &mut mailcraft_layout::DisplayList) {
-    use mailcraft_geom::Rect;
-    use mailcraft_layout::DisplayItem;
+fn polygon_list(pts: &[(f32, f32)], list: &mut iridium_mail_layout::DisplayList) {
+    use iridium_mail_geom::Rect;
+    use iridium_mail_layout::DisplayItem;
     if pts.len() < 3 {
         return;
     }
@@ -979,8 +981,8 @@ fn composite(img: &mut Img, at: (usize, usize), mask: &Mask, color: Color, fx: &
 fn text_list(
     text: &str,
     style: &TextStyle,
-    fonts: &mailcraft_fonts::FontDb,
-) -> (mailcraft_layout::DisplayList, f32, f32, f32, f32) {
+    fonts: &iridium_mail_fonts::FontDb,
+) -> (iridium_mail_layout::DisplayList, f32, f32, f32, f32) {
     // One line per `\n`.
     let mut inlines = Vec::new();
     for (i, line) in text.split('\n').enumerate() {
@@ -993,9 +995,9 @@ fn text_list(
     }
     let doc =
         Doc { blocks: vec![Block::Paragraph { style: ParaStyle::default(), inlines }], ..Default::default() };
-    let lo = mailcraft_layout::LayoutOptions { width: MAX_RASTER_SIDE * 4.0, ..Default::default() };
-    let layout = mailcraft_layout::layout_doc(&doc, fonts, &lo);
-    let mut list = mailcraft_layout::DisplayList::default();
+    let lo = iridium_mail_layout::LayoutOptions { width: MAX_RASTER_SIDE * 4.0, ..Default::default() };
+    let layout = iridium_mail_layout::layout_doc(&doc, fonts, &lo);
+    let mut list = iridium_mail_layout::DisplayList::default();
     let (mut x0, mut y0, mut x1, mut y1) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
     for r in &layout.index.runs {
         x0 = x0.min(r.rect.x);
@@ -1004,7 +1006,7 @@ fn text_list(
         y1 = y1.max(r.rect.y + r.rect.h);
     }
     for item in layout.display.items {
-        if let mailcraft_layout::DisplayItem::Text { .. } = item {
+        if let iridium_mail_layout::DisplayItem::Text { .. } = item {
             list.items.push(item);
         }
     }
@@ -1015,8 +1017,8 @@ fn text_list(
 }
 
 /// Moves every item of `list` by (`dx`, `dy`) and recolours text.
-fn translate(list: &mut mailcraft_layout::DisplayList, dx: f32, dy: f32) {
-    use mailcraft_layout::DisplayItem;
+fn translate(list: &mut iridium_mail_layout::DisplayList, dx: f32, dy: f32) {
+    use iridium_mail_layout::DisplayItem;
     for item in &mut list.items {
         match item {
             DisplayItem::Text { origin, .. } => *origin = origin.offset(dx, dy),
@@ -1049,15 +1051,15 @@ fn put_png(
 
 /// PNG of shape `kind` filled with `color` and drawn with effect set `effects`; (png, width, height).
 fn shape_png(kind: &str, color: Color, effects: &str) -> Option<(Vec<u8>, f32, f32)> {
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let m = EFFECT_MARGIN;
     let (w, h) = (160.0 + 2.0 * m, 100.0 + 2.0 * m);
-    let mut list = mailcraft_layout::DisplayList::default();
+    let mut list = iridium_mail_layout::DisplayList::default();
     let fx = effect_style(effects);
     if kind == "line" {
-        list.items.push(mailcraft_layout::DisplayItem::Line {
-            from: mailcraft_geom::Point::new(m + 4.0, m + 96.0),
-            to: mailcraft_geom::Point::new(m + 156.0, m + 4.0),
+        list.items.push(iridium_mail_layout::DisplayItem::Line {
+            from: iridium_mail_geom::Point::new(m + 4.0, m + 96.0),
+            to: iridium_mail_geom::Point::new(m + 156.0, m + 4.0),
             color: Color::BLACK,
             width: 3.0,
         });
@@ -1119,7 +1121,7 @@ fn wordart_part_color(part: &str, theme: &crate::compose::ResolvedTheme) -> Opti
     if word.is_empty() {
         return None;
     }
-    mailcraft_html::parse_css_color(&word)
+    iridium_mail_html::parse_css_color(&word)
 }
 
 fn parse_wordart(style: &str, theme: &crate::compose::ResolvedTheme) -> WordArtStyle {
@@ -1190,7 +1192,7 @@ struct WordArtOverrides {
     /// `""` (the style's effects), `none`, `shadow`, `glow`, `reflection`, `bevel`.
     effect: String,
     /// Text Effects with options: replace the style's effects (and `effect`).
-    fx: Option<mailcraft_model::rich::ShapeEffects>,
+    fx: Option<iridium_mail_model::rich::ShapeEffects>,
     /// Text Effects › Transform warp (`""` none).
     warp: String,
     /// Outline weight (px; 0 = the style's).
@@ -1204,7 +1206,7 @@ fn wordart_img(
     ts_in: &TextStyle,
     over: &WordArtOverrides,
 ) -> Option<(Img, f32, f32)> {
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let size = ts_in.size_pt.filter(|s| s.is_finite() && *s > 0.0).unwrap_or(36.0).clamp(4.0, 400.0);
     let mut ts = TextStyle {
         bold: Some(ts_in.bold.unwrap_or(true)),
@@ -1294,7 +1296,7 @@ fn wordart_img(
         img.paint(&mask.minus(&mask.shifted(-d(r), -d(r))), lo, &|_, _| darken(fill, 0.5));
     }
     if let Some(f) = &over.fx {
-        let narrow = mailcraft_model::rich::ShapeEffects {
+        let narrow = iridium_mail_model::rich::ShapeEffects {
             bevel_size: if f.bevel_size > 0.0 { f.bevel_size.min(3.0) } else { 1.2 },
             ..f.clone()
         };
@@ -1870,7 +1872,7 @@ pub fn model_shaded_png(
         })
         .collect();
     order.sort_by(|a, b| a.0.total_cmp(&b.0));
-    let mut list = mailcraft_layout::DisplayList::default();
+    let mut list = iridium_mail_layout::DisplayList::default();
     for (_, [a, b, c]) in order {
         let (Some(pa), Some(pb), Some(pc)) = (view.get(a), view.get(b), view.get(c)) else { continue };
         let (u, v) =
@@ -1885,22 +1887,23 @@ pub fn model_shaded_png(
         let shade = (0.3 + 0.7 * lambert) as f32;
         let col = color.lerp(Color::BLACK, 1.0 - shade).lerp(Color::WHITE, (lambert as f32 - 0.85).max(0.0));
         let pt = |p: &[f64; 3]| ((ox + (p[0] - minx) * scale) as f32, (oy + (-p[1] - miny) * scale) as f32);
-        let mut poly = mailcraft_layout::DisplayList::default();
+        let mut poly = iridium_mail_layout::DisplayList::default();
         polygon_list(&[pt(pa), pt(pb), pt(pc)], &mut poly);
         for item in poly.items {
-            if let mailcraft_layout::DisplayItem::FillRect { rect, .. } = item {
+            if let iridium_mail_layout::DisplayItem::FillRect { rect, .. } = item {
                 // A hair wider so neighbouring faces leave no seams.
-                let rect = mailcraft_geom::Rect::new(rect.x - 0.25, rect.y, rect.w + 0.5, rect.h);
-                list.items.push(mailcraft_layout::DisplayItem::FillRect { rect, color: col });
+                let rect = iridium_mail_geom::Rect::new(rect.x - 0.25, rect.y, rect.w + 0.5, rect.h);
+                list.items.push(iridium_mail_layout::DisplayItem::FillRect { rect, color: col });
             }
         }
         if list.items.len() > 4_000_000 {
             break;
         }
     }
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let d = u32::try_from(dev(size)).ok()?;
-    let png = mailcraft_render::render(&list, &fonts, d, d, RASTER_SCALE, Color::WHITE, &|_| None).to_png();
+    let png =
+        iridium_mail_render::render(&list, &fonts, d, d, RASTER_SCALE, Color::WHITE, &|_| None).to_png();
     (!png.is_empty()).then_some(png)
 }
 
@@ -1939,20 +1942,29 @@ pub fn model_png(
         margin + (f64::from(size) - 2.0 * margin - (maxx - minx) * scale) / 2.0,
         margin + (f64::from(size) - 2.0 * margin - (maxy - miny) * scale) / 2.0,
     );
-    let mut list = mailcraft_layout::DisplayList::default();
+    let mut list = iridium_mail_layout::DisplayList::default();
     let stride = (edges.len() / 20_000).max(1);
     for (a, b) in edges.iter().step_by(stride) {
         let (Some(pa), Some(pb)) = (proj.get(*a), proj.get(*b)) else {
             continue;
         };
         let pt = |p: &(f64, f64)| {
-            mailcraft_geom::Point::new((ox + (p.0 - minx) * scale) as f32, (oy + (p.1 - miny) * scale) as f32)
+            iridium_mail_geom::Point::new(
+                (ox + (p.0 - minx) * scale) as f32,
+                (oy + (p.1 - miny) * scale) as f32,
+            )
         };
-        list.items.push(mailcraft_layout::DisplayItem::Line { from: pt(pa), to: pt(pb), color, width: 0.8 });
+        list.items.push(iridium_mail_layout::DisplayItem::Line {
+            from: pt(pa),
+            to: pt(pb),
+            color,
+            width: 0.8,
+        });
     }
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let d = u32::try_from(dev(size)).ok()?;
-    let png = mailcraft_render::render(&list, &fonts, d, d, RASTER_SCALE, Color::WHITE, &|_| None).to_png();
+    let png =
+        iridium_mail_render::render(&list, &fonts, d, d, RASTER_SCALE, Color::WHITE, &|_| None).to_png();
     (!png.is_empty()).then_some(png)
 }
 
@@ -2702,7 +2714,7 @@ fn symbol(s: &mut Session, p: &Value) -> CmdResult {
             .and_then(|n| u32::try_from(n).ok())
             .ok_or_else(|| CmdError::Params("`code` is the character code (0-255)".into()))?;
         let ch = symbol_fonts::map(font, code).ok_or_else(|| {
-            CmdError::Params(format!("{font} has no character at {code} that MailCraft can insert"))
+            CmdError::Params(format!("{font} has no character at {code} that Mail can insert"))
         })?;
         let text = ch.to_string();
         edit(s, p, |c| c.insert_text(&text))?;
@@ -2981,7 +2993,7 @@ fn drop_cap(s: &mut Session, p: &Value) -> CmdResult {
         return Err(CmdError::Params(format!("unknown drop cap `{kind}`")));
     }
     let c = compose_mut(s, p)?;
-    let base = c.body.base.size_pt.unwrap_or(mailcraft_fonts::BODY_SIZE_PT);
+    let base = c.body.base.size_pt.unwrap_or(iridium_mail_fonts::BODY_SIZE_PT);
     let path = c.selection.focus.path.clone();
     c.checkpoint();
     let ok = c.first_char_style_mut(&path, |st| {
@@ -3369,7 +3381,7 @@ fn insert_block_drawings(
     at: Option<(f32, f32)>,
     checkpoint: bool,
 ) -> Result<Vec<u32>, CmdError> {
-    use mailcraft_model::rich::{DrawingKind, WrapStyle};
+    use iridium_mail_model::rich::{DrawingKind, WrapStyle};
     let saved: Vec<&Drawing> = block.drawings.iter().take(crate::compose::MAX_BLOCK_DRAWINGS).collect();
     block_drawings_fit(c, block)?;
     let (ox, oy) = at.unwrap_or_else(|| drawing::caret_point(c));
@@ -3445,7 +3457,7 @@ fn block_drawings_fit(c: &ComposeState, block: &BuildingBlock) -> Result<(), Cmd
 /// is kept where it is shown, floating (it has no place in the text it goes back into). Empty when no
 /// drawing is selected.
 fn selected_drawings_for_block(c: &ComposeState) -> Vec<Drawing> {
-    use mailcraft_model::rich::WrapStyle;
+    use iridium_mail_model::rich::WrapStyle;
     let ds = &c.body.drawings;
     let mut keep: Vec<u32> = Vec::new();
     for id in c.selected_drawings() {
@@ -3848,9 +3860,9 @@ fn busy_label(b: BusyStatus) -> &'static str {
 
 /// A file shown as an icon with its name under it (PNG, logical width × height).
 fn object_icon_png(name: &str) -> Option<(Vec<u8>, f32, f32)> {
-    let fonts = mailcraft_fonts::FontDb::bundled();
+    let fonts = iridium_mail_fonts::FontDb::bundled();
     let icon = icons::png("document", 48.0 * RASTER_SCALE)?;
-    let canvas = mailcraft_render::svg::decode_png(&icon)?;
+    let canvas = iridium_mail_render::svg::decode_png(&icon)?;
     let rgba = canvas.to_rgba_unpremultiplied();
     let caption: String = {
         let n: Vec<char> = name.chars().collect();
@@ -3867,16 +3879,17 @@ fn object_icon_png(name: &str) -> Option<(Vec<u8>, f32, f32)> {
     let w = tw.clamp(56.0, MAX_RASTER_SIDE) + 8.0;
     let h = 48.0 + 6.0 + th + 4.0;
     translate(&mut list, (w - tw) / 2.0 - x0, 54.0 - y0);
-    list.items.push(mailcraft_layout::DisplayItem::Image {
-        rect: mailcraft_geom::Rect::new((w - 48.0) / 2.0, 0.0, 48.0, 48.0),
+    list.items.push(iridium_mail_layout::DisplayItem::Image {
+        rect: iridium_mail_geom::Rect::new((w - 48.0) / 2.0, 0.0, 48.0, 48.0),
         src: "icon".into(),
         alt: String::new(),
     });
     let (cw, ch) = (canvas.width, canvas.height);
     let images = move |src: &str| (src == "icon").then(|| (cw, ch, rgba.clone()));
     let (dw, dh) = (u32::try_from(dev(w)).ok()?, u32::try_from(dev(h)).ok()?);
-    let png = mailcraft_render::render(&list, &fonts, dw, dh, RASTER_SCALE, Color::rgba(0, 0, 0, 0), &images)
-        .to_png();
+    let png =
+        iridium_mail_render::render(&list, &fonts, dw, dh, RASTER_SCALE, Color::rgba(0, 0, 0, 0), &images)
+            .to_png();
     (!png.is_empty()).then_some((png, w, h))
 }
 
@@ -4209,7 +4222,7 @@ pub fn specs() -> Vec<CommandSpec> {
 pub(crate) mod tests {
     use super::super::compose::tests::{open, session};
     use super::*;
-    use mailcraft_model::{Appointment, Contact};
+    use iridium_mail_model::{Appointment, Contact};
 
     fn setup() -> (Session, u64) {
         let mut s = session();
@@ -4256,7 +4269,7 @@ pub(crate) mod tests {
 
     #[test]
     fn image_sizes() {
-        let png = mailcraft_mime::transfer::decode_base64(PNG_1X1.as_bytes());
+        let png = iridium_mail_mime::transfer::decode_base64(PNG_1X1.as_bytes());
         assert_eq!(image_size(&png), Some((1, 1)));
         let gif = b"GIF89a\x10\x00\x20\x00rest";
         assert_eq!(image_size(gif), Some((16, 32)));
@@ -4303,8 +4316,8 @@ pub(crate) mod tests {
     fn shapes_are_drawn_in_theme_colours_with_effects() {
         let theme = crate::compose::ThemeState::default().resolve();
         let accent = theme.color(crate::compose::ACCENT1);
-        let fonts = mailcraft_fonts::FontDb::bundled();
-        let mut list = mailcraft_layout::DisplayList::default();
+        let fonts = iridium_mail_fonts::FontDb::bundled();
+        let mut list = iridium_mail_layout::DisplayList::default();
         polygon_list(&shape_points("rectangle", 0.0, 0.0).unwrap(), &mut list);
         let mask = Mask::from_list(&list, dev(160.0), dev(100.0), &fonts);
         assert!(mask.get(160, 100) > 250, "inside");
@@ -4347,7 +4360,7 @@ pub(crate) mod tests {
         s.run("compose.insertText", &json!({"text": "Keep me"})).unwrap();
         let c = s.composes.get_mut(&id).unwrap();
         for n in 0..drawing::MAX_DRAWINGS {
-            let d = mailcraft_model::rich::Drawing { id: n as u32 + 1, ..Default::default() };
+            let d = iridium_mail_model::rich::Drawing { id: n as u32 + 1, ..Default::default() };
             c.body.drawings.push(d);
         }
         c.select_all();
@@ -4404,7 +4417,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         assert_eq!(rt.len(), 12);
         assert!(rt.iter().flatten().all(|i| *i < rv.len()));
         let png = model_shaded_png(&rv, &rt, 120.0, 35.0, 25.0, Color::rgb(0, 0, 200)).unwrap();
-        let canvas = mailcraft_render::svg::decode_png(&png).unwrap();
+        let canvas = iridium_mail_render::svg::decode_png(&png).unwrap();
         // Filled faces in more than one shade (lit differently), not just lines.
         let mut shades = std::collections::HashSet::new();
         let mut filled = 0usize;
@@ -4514,7 +4527,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         let r = s.run("insert.textBox", &json!({"text": "boxed"})).unwrap();
         assert_eq!(r["editText"], true);
         let c = &s.composes[&id];
-        assert_eq!(c.body.drawings[0].kind, mailcraft_model::DrawingKind::TextBox);
+        assert_eq!(c.body.drawings[0].kind, iridium_mail_model::DrawingKind::TextBox);
         assert_eq!(c.body.drawings[0].text, "boxed");
         assert!(!c.body.to_plain_text().contains("boxed"), "not in the text flow");
         assert_eq!(s.run("insert.textBox", &json!({"preset": "draw"})).unwrap()["armed"], "textBox");
@@ -4841,7 +4854,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
             .enumerate()
             .filter_map(|(i, b)| match b {
                 Block::Paragraph { style, inlines } => match inlines.as_slice() {
-                    [Inline::Image { alt, src, .. }] if src.contains("@mailcraft.invalid") => {
+                    [Inline::Image { alt, src, .. }] if src.contains("@iridium-mail.invalid") => {
                         Some((i, style.indent_px, alt.clone()))
                     }
                     _ => None,
@@ -4883,7 +4896,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         assert_eq!(r["attached"], "Plan 2.txt");
         let c = &s.composes[&id];
         assert_eq!(c.attachments.last().map(|a| a.data.clone()), Some(b"plan".to_vec()));
-        assert!(!mailcraft_html::doc_to_html(&c.body).contains("file:"), "no link to a local file");
+        assert!(!iridium_mail_html::doc_to_html(&c.body).contains("file:"), "no link to a local file");
         assert!(s.run("insert.link", &json!({"path": dir.join("missing.txt").to_string_lossy()})).is_err());
         // The file joins the recent files (kept in the settings); files that are gone drop out of the list
         // (checked in the background, or at once when one fails to open).
@@ -4906,7 +4919,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
             (r["url"].as_str(), r["linked"].as_bool()),
             (Some("https://www.example.com/team/Q3%20plan.docx"), Some(true))
         );
-        let html = mailcraft_html::doc_to_html(&s.composes[&id].body);
+        let html = iridium_mail_html::doc_to_html(&s.composes[&id].body);
         assert!(
             html.contains("Q3 plan.docx</a>") && html.contains("https://www.example.com/team/Q3%20plan.docx"),
             "{html}"
@@ -5007,13 +5020,13 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         let (mut s, id) = setup();
         assert_eq!(s.run("insert.link", &json!({})).unwrap()["dialog"], "insertLink");
         s.run("insert.link", &json!({"url": "example.com", "text": " site"})).unwrap();
-        let html = mailcraft_html::doc_to_html(&s.composes[&id].body);
+        let html = iridium_mail_html::doc_to_html(&s.composes[&id].body);
         assert!(html.contains("href=\"http://example.com\""), "{html}");
         assert!(s.run("insert.link", &json!({"url": "javascript:alert(1)"})).is_err());
         assert_eq!(normalize_url("bob@example.com").as_deref(), Some("mailto:bob@example.com"));
         s.run("compose.select", &json!({"anchor": {"path": [0], "offset": 6}})).unwrap();
         s.run("insert.link", &json!({"url": ""})).unwrap();
-        assert!(!mailcraft_html::doc_to_html(&s.composes[&id].body).contains("href"));
+        assert!(!iridium_mail_html::doc_to_html(&s.composes[&id].body).contains("href"));
         s.run("insert.bookmark", &json!({"name": "top"})).unwrap();
         assert!(s.run("insert.bookmark", &json!({"name": "1bad"})).is_err());
         s.run("insert.bookmark", &json!({"name": "top", "action": "goTo"})).unwrap();
@@ -5078,7 +5091,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         let d = c.body.drawings.last().unwrap();
         assert_eq!(
             (d.kind, d.text.as_str(), d.alt.as_str()),
-            (mailcraft_model::DrawingKind::WordArt, "Big", "Big")
+            (iridium_mail_model::DrawingKind::WordArt, "Big", "Big")
         );
         // The selected text becomes the WordArt, and leaves the text in the same undo step.
         s.run("compose.select", &json!({"all": true})).unwrap();
@@ -5178,7 +5191,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         let dir = tempfile::tempdir().unwrap();
         {
             let (mut s, id) = setup();
-            s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+            s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
             s.run("compose.select", &json!({"compose": id, "all": true})).unwrap();
             let r = s
                 .run("insert.saveToGallery", &json!({"compose": id, "gallery": "autoText", "name": "Sig"}))
@@ -5192,7 +5205,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
         for a in &mut s.mailbox.accounts {
             a.sender_name.clear();
         }
-        s.store = Some(mailcraft_store::Store::open(dir.path()).unwrap());
+        s.store = Some(iridium_mail_store::Store::open(dir.path()).unwrap());
         let id = open(&mut s);
         s.run("insert.quickPart", &json!({"gallery": "autoText"})).unwrap();
         let d = last_dialog(&s);
@@ -5275,7 +5288,7 @@ f 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n";
             .mailbox
             .folders
             .values()
-            .find(|f| f.kind == mailcraft_model::FolderKind::Calendar)
+            .find(|f| f.kind == iridium_mail_model::FolderKind::Calendar)
             .map(|f| f.id)
             .unwrap();
         let aid = s.mailbox.alloc_id();

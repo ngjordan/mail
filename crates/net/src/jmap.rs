@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use mailcraft_model::FolderRole;
+use iridium_mail_model::FolderRole;
 use serde_json::{Map, Value, json};
 
 use crate::error::{NetError, Result};
@@ -885,7 +885,7 @@ impl JmapClient {
     /// Sends a raw RFC 5322 message: upload, import into `drafts_id` as a draft, submit, and on success
     /// move it to `sent_id`. Returns (email id, submission id).
     ///
-    /// Submission-only `X-MailCraft-Submit-*` header fields are removed first, as the SMTP client does
+    /// Submission-only `X-Mail-Submit-*` header fields are removed first, as the SMTP client does
     /// ([`crate::smtp::take_submit_options`]), so neither the recipients nor the server's sent copy see
     /// them; a delivery receipt request among them becomes DSN envelope parameters when the server lists
     /// the DSN extension and an envelope is given.
@@ -1125,7 +1125,7 @@ mod tests {
         )
         .unwrap();
         let raw = b"From: a@example.com\r\nTo: b@example.org\r\nMessage-ID: <m1@example.com>\r\n\
-X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nX-MailCraft-Submit-Save-Sent: none\r\nSubject: s\r\n\r\nbody\r\n";
+X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nX-Mail-Submit-Save-Sent: none\r\nSubject: s\r\n\r\nbody\r\n";
         c.send_raw("I1", raw, "M9", "M2", Some(("a@example.com", &["b@example.org"]))).unwrap();
         t.join().unwrap();
         let seen: Vec<Seen> = rx.try_iter().collect();
@@ -1144,7 +1144,7 @@ X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nX-MailCraft-Submit-S
     #[test]
     fn send_raw_strips_submission_fields_and_asks_for_dsn() {
         let (msg, sub) = send_with_dsn(json!({ "DSN": [], "SIZE": ["0"] }));
-        assert!(!msg.contains("X-MailCraft-Submit"), "{msg}");
+        assert!(!msg.contains("X-Mail-Submit"), "{msg}");
         assert!(msg.contains("Subject: s\r\n") && msg.contains("Message-ID: <m1@example.com>"));
         let env = &sub["envelope"];
         assert_eq!(
@@ -1157,7 +1157,7 @@ X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nX-MailCraft-Submit-S
         );
         // Without the server's DSN extension: no parameters, still no submission-only fields.
         let (msg, sub) = send_with_dsn(json!({}));
-        assert!(!msg.contains("X-MailCraft-Submit"), "{msg}");
+        assert!(!msg.contains("X-Mail-Submit"), "{msg}");
         assert_eq!(sub["envelope"]["mailFrom"], json!({"email": "a@example.com"}));
         assert_eq!(sub["envelope"]["rcptTo"][0], json!({"email": "b@example.org"}));
     }

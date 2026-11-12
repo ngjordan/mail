@@ -10,7 +10,7 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError};
 
-use mailcraft_model::{FolderCounts, FolderId};
+use iridium_mail_model::{FolderCounts, FolderId};
 
 use crate::Session;
 

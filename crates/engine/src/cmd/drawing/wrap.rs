@@ -1,5 +1,5 @@
 //! Wrap Text and Position: how the body text flows around a drawing ([`WrapStyle`]; the layout makes room,
-//! see `mailcraft_layout`), In Line with Text (the drawing keeps its place in the text through a
+//! see `iridium_mail_layout`), In Line with Text (the drawing keeps its place in the text through a
 //! `drawing:<id>` picture), the outline Tight and Through wrap to, and the Position gallery (with text
 //! wrapping, at one of nine places on the page).
 
@@ -10,17 +10,17 @@ use crate::cmd::insert::drawing as draw;
 use crate::cmd::insert::shapes;
 use crate::compose::{BodySelection, ComposeState, DocPos, PasteMode};
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::rich::{Drawing, WrapStyle};
-use mailcraft_model::{Block, Doc, Inline, ParaStyle};
+use iridium_mail_model::rich::{Drawing, WrapStyle};
+use iridium_mail_model::{Block, Doc, Inline, ParaStyle};
 
 /// Most points of a wrap outline made from a shape.
 const OUTLINE_POINTS: usize = 64;
 
-fn layout(c: &ComposeState) -> mailcraft_layout::Layout {
+fn layout(c: &ComposeState) -> iridium_mail_layout::Layout {
     let width = c.view_width.filter(|w| w.is_finite() && *w > 40.0).unwrap_or(draw::DEFAULT_VIEW_WIDTH);
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    let fonts = mailcraft_fonts::FontDb::bundled();
-    mailcraft_layout::layout_doc(&c.body, &fonts, &lo)
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    let fonts = iridium_mail_fonts::FontDb::bundled();
+    iridium_mail_layout::layout_doc(&c.body, &fonts, &lo)
 }
 
 /// Where the In Line with Text drawings of `c` are shown: (id, (x, y, w, h)) px from the text area's corner.
@@ -33,8 +33,9 @@ pub fn inline_boxes(c: &ComposeState) -> Vec<(u32, (f32, f32, f32, f32))> {
         .items
         .iter()
         .filter_map(|i| match i {
-            mailcraft_layout::DisplayItem::Image { rect, src, .. } => {
-                mailcraft_model::rich::inline_drawing_id(src).map(|id| (id, (rect.x, rect.y, rect.w, rect.h)))
+            iridium_mail_layout::DisplayItem::Image { rect, src, .. } => {
+                iridium_mail_model::rich::inline_drawing_id(src)
+                    .map(|id| (id, (rect.x, rect.y, rect.w, rect.h)))
             }
             _ => None,
         })
@@ -49,7 +50,7 @@ pub(super) fn inline_box(c: &ComposeState, id: u32) -> Option<(f32, f32, f32, f3
 /// The place in the text at (`x`, `y`).
 fn text_at(c: &ComposeState, x: f32, y: f32) -> DocPos {
     let l = layout(c);
-    l.hit_pos(mailcraft_geom::Point { x, y })
+    l.hit_pos(iridium_mail_geom::Point { x, y })
         .map(|t| DocPos::new(t.block_path, t.offset))
         .unwrap_or_else(|| c.body_start())
 }
@@ -264,9 +265,9 @@ pub(super) fn position(s: &mut Session, p: &Value) -> CmdResult {
     // The page: as tall as the text laid out without the drawing in the way.
     let mut plain = c.body.clone();
     plain.drawings.clear();
-    let fonts = mailcraft_fonts::FontDb::bundled();
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    let height = mailcraft_layout::layout_doc(&plain, &fonts, &lo).height.max(d.h);
+    let fonts = iridium_mail_fonts::FontDb::bundled();
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    let height = iridium_mail_layout::layout_doc(&plain, &fonts, &lo).height.max(d.h);
     let nx = match col.as_str() {
         "Left" => 0.0,
         "Center" => (width - d.w) / 2.0,
@@ -359,7 +360,7 @@ mod tests {
         assert!(f.body.drawings.is_empty());
         assert_eq!(f.inline_images.len(), 1);
         assert!(crate::compose::placeholder_ids(&f.body.blocks).is_empty());
-        let html = mailcraft_html::doc_to_html(&f.body);
+        let html = iridium_mail_html::doc_to_html(&f.body);
         assert!(html.contains("cid:"), "{html}");
         // Deleting the text it sits in deletes it.
         let c = s.composes.get_mut(&cid).unwrap();

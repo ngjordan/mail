@@ -12,7 +12,7 @@
 //! **Icon positions.** Icons dragged off the grid keep their place: `notes.setPosition` stores the note's
 //! offset from the grid's top-left corner (points) on the note itself (`Note::x` / `Note::y`, saved with
 //! the mailbox and undoable), and [`positions`] reads them back. Line Up Icons drops them (the icons snap
-//! back to the grid), and so does Reset View. Positions MailCraft 0.1 kept in the folder's view state move
+//! back to the grid), and so does Reset View. Positions Mail 0.1 kept in the folder's view state move
 //! onto the notes when the profile is loaded ([`migrate_view_positions`]).
 //!
 //! `notes.forward` sends the notes attached as text files in a new message. [`view_rows`] is the list of the Notes views
@@ -27,7 +27,7 @@ use crate::cmd::calendar::{pim, pim::Kind};
 use crate::cmd::util::opt_str;
 use crate::cmd::view::modules::{self, ModuleKind, RowKind, ViewRow};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::{FolderId, ItemId, Note, NoteColor};
+use iridium_mail_model::{FolderId, ItemId, Note, NoteColor};
 
 /// Icon view arrangement.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,16 +73,16 @@ fn store_view(s: &mut Session, v: &NotesViewState) {
     }
 }
 
-/// Reserved entry of a folder's view state where MailCraft 0.1 kept the icon positions (JSON after the
+/// Reserved entry of a folder's view state where Mail 0.1 kept the icon positions (JSON after the
 /// prefix); [`migrate_view_positions`] moves them onto the notes.
 const NOTE_POS: &str = "\u{1}notes.pos=";
 /// Most icon positions one folder's old view-state entry is read for.
 pub const MAX_POSITIONS: usize = 2_000;
 /// Largest offset accepted (points).
-pub const MAX_OFFSET: f32 = mailcraft_model::note::MAX_NOTE_OFFSET;
+pub const MAX_OFFSET: f32 = iridium_mail_model::note::MAX_NOTE_OFFSET;
 
 fn valid_offset(v: f32) -> bool {
-    mailcraft_model::note::valid_note_offset(v)
+    iridium_mail_model::note::valid_note_offset(v)
 }
 
 /// Icon positions of the notes of `folder` that were dragged off the grid: note id → (x, y) offset from the
@@ -108,7 +108,7 @@ pub(crate) fn clear_positions(s: &mut Session, folder: FolderId) -> usize {
     n
 }
 
-/// Moves icon positions kept in the view state by MailCraft 0.1 (`NOTE_POS` entries) onto the notes, and
+/// Moves icon positions kept in the view state by Mail 0.1 (`NOTE_POS` entries) onto the notes, and
 /// drops those entries. A note that already has a position keeps it; positions of notes that are gone or in
 /// another folder are dropped. Returns how many notes got a position.
 pub(crate) fn migrate_view_positions(s: &mut Session) -> usize {
@@ -355,8 +355,8 @@ fn run_forward(s: &mut Session, p: &Value) -> CmdResult {
     };
     let names: Vec<String> = attachments.iter().map(|a| a.filename.clone()).collect();
     let mut compose = crate::compose::ComposeState {
-        subject: mailcraft_model::subject::forward_subject(&subject),
-        body: mailcraft_model::Doc::from_plain_text(&body),
+        subject: iridium_mail_model::subject::forward_subject(&subject),
+        body: iridium_mail_model::Doc::from_plain_text(&body),
         attachments,
         dirty: true,
         ..Default::default()
@@ -376,19 +376,19 @@ fn note_selected(s: &Session) -> Option<&'static str> {
 }
 
 /// Whether note `n` meets a View Settings filter (subject = the note's title, text = the rest).
-pub fn filter_matches(f: &mailcraft_model::view::ItemFilter, n: &Note, now: i64) -> bool {
+pub fn filter_matches(f: &iridium_mail_model::view::ItemFilter, n: &Note, now: i64) -> bool {
     f.matches_text(&filter_text(n, f.needs_body()), &n.categories, n.modified.unix, now)
 }
 
 /// Note `n`'s title and text prepared once for filters (`with_body`: the text too).
-fn filter_text(n: &Note, with_body: bool) -> mailcraft_model::view::FilterText {
+fn filter_text(n: &Note, with_body: bool) -> iridium_mail_model::view::FilterText {
     let title = n.text.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
-    mailcraft_model::view::FilterText::new(title, &n.text, with_body)
+    iridium_mail_model::view::FilterText::new(title, &n.text, with_body)
 }
 
 /// Conditional Formatting of note `n` in the folder's view (the note's text is prepared once for every rule).
-pub fn row_style(s: &Session, st: &modules::ModuleView, n: &Note) -> mailcraft_model::view::ItemStyle {
-    use mailcraft_model::view::{ItemStyle, rule_style, rules_active, rules_need_body};
+pub fn row_style(s: &Session, st: &modules::ModuleView, n: &Note) -> iridium_mail_model::view::ItemStyle {
+    use iridium_mail_model::view::{ItemStyle, rule_style, rules_active, rules_need_body};
     if !rules_active(&st.rules) {
         return ItemStyle::default();
     }
@@ -423,11 +423,11 @@ fn color_label(c: NoteColor) -> &'static str {
 fn note_groups(s: &Session, n: &Note, col: &str) -> Vec<((i64, String), String)> {
     let label = modules::note_group_label(col);
     let tz = s.tz_offset_min;
-    let day = |t: mailcraft_model::DateTime| {
+    let day = |t: iridium_mail_model::DateTime| {
         let text = format!(
             "{} {}",
-            mailcraft_model::dates::LocalTime::of(t, tz).weekday.short(),
-            mailcraft_model::ListTime::date(t, tz)
+            iridium_mail_model::dates::LocalTime::of(t, tz).weekday.short(),
+            iridium_mail_model::ListTime::date(t, tz)
         );
         ((t.day_number(tz), String::new()), format!("{label}: {text}"))
     };
@@ -715,7 +715,7 @@ mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
     use crate::{Notice, Selection};
-    use mailcraft_model::{FolderKind, FolderRole};
+    use iridium_mail_model::{FolderKind, FolderRole};
 
     #[test]
     fn new_note_creates_and_opens() {
@@ -865,7 +865,7 @@ mod tests {
         assert!(
             s.view.collapsed_groups.get(&folder).is_none_or(|l| l.iter().all(|e| !e.starts_with(NOTE_POS)))
         );
-        let mb: mailcraft_model::Mailbox =
+        let mb: iridium_mail_model::Mailbox =
             serde_json::from_value(serde_json::to_value(&s.mailbox).unwrap()).unwrap();
         s.mailbox = mb;
         assert_eq!(positions(&s, folder).len(), 2);
@@ -924,7 +924,7 @@ mod tests {
         let b = s.run("notes.new", &json!({"text": "B"})).unwrap()["id"].as_u64().unwrap();
         let c = s.run("notes.new", &json!({"text": "C", "folder": other.0})).unwrap()["id"].as_u64().unwrap();
         s.run("notes.setPosition", &json!({"id": b, "x": 7, "y": 8})).unwrap();
-        // MailCraft 0.1 kept them in the folder's view state, next to group labels.
+        // Mail 0.1 kept them in the folder's view state, next to group labels.
         let old = format!(
             "{NOTE_POS}{{\"{a}\":[10.0,20.0],\"{b}\":[1.0,1.0],\"{c}\":[3.0,3.0],\"999999\":[1.0,1.0],\"{a}0\":[-5.0,1.0]}}"
         );

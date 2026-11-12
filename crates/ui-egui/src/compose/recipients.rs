@@ -1,7 +1,7 @@
 //! Recipient fields (To, Cc, Bcc): Auto-Complete, resolved names, Check Names.
 //!
 //! - **Auto-Complete**: while a field has focus and its text changes, the entry being typed (after the last
-//!   `;`) is matched with [`mailcraft_engine::queries::address_suggestions`] (recently used recipients, then
+//!   `;`) is matched with [`iridium_mail_engine::queries::address_suggestions`] (recently used recipients, then
 //!   contacts, then the user's own accounts) and a dropdown opens under the field. Up / Down move the
 //!   highlight, Enter or Tab accepts (the entry becomes "Name <address>; "), Escape closes the list, a click
 //!   picks a row, and the × on a row removes that address from the Auto-Complete list
@@ -24,7 +24,7 @@ use egui::{
 };
 use serde_json::json;
 
-use mailcraft_engine::queries::{Suggestion, address_suggestions};
+use iridium_mail_engine::queries::{Suggestion, address_suggestions};
 
 use super::{Field, field_id};
 use crate::App;
@@ -55,7 +55,7 @@ pub fn split_entries(field: &str) -> Vec<&str> {
 }
 
 /// Options › Mail › Send messages › "Commas can be used to separate multiple message recipients".
-pub fn commas_separate(s: &mailcraft_engine::Session) -> bool {
+pub fn commas_separate(s: &iridium_mail_engine::Session) -> bool {
     s.settings.bool("mail.send.commasSeparate")
 }
 
@@ -174,7 +174,7 @@ pub fn entries_with(field: &str, commas: bool) -> Vec<Entry> {
                     let name = name.trim().trim_matches('"').trim();
                     Some((name.to_owned(), addr.trim().to_owned()))
                 }
-                None => mailcraft_mime::addr::parse_mailbox(piece)
+                None => iridium_mail_mime::addr::parse_mailbox(piece)
                     .map(|m| (m.name.unwrap_or_default().trim().to_owned(), m.addr)),
             };
             match parsed.filter(|(_, a)| valid_address(a)) {
@@ -217,7 +217,7 @@ struct Ac {
 }
 
 fn ac_id(cid: u64, f: Field) -> Id {
-    Id::unique(("mailcraft-compose-autocomplete", cid, f))
+    Id::unique(("iridium-mail-compose-autocomplete", cid, f))
 }
 
 /// Options › Mail › "Use Auto-Complete List to suggest names" (engine setting `mail.autoComplete`).
@@ -361,7 +361,7 @@ pub(super) fn address_field(
             let pos = pos2(rect.left(), rect.bottom() + 1.0);
             let width = rect.width().clamp(240.0, 460.0);
             let theme = app.theme.clone();
-            egui::Area::new(Id::unique(("mailcraft-compose-autocomplete-list", cid, f)))
+            egui::Area::new(Id::unique(("iridium-mail-compose-autocomplete-list", cid, f)))
                 .order(egui::Order::Foreground)
                 .fixed_pos(pos)
                 .show(&ctx, |ui| {
@@ -380,7 +380,7 @@ pub(super) fn address_field(
                                 if row.hovered() {
                                     ac.sel = i;
                                 }
-                                if s.source == mailcraft_engine::queries::SuggestionSource::Recent
+                                if s.source == iridium_mail_engine::queries::SuggestionSource::Recent
                                     && ui
                                         .add(egui::Button::new("×").frame(false).small())
                                         .on_hover_text("Remove from the Auto-Complete list")
@@ -456,7 +456,7 @@ fn paint_pills(ui: &mut Ui, app: &App, cid: u64, f: Field, rect: Rect, shown: &[
             };
             let hover = ui.interact(
                 pill.intersect(rect),
-                Id::unique(("mailcraft-recipient", cid, f, i)),
+                Id::unique(("iridium-mail-recipient", cid, f, i)),
                 Sense::hover(),
             );
             let label = e.label.clone();
@@ -560,8 +560,9 @@ mod tests {
     }
 
     fn compose_app(commas: bool) -> (crate::App, u64) {
-        use mailcraft_engine::compose::{ComposeKind, ComposeState};
-        let mut s = mailcraft_engine::Session::new(mailcraft_engine::model::Mailbox::new_local("Local"));
+        use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+        let mut s =
+            iridium_mail_engine::Session::new(iridium_mail_engine::model::Mailbox::new_local("Local"));
         s.settings.set("mail.send.commasSeparate", &json!(commas)).unwrap();
         let cid =
             s.open_compose(ComposeState { inline: true, kind: ComposeKind::New, ..ComposeState::default() });

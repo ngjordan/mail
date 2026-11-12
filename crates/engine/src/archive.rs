@@ -10,7 +10,7 @@
 //! - mail: the received date (the sent date when there is none);
 //! - appointments: the end; recurring series and their exceptions are never archived;
 //! - tasks: completed tasks only, by the completion date (the due date when none was recorded);
-//! - notes: the last change; contacts (and journal entries, which MailCraft does not keep) are never
+//! - notes: the last change; contacts (and journal entries, which Mail does not keep) are never
 //!   archived.
 //!
 //! An item is old when that date lies before now minus the age (calendar months in local time, or weeks or
@@ -42,11 +42,11 @@ use serde_json::{Value, json};
 
 use crate::cmd::util::{opt_bool, opt_str};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session, always};
-use mailcraft_model::calendar::CalendarSource;
-use mailcraft_model::dates::{civil_from_days, days_from_civil, days_in_month};
-use mailcraft_model::folder::{AgeUnit, ArchiveAction, ArchiveMode, FolderArchive, MAX_ARCHIVE_AGE};
-use mailcraft_model::mailbox::{LOCAL_ACCOUNT_FALLBACK_NAME, MAX_FOLDER_NAME_CHARS};
-use mailcraft_model::{
+use iridium_mail_model::calendar::CalendarSource;
+use iridium_mail_model::dates::{civil_from_days, days_from_civil, days_in_month};
+use iridium_mail_model::folder::{AgeUnit, ArchiveAction, ArchiveMode, FolderArchive, MAX_ARCHIVE_AGE};
+use iridium_mail_model::mailbox::{LOCAL_ACCOUNT_FALLBACK_NAME, MAX_FOLDER_NAME_CHARS};
+use iridium_mail_model::{
     Account, AccountId, AccountKind, Appointment, DateTime, Folder, FolderId, FolderKind, FolderRole, ItemId,
     MailItem, Mailbox, Note, Task,
 };

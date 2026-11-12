@@ -10,6 +10,9 @@
 
 use std::collections::HashMap;
 
+use iridium_mail_fonts::{FontDb, FontId, is_zero_width};
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_layout::DisplayItem;
 use krilla::Document;
 use krilla::color::rgb;
 use krilla::geom::{PathBuilder, Point as KPoint, Rect as KRect, Transform};
@@ -19,9 +22,6 @@ use krilla::page::PageSettings;
 use krilla::paint::{Fill, Stroke};
 use krilla::surface::Surface;
 use krilla::text::{Font, GlyphId, KrillaGlyph};
-use mailcraft_fonts::{FontDb, FontId, is_zero_width};
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_layout::DisplayItem;
 
 use crate::print::Page;
 
@@ -58,7 +58,7 @@ impl std::error::Error for PdfError {}
 /// Writes `pages` as a PDF document.
 pub fn write_pdf(pages: &[Page], fonts: &FontDb, info: &PdfInfo) -> Result<Vec<u8>, PdfError> {
     let mut doc = Document::new();
-    let mut meta = Metadata::new().creator("MailCraft".to_owned());
+    let mut meta = Metadata::new().creator("Mail".to_owned());
     if !info.title.trim().is_empty() {
         meta = meta.title(info.title.chars().take(1_000).collect());
     }
@@ -257,7 +257,7 @@ impl Painter<'_, '_, '_> {
         let frame = Color::rgb(0xc6, 0xc6, 0xc6);
         self.stroke_rect(r, frame, 1.0);
         if !alt.trim().is_empty() && r.w > 20.0 && r.h > 16.0 {
-            let font = self.fonts.resolve(mailcraft_fonts::UI_FAMILY, 400, false);
+            let font = self.fonts.resolve(iridium_mail_fonts::UI_FAMILY, 400, false);
             let size = 11.0;
             let mut s = String::new();
             let mut w = 0.0;

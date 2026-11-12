@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 
 use crate::accounts::account_options;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::{AccountId, AccountKind, ItemId};
+use iridium_mail_model::{AccountId, AccountKind, ItemId};
 
 /// Most matches one search brings in per server folder, and per account.
 pub const MAX_PER_FOLDER: usize = 100;
@@ -56,9 +56,9 @@ pub struct OlderResults {
 #[derive(Clone, Debug)]
 pub(crate) struct Request {
     pub(crate) generation: u64,
-    pub(crate) criterion: mailcraft_net::search::Criterion,
+    pub(crate) criterion: iridium_mail_net::search::Criterion,
     /// The folders searched (the search scope when the search started).
-    pub(crate) folders: BTreeSet<mailcraft_model::FolderId>,
+    pub(crate) folders: BTreeSet<iridium_mail_model::FolderId>,
 }
 
 /// Server accounts that keep older mail on the server: IMAP (not POP3) or JMAP with an incoming server and
@@ -199,7 +199,7 @@ fn start_native(s: &mut Session, query: &str) -> Result<usize, CmdError> {
         return Ok(0);
     }
     let generation = s.sync.older.generation;
-    let folders: BTreeSet<mailcraft_model::FolderId> =
+    let folders: BTreeSet<iridium_mail_model::FolderId> =
         crate::search_index::scope_folders(s).into_iter().collect();
     for a in &accounts {
         let req = Request { generation, criterion: criterion.clone(), folders: folders.clone() };
@@ -277,9 +277,9 @@ pub(crate) fn run_ended(s: &mut Session, account: AccountId, error: Option<&str>
 
 /// The server criteria for `query` (`None` when nothing in it can be tested on a server).
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn criterion(s: &Session, query: &str) -> Option<mailcraft_net::search::Criterion> {
-    use mailcraft_net::search::Criterion;
-    let q = mailcraft_search::parse(query);
+pub(crate) fn criterion(s: &Session, query: &str) -> Option<iridium_mail_net::search::Criterion> {
+    use iridium_mail_net::search::Criterion;
+    let q = iridium_mail_search::parse(query);
     let ctx = crate::search_index::context(s);
     match conv(&q, &ctx, false, 0)? {
         Criterion::All => None,
@@ -295,13 +295,13 @@ const MAX_DEPTH: usize = 12;
 /// such parts of an AND are left out (more matches, never fewer); under a NOT the conversion must be exact.
 #[cfg(not(target_arch = "wasm32"))]
 fn conv(
-    q: &mailcraft_search::Query,
-    ctx: &mailcraft_search::Context,
+    q: &iridium_mail_search::Query,
+    ctx: &iridium_mail_search::Context,
     exact: bool,
     depth: usize,
-) -> Option<mailcraft_net::search::Criterion> {
-    use mailcraft_net::search::Criterion;
-    use mailcraft_search::Query;
+) -> Option<iridium_mail_net::search::Criterion> {
+    use iridium_mail_net::search::Criterion;
+    use iridium_mail_search::Query;
     if depth > MAX_DEPTH {
         return None;
     }
@@ -340,13 +340,13 @@ fn conv(
 
 #[cfg(not(target_arch = "wasm32"))]
 fn term(
-    t: &mailcraft_search::Term,
-    ctx: &mailcraft_search::Context,
-) -> Option<mailcraft_net::search::Criterion> {
-    use mailcraft_net::search::{Criterion, TextIn};
-    use mailcraft_search::doc::DocKind;
-    use mailcraft_search::query::{DateField, SizeSpec};
-    use mailcraft_search::{Term, TextField};
+    t: &iridium_mail_search::Term,
+    ctx: &iridium_mail_search::Context,
+) -> Option<iridium_mail_net::search::Criterion> {
+    use iridium_mail_net::search::{Criterion, TextIn};
+    use iridium_mail_search::doc::DocKind;
+    use iridium_mail_search::query::{DateField, SizeSpec};
+    use iridium_mail_search::{Term, TextField};
     let text = |fields: &[TextIn], value: &str| {
         let v = value.trim();
         if v.is_empty() {
@@ -368,7 +368,7 @@ fn term(
             TextField::Attachments => return None,
         })
     };
-    let day = |n: i64| mailcraft_model::dates::civil_from_days(n);
+    let day = |n: i64| iridium_mail_model::dates::civil_from_days(n);
     match t {
         Term::Text(f, words) => text(fields(*f)?, &words.raw),
         Term::Me(f) => {
@@ -436,10 +436,10 @@ fn term(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use mailcraft_net::search::{Criterion, TextIn};
+    use iridium_mail_net::search::{Criterion, TextIn};
 
     fn crit(q: &str) -> Option<Criterion> {
-        let s = Session::new(mailcraft_model::Mailbox::new_local("Local Folders"));
+        let s = Session::new(iridium_mail_model::Mailbox::new_local("Local Folders"));
         criterion(&s, q)
     }
 
@@ -492,12 +492,12 @@ mod tests {
     /// server matches) on that account's next Send/Receive.
     #[test]
     fn turning_off_drops_queued_searches() {
-        let mut s = Session::new(mailcraft_model::Mailbox::new_local("Local Folders"));
-        let a = s.mailbox.add_account(mailcraft_model::Account {
+        let mut s = Session::new(iridium_mail_model::Mailbox::new_local("Local Folders"));
+        let a = s.mailbox.add_account(iridium_mail_model::Account {
             kind: AccountKind::Imap,
             address: "me@example.net".into(),
             display_name: "me@example.net".into(),
-            incoming: Some(mailcraft_model::ServerSettings::default()),
+            incoming: Some(iridium_mail_model::ServerSettings::default()),
             ..Default::default()
         });
         s.mailbox.create_default_folders(a);

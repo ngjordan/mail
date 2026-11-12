@@ -1,7 +1,7 @@
 //! iCalendar (RFC 5545) and iTIP (RFC 5546) basics.
 //!
-//! Reading: VCALENDAR › VEVENT / VTODO / VALARM / VTIMEZONE into [`mailcraft_model::Appointment`] and
-//! [`mailcraft_model::Task`]. DATE values become local midnight in [`ImportOptions::local_offset_min`]; floating
+//! Reading: VCALENDAR › VEVENT / VTODO / VALARM / VTIMEZONE into [`iridium_mail_model::Appointment`] and
+//! [`iridium_mail_model::Task`]. DATE values become local midnight in [`ImportOptions::local_offset_min`]; floating
 //! times are taken in that offset too; `TZID` times resolve through the file's VTIMEZONEs, then a built-in table
 //! of common zones and fixed-offset names, else they are treated as floating. Recurrence keeps the RRULE text
 //! and EXDATEs on the appointment; [`Event::occurrences`] expands with full time-zone rules and
@@ -18,7 +18,7 @@ pub mod rrule;
 pub mod tz;
 pub mod value;
 
-use mailcraft_model::{Appointment, DateTime, Task};
+use iridium_mail_model::{Appointment, DateTime, Task};
 
 pub use itip::Method;
 pub use parse::Component;
@@ -34,7 +34,7 @@ pub const MAX_ITEMS: usize = 100_000;
 /// Most VTIMEZONE definitions kept from one input (real files define a handful).
 pub const MAX_ZONES: usize = 1_000;
 /// Product identifier written to every calendar.
-pub const PRODID: &str = "-//MailCraft//MailCraft Calendar//EN";
+pub const PRODID: &str = "-//Mail//Mail Calendar//EN";
 
 /// Reader settings.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

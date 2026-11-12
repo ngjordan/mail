@@ -1,6 +1,6 @@
 # Windows on Arm build on demand: cross-compiles aarch64-pc-windows-msvc on the x64 windows-latest runner
 # (its Visual Studio has the MSVC ARM64 build tools, and LLVM/clang for the ring crate), or builds natively
-# on the windows-11-arm runner. Produces mailcraft-VERSION-windows-aarch64.msi and .zip, signed when
+# on the windows-11-arm runner. Produces iridium-mail-VERSION-windows-aarch64.msi and .zip, signed when
 # WINDOWS_CERT_PFX / WINDOWS_CERT_PASSWORD are set.
 name: windows-arm64
 

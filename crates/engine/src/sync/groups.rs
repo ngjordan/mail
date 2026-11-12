@@ -4,7 +4,7 @@
 //! A group is a set of accounts, and for each account what a run does: send the Outbox, receive (all
 //! folders or chosen ones), and whether new mail comes as headers only. A group also says when it runs: with
 //! Send/Receive All Folders (F9), on a schedule (one interval while online, one while working offline) and
-//! when MailCraft exits. The built-in "All Accounts" group stays what it was: every account included in
+//! when Mail exits. The built-in "All Accounts" group stays what it was: every account included in
 //! send/receive (Account Settings), the Options › Advanced interval and exit option.
 //!
 //! Groups are saved with the account options (`account-options.json`).
@@ -16,7 +16,7 @@ use serde_json::{Value, json};
 
 use super::{Plan, dispatch, is_server_account, refresh_status};
 use crate::{CmdError, Notice, Session};
-use mailcraft_model::{AccountId, FolderId, FolderKind};
+use iridium_mail_model::{AccountId, FolderId, FolderKind};
 
 /// Name of the built-in group.
 pub const ALL_ACCOUNTS: &str = "All Accounts";
@@ -60,7 +60,7 @@ pub struct SendReceiveGroup {
     pub include: bool,
     /// Online: scheduled run every N minutes (0 = no schedule).
     pub every_minutes: u32,
-    /// Run when MailCraft exits.
+    /// Run when Mail exits.
     pub on_exit: bool,
     /// Working offline: F9 still runs this group.
     pub offline_include: bool,
@@ -297,7 +297,7 @@ pub fn define(s: &mut Session, p: &Value) -> crate::CmdResult {
                     }
                 }
                 None if list.len() >= MAX_GROUPS => {
-                    return Err(CmdError::Failed(format!("MailCraft keeps at most {MAX_GROUPS} groups")));
+                    return Err(CmdError::Failed(format!("Mail keeps at most {MAX_GROUPS} groups")));
                 }
                 None => list.push(g.clone()),
             }
@@ -314,7 +314,7 @@ pub fn define(s: &mut Session, p: &Value) -> crate::CmdResult {
             let list = &mut crate::accounts::prefs(s).groups;
             if action == "copy" {
                 if list.len() >= MAX_GROUPS {
-                    return Err(CmdError::Failed(format!("MailCraft keeps at most {MAX_GROUPS} groups")));
+                    return Err(CmdError::Failed(format!("Mail keeps at most {MAX_GROUPS} groups")));
                 }
                 if let Some(mut g) = list.get(i).cloned() {
                     g.name.clone_from(&new_name);
@@ -403,7 +403,7 @@ pub fn f9_groups(s: &Session) -> Vec<SendReceiveGroup> {
     groups(s).iter().filter(|g| if offline { g.offline_include } else { g.include }).cloned().collect()
 }
 
-/// Groups to run when MailCraft exits.
+/// Groups to run when Mail exits.
 pub fn exit_groups(s: &Session) -> Vec<SendReceiveGroup> {
     groups(s).iter().filter(|g| g.on_exit).cloned().collect()
 }
@@ -447,7 +447,7 @@ pub(crate) fn tick(s: &mut Session) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Account, AccountKind, Mailbox, ServerSettings};
+    use iridium_mail_model::{Account, AccountKind, Mailbox, ServerSettings};
 
     #[test]
     fn a_failed_headers_only_run_does_not_leave_headers_only_behind() {

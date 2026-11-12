@@ -1,8 +1,8 @@
 //! Internet calendars (Add Calendar › From Internet) and calendars from .ics files (From File).
 //!
 //! A subscription is a read-only calendar folder whose properties hold the URL ([`super::props`]). Refreshing
-//! fetches the URL with `mailcraft-net`'s HTTP client (conditional GET with the stored ETag /
-//! Last-Modified), parses it with `mailcraft-formats` and replaces the folder's items, keeping item ids for
+//! fetches the URL with `iridium-mail-net`'s HTTP client (conditional GET with the stored ETag /
+//! Last-Modified), parses it with `iridium-mail-formats` and replaces the folder's items, keeping item ids for
 //! events whose UID (and RECURRENCE-ID) were there before so selections and open windows survive. The refresh
 //! interval is the publisher's `REFRESH-INTERVAL` (RFC 7986) or `X-PUBLISHED-TTL`, else an hour.
 //!
@@ -12,9 +12,9 @@
 
 use std::collections::BTreeMap;
 
-use mailcraft_formats::ics::{self, ImportOptions};
-use mailcraft_model::calendar::Subscription;
-use mailcraft_model::{self as mbx, FolderId, ItemId};
+use iridium_mail_formats::ics::{self, ImportOptions};
+use iridium_mail_model::calendar::Subscription;
+use iridium_mail_model::{self as mbx, FolderId, ItemId};
 
 use super::{new_uid, props, tz};
 use crate::{CmdError, Session};
@@ -246,10 +246,10 @@ pub fn subscription(s: &Session, folder: FolderId) -> Option<Due> {
 /// Fetches an internet calendar (blocking; call off the UI thread). Errors are user-facing text.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn fetch(d: &Due) -> Result<Fetched, String> {
-    use mailcraft_net::http::HttpClient;
+    use iridium_mail_net::http::HttpClient;
     let url = props::normalize_url(&d.url)
         .ok_or_else(|| format!("`{}` is not an internet calendar address", d.url))?;
-    let client = HttpClient::new(mailcraft_net::ConnectOptions {
+    let client = HttpClient::new(iridium_mail_net::ConnectOptions {
         connect_timeout: std::time::Duration::from_secs(20),
         io_timeout: std::time::Duration::from_secs(60),
         ..Default::default()

@@ -4,10 +4,10 @@
 
 use std::collections::HashMap;
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{AttendeeRole, ResponseStatus};
-use mailcraft_model::contact::PostalAddress;
-use mailcraft_model::{
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{AttendeeRole, ResponseStatus};
+use iridium_mail_model::contact::PostalAddress;
+use iridium_mail_model::{
     Appointment, Attendee, BusyStatus, Contact, DateTime, Importance, Note, NoteColor, Recurrence, Task,
     TaskPriority, TaskStatus,
 };
@@ -268,7 +268,7 @@ fn ymd(t: Option<DateTime>) -> Option<String> {
     let t = t?;
     // Birthdays are stored as local midnight in UTC; noon keeps the date on either side.
     let days = t.unix.saturating_add(12 * 3600).div_euclid(86_400);
-    let (y, m, d) = mailcraft_model::dates::civil_from_days(days);
+    let (y, m, d) = iridium_mail_model::dates::civil_from_days(days);
     (1..=9999).contains(&y).then(|| format!("{y:04}-{m:02}-{d:02}"))
 }
 
@@ -673,7 +673,7 @@ pub fn recurrence_rule(blob: &[u8], offset_min: i32) -> Result<Recurrence, Strin
         ),
         (0x200D, 0x0002..=0x0004) => {
             let (_, month, _) =
-                mailcraft_model::dates::civil_from_days(minutes_to_unix(start_date).div_euclid(86_400));
+                iridium_mail_model::dates::civil_from_days(minutes_to_unix(start_date).div_euclid(86_400));
             let years = (period / 12).max(1);
             match pattern {
                 0x0002 => {
@@ -725,6 +725,6 @@ pub fn recurrence_rule(blob: &[u8], offset_min: i32) -> Result<Recurrence, Strin
 fn utc_stamp(t: DateTime) -> String {
     let days = t.unix.div_euclid(86_400);
     let secs = t.unix.rem_euclid(86_400);
-    let (y, m, d) = mailcraft_model::dates::civil_from_days(days);
+    let (y, m, d) = iridium_mail_model::dates::civil_from_days(days);
     format!("{y:04}{m:02}{d:02}T{:02}{:02}{:02}Z", secs / 3600, (secs / 60) % 60, secs % 60)
 }

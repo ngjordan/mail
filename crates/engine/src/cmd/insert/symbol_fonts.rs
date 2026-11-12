@@ -1,6 +1,6 @@
 //! Symbol fonts: the characters the classic symbol fonts hold at each code, as the Unicode characters that
 //! stand for them, so Insert › Symbol can offer them ("Wingdings: 74") without the fonts themselves (which
-//! MailCraft does not ship; text sent as Unicode reads the same everywhere).
+//! Mail does not ship; text sent as Unicode reads the same everywhere).
 //!
 //! - **Symbol**: the Adobe Symbol encoding (Greek letters on the Latin letters, mathematical operators,
 //!   arrows and card suits), from its published Unicode mapping.

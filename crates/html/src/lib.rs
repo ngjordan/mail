@@ -2,7 +2,7 @@
 //!
 //! A tolerant tokenizer + tree builder for the HTML found in mail (WHATWG HTML used as the reference for
 //! tokenizing, named character references and implied end tags). Output is a sanitised
-//! [`mailcraft_model::Doc`]: no scripts, forms, iframes, objects, event handlers or `javascript:` URLs; CSS
+//! [`iridium_mail_model::Doc`]: no scripts, forms, iframes, objects, event handlers or `javascript:` URLs; CSS
 //! limited to inline `style` attributes plus simple `<style>` rules (type, `.class`, `#id`, `tag.class`
 //! selectors) mapped onto `TextStyle`/`ParaStyle`. Remote images are kept as URLs; blocking happens at
 //! display time. Size caps: input ≤ 16 MiB, nesting ≤ 256.
@@ -31,8 +31,8 @@ mod tokenizer;
 #[cfg(test)]
 mod tests;
 
-use mailcraft_geom::Color;
-use mailcraft_model::Doc;
+use iridium_mail_geom::Color;
+use iridium_mail_model::Doc;
 use std::borrow::Cow;
 
 /// Inputs longer than this are truncated (at a character boundary) before parsing.

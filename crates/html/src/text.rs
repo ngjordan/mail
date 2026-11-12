@@ -1,7 +1,7 @@
 //! Plain text ↔ HTML: [`doc_to_text`] (used by `html_to_text`) and [`text_to_html`] with auto-linking.
 
 use crate::serialize::{escape_attr, escape_text};
-use mailcraft_model::rich::{Block, Doc, Inline, ListKind};
+use iridium_mail_model::rich::{Block, Doc, Inline, ListKind};
 
 /// Text line used for a horizontal rule.
 pub(crate) const RULE_TEXT: &str = "------------------------------";

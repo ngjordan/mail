@@ -1,8 +1,8 @@
-//! MailCraft MCP server (layer L5): the Model Context Protocol over stdio (JSON-RPC 2.0, one message per
-//! line), so agents can read and drive MailCraft through the same command registry as the ribbon.
+//! Mail MCP server (layer L5): the Model Context Protocol over stdio (JSON-RPC 2.0, one message per
+//! line), so agents can read and drive Mail through the same command registry as the ribbon.
 //!
 //! Two backends:
-//! - [`HeadlessBackend`] owns a [`mailcraft_engine::Session`]: the sample mailbox, or a profile folder.
+//! - [`HeadlessBackend`] owns a [`iridium_mail_engine::Session`]: the sample mailbox, or a profile folder.
 //! - [`BridgedBackend`] drives a running app over its control channel (`--control-port N`,
 //!   `docs/control-protocol.md`), so an agent and a person share one window.
 //!

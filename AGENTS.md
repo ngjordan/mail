@@ -1,6 +1,6 @@
-# MailCraft: instructions for agents
+# Mail: instructions for agents
 
-MailCraft is a clean-room, open-source, Rust-native desktop mail client modelled on the classic Outlook
+Mail is a clean-room, open-source, Rust-native desktop mail client modelled on the classic Outlook
 workflow: module rail, ribbon, folder pane, message list, reading pane, compose window, rules, quick steps,
 calendar, people, tasks and notes. It runs natively on Linux, Windows, macOS and FreeBSD, and on the web via
 WASM.
@@ -41,7 +41,7 @@ People trust a mail client with their mail; a crash can lose a draft. This outra
   Specifications ([MS-OXMSG], [MS-OXWS]…). Never copy GPL/LGPL/AGPL/MPL code (Thunderbird, Evolution,
   Geary, mutt…).
 - Never test with real mail accounts. Use the local test servers and synthetic mail
-  (`mailcraft-engine::sample`, example.com/.org/.net addresses).
+  (`iridium-mail-engine::sample`, example.com/.org/.net addresses).
 
 ## Architecture (`plan/architecture.md`)
 | Layer | Crate | Job |
@@ -53,7 +53,7 @@ People trust a mail client with their mail; a crash can lose a draft. This outra
 | L4 | `engine` | Session, undo, **command registry**, Outlook feature catalog, sample mailbox |
 | L5 | `mcp` | MCP server |
 | L6 | `ui-egui` | Outlook-style egui front end |
-| apps | `apps/mailcraft`, `apps/mailcraft-cli`, `apps/mailcraft-web` | binaries |
+| apps | `apps/iridium-mail`, `apps/iridium-mail-cli`, `apps/iridium-mail-web` | binaries |
 | test support | `testmail` | local IMAP/SMTP test servers (127.0.0.1); dev-dependencies and apps only |
 
 - **Everything is a command.** User-visible behaviour is a `CommandSpec` in `crates/engine/src/cmd/*.rs`.
@@ -67,10 +67,10 @@ Before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, layers, a
 CI runs on GitHub Actions (`.github/workflows/`).
 
 ## Running and looking at the app
-- `cargo run --release -p mailcraft -- --sample --control-port 7982` (sample mailbox + control channel; see
+- `cargo run --release -p iridium-mail -- --sample --control-port 7982` (sample mailbox + control channel; see
   `docs/control-protocol.md`).
-- Headless screenshots: `cargo run -p mailcraft-ui-egui --example ui_shot -- …` (see the example header).
-- CLI and MCP: `mailcraft-cli commands`, `mailcraft-cli parity`, `mailcraft-cli mcp` (see `docs/mcp.md`).
+- Headless screenshots: `cargo run -p iridium-mail-ui-egui --example ui_shot -- …` (see the example header).
+- CLI and MCP: `iridium-mail-cli commands`, `iridium-mail-cli parity`, `iridium-mail-cli mcp` (see `docs/mcp.md`).
 - **Never use /tmp** on the dev box: it is a RAM tmpfs and filling it crashed the machine. Scratch files go
   under `target/scratch/`; run cargo with `TMPDIR=$PWD/target/tmp` (create it first) so test temp files land
   on disk.

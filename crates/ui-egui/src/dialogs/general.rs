@@ -16,7 +16,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
         "feedback" | "contactSupport" => feedback(ctx, app, d),
         "message" | "notAvailable" => message(ctx, app, d),
         "exit" => {
-            // Unsaved Edit Message changes ask first (in their windows); MailCraft then stays open.
+            // Unsaved Edit Message changes ask first (in their windows); Mail then stays open.
             if crate::edit_message::may_exit(ctx, app) {
                 ctx.send_viewport_cmd_to(egui::ViewportId::ROOT, egui::ViewportCommand::Close);
             }
@@ -40,7 +40,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
 
 /// Generic box for dialog ids without a renderer.
 pub(crate) fn not_available(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    window(ctx, app, d, "MailCraft", 380.0, |ui, app| {
+    window(ctx, app, d, "Mail", 380.0, |ui, app| {
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(Vec2::splat(28.0), Sense::hover());
             app.icons.paint(ui, r, "info", app.theme.accent);
@@ -55,7 +55,7 @@ fn ok_only(ui: &mut egui::Ui, app: &App) -> Out {
 }
 
 fn message(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    let title = if d.str("title").is_empty() { "MailCraft".to_owned() } else { d.str("title") };
+    let title = if d.str("title").is_empty() { "Mail".to_owned() } else { d.str("title") };
     window(ctx, app, d, &title, 400.0, |ui, app| {
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(Vec2::splat(28.0), Sense::hover());
@@ -71,14 +71,14 @@ fn message(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 }
 
 fn about(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    window(ctx, app, d, "About MailCraft", 420.0, |ui, app| {
+    window(ctx, app, d, "About Mail", 420.0, |ui, app| {
         ui.horizontal(|ui| {
             let (r, _) = ui.allocate_exact_size(Vec2::splat(48.0), Sense::hover());
             app.icons.paint(ui, r, "mail", app.theme.accent);
             ui.vertical(|ui| {
-                ui.label(RichText::new("MailCraft").size(20.0).strong());
+                ui.label(RichText::new("Mail").size(20.0).strong());
                 let v = if d.str("version").is_empty() {
-                    mailcraft_engine::cmd::help::VERSION.to_owned()
+                    iridium_mail_engine::cmd::help::VERSION.to_owned()
                 } else {
                     d.str("version")
                 };
@@ -114,7 +114,7 @@ pub(crate) const LESSONS: [(&str, &str, &str, &str); 8] = [
     ),
     (
         "3. Writing",
-        "New Email (Ctrl+Shift+M) opens a message. Type the addresses (MailCraft completes names it has seen), a subject and the text, then Send. Reply, Reply All and Forward answer the selected message. Drafts are kept in the Drafts folder until you send them.",
+        "New Email (Ctrl+Shift+M) opens a message. Type the addresses (Mail completes names it has seen), a subject and the text, then Send. Reply, Reply All and Forward answer the selected message. Drafts are kept in the Drafts folder until you send them.",
         "Write a new message",
         "mail.newEmail",
     ),
@@ -144,7 +144,7 @@ pub(crate) const LESSONS: [(&str, &str, &str, &str); 8] = [
     ),
     (
         "8. Send and receive",
-        "MailCraft checks your accounts on a schedule and when you press F9 (Send/Receive All Folders). Send/Receive Groups choose which accounts and folders run together and when. File › Options holds every setting.",
+        "Mail checks your accounts on a schedule and when you press F9 (Send/Receive All Folders). Send/Receive Groups choose which accounts and folders run together and when. File › Options holds every setting.",
         "Define Send/Receive Groups",
         "sendReceive.defineGroups",
     ),
@@ -155,7 +155,7 @@ const TOPICS: [(&str, &str, &str); 19] = [
     (
         "getting-started",
         "Getting started",
-        "MailCraft keeps your mail, calendar, people, tasks and notes in one window. Pick a module on the left rail, a folder in the folder pane, and a message in the list; it opens in the reading pane. Everything on the ribbon is also available from the keyboard: press Alt to see the key tips.",
+        "Mail keeps your mail, calendar, people, tasks and notes in one window. Pick a module on the left rail, a folder in the folder pane, and a message in the list; it opens in the reading pane. Everything on the ribbon is also available from the keyboard: press Alt to see the key tips.",
     ),
     (
         "training",
@@ -170,12 +170,12 @@ const TOPICS: [(&str, &str, &str); 19] = [
     (
         "writing",
         "Writing mail",
-        "Choose New Email (Ctrl+Shift+M) to write a message. Reply, Reply All and Forward start a response in the reading pane; Pop Out moves it to its own window. Drafts are saved automatically.\n\nMessage › Follow Up › Custom flags the message for you (label, start and due dates, reminder) and, under Flag for Recipients, for the people you send it to: their copies arrive flagged with your label, due date and reminder. The Tags group's launcher opens Properties: importance, sensitivity, encryption and signing, voting buttons, receipts, where replies go (Select Names picks the address), Do not deliver before, Expires after, where the sent copy is saved, contacts and categories.\n\nInsert › Calendar puts one of your calendars into the message, for today, the next days or dates you choose, as a daily schedule or a list, with as much detail as you pick, and can attach it as an iCalendar file. The Clipboard pane (Clipboard group launcher) collects what you copy in messages, in the reading pane and in other programs while MailCraft runs; its Options decide what it collects. Type the start of an AutoText entry (your name and initials are there from the start) and press F3 to insert it.",
+        "Choose New Email (Ctrl+Shift+M) to write a message. Reply, Reply All and Forward start a response in the reading pane; Pop Out moves it to its own window. Drafts are saved automatically.\n\nMessage › Follow Up › Custom flags the message for you (label, start and due dates, reminder) and, under Flag for Recipients, for the people you send it to: their copies arrive flagged with your label, due date and reminder. The Tags group's launcher opens Properties: importance, sensitivity, encryption and signing, voting buttons, receipts, where replies go (Select Names picks the address), Do not deliver before, Expires after, where the sent copy is saved, contacts and categories.\n\nInsert › Calendar puts one of your calendars into the message, for today, the next days or dates you choose, as a daily schedule or a list, with as much detail as you pick, and can attach it as an iCalendar file. The Clipboard pane (Clipboard group launcher) collects what you copy in messages, in the reading pane and in other programs while Mail runs; its Options decide what it collects. Type the start of an AutoText entry (your name and initials are there from the start) and press F3 to insert it.",
     ),
     (
         "proofing",
         "Spelling, grammar and the Editor",
-        "MailCraft marks misspelled words in red, grammar in blue (agreement such as \u{201C}she don't\u{201D}, punctuation spacing, commonly confused words such as \u{201C}could of\u{201D} or \u{201C}their is\u{201D}) and writing refinements with a dotted line. Review › Spelling and Grammar (F7) steps through the corrections; its menu chooses whether it checks spelling only or grammar too, and the choice is remembered. Review › Editor opens the Editor pane: a score for the message and the suggestions grouped as spelling, grammar, clarity (passive voice), conciseness (wordy phrases), clich\u{e9}s, formality and inclusive language. Pick a group to go through it, apply a suggestion or ignore it. File › Options › Mail › Editor Options turns each refinement group on or off.",
+        "Mail marks misspelled words in red, grammar in blue (agreement such as \u{201C}she don't\u{201D}, punctuation spacing, commonly confused words such as \u{201C}could of\u{201D} or \u{201C}their is\u{201D}) and writing refinements with a dotted line. Review › Spelling and Grammar (F7) steps through the corrections; its menu chooses whether it checks spelling only or grammar too, and the choice is remembered. Review › Editor opens the Editor pane: a score for the message and the suggestions grouped as spelling, grammar, clarity (passive voice), conciseness (wordy phrases), clich\u{e9}s, formality and inclusive language. Pick a group to go through it, apply a suggestion or ignore it. File › Options › Mail › Editor Options turns each refinement group on or off.",
     ),
     (
         "calendar",
@@ -215,12 +215,12 @@ const TOPICS: [(&str, &str, &str); 19] = [
     (
         "accounts",
         "Accounts",
-        "File › Add Account sets up a mail account: type the address and MailCraft looks up its servers (IMAP or POP3 and SMTP, or JMAP), or enter them yourself. Account Settings lists the accounts and data files: change an account's servers and password, make it the default, or remove it. Test Account Settings signs in to both servers and reports what worked. Your passwords stay on this computer, next to the mail data, never in the mail file itself.",
+        "File › Add Account sets up a mail account: type the address and Mail looks up its servers (IMAP or POP3 and SMTP, or JMAP), or enter them yourself. Account Settings lists the accounts and data files: change an account's servers and password, make it the default, or remove it. Test Account Settings signs in to both servers and reports what worked. Your passwords stay on this computer, next to the mail data, never in the mail file itself.",
     ),
     (
         "send-receive",
         "Send/Receive and its groups",
-        "Send/Receive All Folders (F9) sends what waits in the Outbox and downloads new mail for every account in the All Accounts group; Options › Advanced sets how often that happens on its own.\n\nSend / Receive › Send/Receive Groups › Define Send/Receive Groups makes your own groups. A group lists accounts and, for each, whether it sends, receives, downloads only headers, and which folders it updates. Each group decides whether F9 includes it, how often it runs by itself (online and while working offline) and whether it runs when MailCraft closes. Pick a group in the Send/Receive Groups menu to run it now.\n\nWork Offline stops every connection until you turn it off again, except for groups you set to run while working offline. The status bar can show how full your mailbox is on the server (right-click it and choose Quota Information) when the server reports a quota.",
+        "Send/Receive All Folders (F9) sends what waits in the Outbox and downloads new mail for every account in the All Accounts group; Options › Advanced sets how often that happens on its own.\n\nSend / Receive › Send/Receive Groups › Define Send/Receive Groups makes your own groups. A group lists accounts and, for each, whether it sends, receives, downloads only headers, and which folders it updates. Each group decides whether F9 includes it, how often it runs by itself (online and while working offline) and whether it runs when Mail closes. Pick a group in the Send/Receive Groups menu to run it now.\n\nWork Offline stops every connection until you turn it off again, except for groups you set to run while working offline. The status bar can show how full your mailbox is on the server (right-click it and choose Quota Information) when the server reports a quota.",
     ),
     (
         "recover",
@@ -241,7 +241,7 @@ const TOPICS: [(&str, &str, &str); 19] = [
     (
         "data",
         "Your data",
-        "MailCraft stores your mailbox in a local data file. New Data File adds another one, for example for an archive. Use File › Open & Export to import EML, MBOX, iCalendar and vCard files and to export a folder.",
+        "Mail stores your mailbox in a local data file. New Data File adds another one, for example for an archive. Use File › Open & Export to import EML, MBOX, iCalendar and vCard files and to export a folder.",
     ),
 ];
 
@@ -278,7 +278,7 @@ fn help(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         lesson: 0,
     };
     with_state(ctx, app, uid, init, |st, app| {
-        window(ctx, app, d, "MailCraft Help", 680.0, |ui, app| {
+        window(ctx, app, d, "Mail Help", 680.0, |ui, app| {
             ui.horizontal_top(|ui| {
                 ui.vertical(|ui| {
                     ui.set_width(190.0);
@@ -345,7 +345,7 @@ fn help(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                     return Out::Close;
                 }
                 if btn(ui, "Issue Tracker") {
-                    ui.ctx().open_url(egui::OpenUrl::new_tab(mailcraft_engine::cmd::help::ISSUES_URL));
+                    ui.ctx().open_url(egui::OpenUrl::new_tab(iridium_mail_engine::cmd::help::ISSUES_URL));
                 }
                 Out::Keep
             })
@@ -379,7 +379,7 @@ fn lesson(ui: &mut egui::Ui, app: &mut App, st: &mut HelpState) {
 
 fn whats_new(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     window(ctx, app, d, "What's New", 520.0, |ui, app| {
-        ui.label(RichText::new(format!("MailCraft {}", d.str("version"))).strong());
+        ui.label(RichText::new(format!("Mail {}", d.str("version"))).strong());
         let notes = d.arr("notes");
         if notes.is_empty() {
             muted(ui, app, "No release notes are bundled with this build.");
@@ -467,7 +467,7 @@ fn feedback(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                         } else {
                             "Feedback"
                         };
-                        let link = mailcraft_engine::cmd::help::new_issue_link(title, &t);
+                        let link = iridium_mail_engine::cmd::help::new_issue_link(title, &t);
                         if !link.whole {
                             // The link carries only the start: the whole text goes to the clipboard.
                             ui.ctx().copy_text(t.clone());
@@ -484,7 +484,7 @@ fn feedback(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 
 fn about_line(about: &Value) -> String {
     let g = |k: &str| about.get(k).and_then(Value::as_str).unwrap_or_default().to_owned();
-    format!("MailCraft {} on {} ({})", g("version"), g("os"), g("arch"))
+    format!("Mail {} on {} ({})", g("version"), g("os"), g("arch"))
 }
 
 fn save_changes(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
@@ -494,7 +494,7 @@ fn save_changes(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         .and_then(|c| app.s.composes.get(&c))
         .map(|c| if c.subject.trim().is_empty() { "Untitled".to_owned() } else { c.subject.clone() })
         .unwrap_or_default();
-    window(ctx, app, d, "MailCraft", 400.0, |ui, app| {
+    window(ctx, app, d, "Mail", 400.0, |ui, app| {
         if compose.is_some() {
             ui.label(format!("Do you want to save changes to \"{subject}\"?"));
         } else {
@@ -592,7 +592,7 @@ fn indexing(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let _ = d.u64("remaining");
     window(ctx, app, d, "Indexing Status", 380.0, |ui, app| {
         // Live: mail still arriving from a send/receive is counted as it comes.
-        let st = mailcraft_engine::search_index::indexing_status(&app.s);
+        let st = iridium_mail_engine::search_index::indexing_status(&app.s);
         let n = st.get("remaining").and_then(Value::as_u64).unwrap_or(0);
         if n == 0 {
             ui.label("All items are indexed.");

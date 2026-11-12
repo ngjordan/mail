@@ -4,11 +4,11 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{
     AttendeeRole, ItemAttachment, MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS, ResponseStatus,
 };
-use mailcraft_model::{
+use iridium_mail_model::{
     Appointment, Attendee, BusyStatus, DateTime, Importance, Recurrence, Task, TaskPriority, TaskStatus,
 };
 
@@ -299,7 +299,7 @@ pub(crate) fn event_from(c: &Component, ctx: &Ctx<'_>) -> Option<Event> {
         .text("UID")
         .map(|u| u.trim().to_owned())
         .filter(|u| !u.is_empty())
-        .unwrap_or_else(|| format!("{:016x}@mailcraft.import", content_hash(c)));
+        .unwrap_or_else(|| format!("{:016x}@iridium-mail.import", content_hash(c)));
     let recurrence_id = ctx.time(c, "RECURRENCE-ID").map(|(_, t)| t);
     // The IANA zone the times were entered in (recurrences then follow its daylight-saving rules).
     let year = value::civil(start_local).0;
@@ -378,7 +378,7 @@ fn attachments_of(c: &Component) -> Vec<ItemAttachment> {
 }
 
 /// The inline files of `c` the model keeps, with the index of the property each comes from. A file name
-/// from the file is made safe to save under ([`mailcraft_mime::message::safe_file_name`]: no folders, no
+/// from the file is made safe to save under ([`iridium_mail_mime::message::safe_file_name`]: no folders, no
 /// dot segments or hidden names, no device names).
 pub(crate) fn held_attachments(c: &Component) -> Vec<(usize, ItemAttachment)> {
     let mut out: Vec<(usize, ItemAttachment)> = Vec::new();
@@ -391,7 +391,7 @@ pub(crate) fn held_attachments(c: &Component) -> Vec<(usize, ItemAttachment)> {
         if !base64 {
             continue;
         }
-        let data = mailcraft_mime::transfer::decode_base64(p.value.as_bytes());
+        let data = iridium_mail_mime::transfer::decode_base64(p.value.as_bytes());
         if data.is_empty() || total.saturating_add(data.len()) > MAX_ITEM_ATTACHMENT_BYTES {
             continue;
         }
@@ -399,7 +399,7 @@ pub(crate) fn held_attachments(c: &Component) -> Vec<(usize, ItemAttachment)> {
         let name = ["X-FILENAME", "FILENAME", "X-APPLE-FILENAME"]
             .iter()
             .find_map(|n| p.param(n))
-            .map(mailcraft_mime::message::safe_file_name)
+            .map(iridium_mail_mime::message::safe_file_name)
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| format!("attachment{}", out.len().saturating_add(1)));
         let mime_type = p.param("FMTTYPE").map(|m| m.trim().to_ascii_lowercase()).unwrap_or_default();
@@ -443,7 +443,7 @@ pub(crate) fn task_from(c: &Component, ctx: &Ctx<'_>) -> Task {
         start.map(|s| DateTime::from_unix(s.unix.saturating_add(d), s.offset_min))
     });
     let upper = |name: &str| c.text(name).map(|v| v.trim().to_ascii_uppercase()).unwrap_or_default();
-    let status = match (upper("X-MAILCRAFT-STATUS").as_str(), upper("STATUS").as_str()) {
+    let status = match (upper("X-IRIDIUM_MAIL-STATUS").as_str(), upper("STATUS").as_str()) {
         ("WAITING", _) => TaskStatus::WaitingOnSomeoneElse,
         ("DEFERRED", _) | (_, "CANCELLED") => TaskStatus::Deferred,
         (_, "COMPLETED") => TaskStatus::Completed,
@@ -597,7 +597,7 @@ pub(crate) struct EventOut<'a> {
     /// Leave the attached files out (an invitation carries them as message attachments instead).
     pub no_attachments: bool,
     /// Stored on a CalDAV server, not sent: ORGANIZER and ATTENDEE carry SCHEDULE-AGENT=CLIENT (RFC 6638
-    /// section 7.1), so a server that schedules does not mail the attendees itself. MailCraft sends the
+    /// section 7.1), so a server that schedules does not mail the attendees itself. Mail sends the
     /// invitations, updates and replies.
     pub schedule_client: bool,
 }
@@ -626,7 +626,7 @@ pub(crate) fn event_component(
         _ => None,
     };
     let uid = if a.uid.trim().is_empty() {
-        format!("{:016x}@mailcraft.local", uid_hash(a))
+        format!("{:016x}@iridium-mail.local", uid_hash(a))
     } else {
         no_breaks(&a.uid)
     };
@@ -666,7 +666,7 @@ pub(crate) fn event_component(
             if !f.mime_type.trim().is_empty() {
                 params.insert(0, ("FMTTYPE", no_breaks(f.mime_type.trim())));
             }
-            c.props.push(line("ATTACH", params, mailcraft_mime::transfer::encode_base64_flat(&f.data)));
+            c.props.push(line("ATTACH", params, iridium_mail_mime::transfer::encode_base64_flat(&f.data)));
         }
     }
     if let Some(s) = o.status {
@@ -753,7 +753,7 @@ pub(crate) fn task_component(t: &Task, now: DateTime, offsets: &mut UsedZones) -
         h ^= u64::from(b);
         h = h.wrapping_mul(0x0100_0000_01b3);
     }
-    c.props.push(line("UID", vec![], format!("task-{}-{h:016x}@mailcraft.local", t.id.0)));
+    c.props.push(line("UID", vec![], format!("task-{}-{h:016x}@iridium-mail.local", t.id.0)));
     c.props.push(line("DTSTAMP", vec![], utc_text(now)));
     c.props.push(line("SUMMARY", vec![], escape(&t.subject)));
     if let Some(s) = t.start {
@@ -771,7 +771,7 @@ pub(crate) fn task_component(t: &Task, now: DateTime, offsets: &mut UsedZones) -
     };
     c.props.push(line("STATUS", vec![], status));
     if let Some(x) = x {
-        c.props.push(line("X-MAILCRAFT-STATUS", vec![], x));
+        c.props.push(line("X-IRIDIUM_MAIL-STATUS", vec![], x));
     }
     let prio = match t.priority {
         TaskPriority::High => "1",

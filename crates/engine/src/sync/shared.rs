@@ -8,8 +8,8 @@
 //! Locations to Search like any other mailbox. Closing it ([`close`]) removes the store and its local copy;
 //! the mail on the server is not touched.
 
-use mailcraft_model::account::SharedRootInfo;
-use mailcraft_model::{Account, AccountId, AccountKind, FolderRole, SharedStore};
+use iridium_mail_model::account::SharedRootInfo;
+use iridium_mail_model::{Account, AccountId, AccountKind, FolderRole, SharedStore};
 
 use crate::{CmdError, Session};
 
@@ -17,16 +17,20 @@ use crate::{CmdError, Session};
 pub const MAX_STORES: usize = 50;
 
 #[cfg(not(target_arch = "wasm32"))]
-fn kind_of(k: mailcraft_net::sync::SharedKind) -> mailcraft_model::account::SharedKind {
+fn kind_of(k: iridium_mail_net::sync::SharedKind) -> iridium_mail_model::account::SharedKind {
     match k {
-        mailcraft_net::sync::SharedKind::OtherUser => mailcraft_model::account::SharedKind::OtherUser,
-        mailcraft_net::sync::SharedKind::Shared => mailcraft_model::account::SharedKind::Shared,
+        iridium_mail_net::sync::SharedKind::OtherUser => iridium_mail_model::account::SharedKind::OtherUser,
+        iridium_mail_net::sync::SharedKind::Shared => iridium_mail_model::account::SharedKind::Shared,
     }
 }
 
 /// Records the shared mailboxes a run of `account` listed.
 #[cfg(not(target_arch = "wasm32"))]
-pub(super) fn apply_roots(s: &mut Session, account: AccountId, roots: Vec<mailcraft_net::sync::SharedRoot>) {
+pub(super) fn apply_roots(
+    s: &mut Session,
+    account: AccountId,
+    roots: Vec<iridium_mail_net::sync::SharedRoot>,
+) {
     let list: Vec<SharedRootInfo> = roots
         .into_iter()
         .map(|r| SharedRootInfo {

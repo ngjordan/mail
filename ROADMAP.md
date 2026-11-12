@@ -1,10 +1,10 @@
-# MailCraft roadmap
+# Mail roadmap
 
-MailCraft is a clean-room, open-source desktop mail client in Rust, modelled on the classic Outlook
+Mail is a clean-room, open-source desktop mail client in Rust, modelled on the classic Outlook
 workflow. This file tracks what is done, what is next, and an honest estimate of how close each area is to
 Outlook. It is updated with every commit.
 
-Status: **pre-alpha** (2026-10-29). Repository: https://github.com/MonkeySaint/mailcraft. Tags: v0.1.0 (commit 23,
+Status: **pre-alpha** (2026-10-29). Repository: https://github.com/ngjordan/mail. Tags: v0.1.0 (commit 23,
 unpublished: its release run failed), v0.1.1 (commit 26, first GitHub release), v0.2.0 (after round 5), v0.3.0 (after round 7), v0.4.0 (storage redesign S0-S6), v0.5.0 (Microsoft Graph, Exchange EWS, PST import), v0.5.1 (Windows account setup and sign-in fixes).
 
 ## Milestones
@@ -24,7 +24,7 @@ unpublished: its release run failed), v0.1.1 (commit 26, first GitHub release), 
 | — | Release pipeline on GitHub Actions (Linux AppImage/deb/rpm/tar/Flatpak, Windows MSI, macOS DMG, FreeBSD, web) | ✅ done (commits 12–13) |
 | — | Gap closing: profile settings store and Options; People/Tasks/Notes views and actions; calendar depth (colours, overlay, drag/resize, named time zones, subscriptions); compose (rich paste, themes, list formats, voting, receipts, Save Sent Item To); Junk Email; accounts (IDLE push, POP3, JMAP, OAuth sign-in, OS keyring) | ✅ round 1 done (commit 14), re-audited at 87.1 % |
 | — | Gap closing round 2: task requests, contact reminders, calendar settings and meeting form, Options wiring, saved views and columns, compose panes and find in received mail, autodiscovery/OAuth/JMAP push, keyboard focus, New Items | ✅ done (commits 15–22) |
-| — | Round 3: new-mail pipeline (junk, Focused overrides, rules, meeting auto-respond, task and receipt processing), contact reminders, saved views in Change View, theme colours, picture paste, vCard photos, compose auto-save; move to GitHub Actions, app id `saint.dev.MailCraft`, new app icon | ✅ done (commit 23, tag v0.1.0) |
+| — | Round 3: new-mail pipeline (junk, Focused overrides, rules, meeting auto-respond, task and receipt processing), contact reminders, saved views in Change View, theme colours, picture paste, vCard photos, compose auto-save; move to GitHub Actions, app id `ph.mail`, new app icon | ✅ done (commit 23, tag v0.1.0) |
 | — | Release fixes (desktop entry, web wasm-opt, Flatpak on trixie, CI cache); first published release | ✅ done (commits 24–26, tag v0.1.1) |
 | — | Round 4: AutoArchive, S/MIME, compose and reading options take effect, note positions | ✅ done |
 | — | Round 5: data safety (data files kept on Remove, Close All Items prompts), second main window, Focused Inbox on arrival, Ignore, Font and Paragraph dialogs, building blocks, screenshots, equations, thesaurus, People/Tasks/Notes/Calendar table views, Help | ✅ done, re-audited at 95.7 % |
@@ -36,17 +36,22 @@ unpublished: its release run failed), v0.1.1 (commit 26, first GitHub release), 
 
 ## Parity
 
-Two numbers, kept separate on purpose:
+Three numbers, kept separate on purpose:
 
 - **Catalog coverage** (mechanical, `cargo xtask parity` → [docs/parity.md](docs/parity.md)): every observed
-  Outlook command row maps to a MailCraft command id that exists in the registry. Today 1,565 of 1,565 applicable
-  rows (100 %); 133 rows are not applicable (cloud-only Microsoft services). This only proves an id exists.
-- **Honest parity** (re-audited 2026-10-21 after round 7): each of the 1,565 audited rows classified by what its
-  command really does: REAL (works and is reachable), DIALOG-OK (opens a dialog that works), DIALOG-STUB (opens a
-  dialog that doesn't do the thing), PARTIAL (works, but clearly less than observed), STUB (no-op, echo or
-  error). Honest % = (REAL + DIALOG-OK + ½ PARTIAL) / rows. **Overall: 99.1 %** (98.3 % counting only REAL +
-  DIALOG-OK), up from 97.1 % (94.8 %) after round 6 with the same method. Every area is above 95 % on both
-  numbers; the 27 PARTIAL rows left are listed under Biggest gaps.
+  Outlook command row maps to a Mail command id that exists in the registry. Today **1,569 of 1,569** applicable
+  rows (100 %); 129 rows are not applicable (cloud-only Microsoft services). This only proves an id exists.
+- **Honest parity** (audited 2026-10-21, after round 7): each audited row classified by what its command really
+  does: REAL (works and is reachable), DIALOG-OK (opens a dialog that works), DIALOG-STUB (opens a dialog that
+  does not do the thing), PARTIAL (works, but clearly less than observed), STUB (no-op, echo or error).
+  Honest % = (REAL + DIALOG-OK + ½ PARTIAL) / rows. **Overall: 99.1 %** (98.3 % counting only REAL +
+  DIALOG-OK), up from 97.1 % (94.8 %) after round 6 with the same method.
+- **Audit coverage**: the honest audit was made on 1,565 applicable rows. The catalogue now has 1,569; the four
+  rows added since are calendar rows, re-observed when the calendar catalogue was rewritten in `2ac4db8`
+  (2026-10-30). They are mapped and implemented, but not classified. **The honest number below therefore
+  covers 1,565 of 1,569 rows, and the next audit has to re-check the calendar area.**
+
+Every area is above 95 % on both numbers; the 27 PARTIAL rows left are listed under Biggest gaps.
 
 | Catalog area | Rows | REAL | DIALOG-OK | DIALOG-STUB | PARTIAL | STUB | Honest |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -59,7 +64,7 @@ Two numbers, kept separate on purpose:
 | People | 142 | 104 | 38 | 0 | 0 | 0 | 100 % |
 | Notes | 64 | 50 | 14 | 0 | 0 | 0 | 100 % |
 | Tasks | 144 | 119 | 25 | 0 | 0 | 0 | 100 % |
-| **Total** | **1,565** | **1,224** | **314** | **0** | **27** | **0** | **99.1 %** |
+| **Total (audited)** | **1,565** | **1,224** | **314** | **0** | **27** | **0** | **99.1 %** |
 
 ### By functional area (judgement, with evidence)
 
@@ -76,7 +81,7 @@ Two numbers, kept separate on purpose:
 | People | ~97 % | editor, groups, table and card views with sort, filter and conditional formatting, saved views, vCard/CSV, Mail Merge (e-mail, letters, labels, envelopes), CardDAV sync |
 | Tasks | ~98 % | editor, recurrence, task requests, table views with column sets and saved views, Tasks ribbon on flagged messages and contacts, CalDAV task sync, flagged mail previews in the To-Do List |
 | Notes | ~100 % | create/edit/colour, icon and table views, saved views, positions kept on the note |
-| Import/export and print | ~75 % | EML/MSG/MBOX/Maildir/ICS/VCF/CSV, PST import and Open Data File (read only; export goes to MailCraft data files, EML, MBOX, ICS and VCF; attached messages inside PST files not yet), PDF everywhere, CUPS; no Windows printing |
+| Import/export and print | ~75 % | EML/MSG/MBOX/Maildir/ICS/VCF/CSV, PST import and Open Data File (read only; export goes to Mail data files, EML, MBOX, ICS and VCF; attached messages inside PST files not yet), PDF everywhere, CUPS; no Windows printing |
 | Options dialog | ~90 % | every setting persists in the profile; 178 of 228 take effect, 29 are not applicable, 21 are shown or stored only (`settings::effect_counts`) |
 | Responsive behaviour | ~97 % | 29 of 30 observed behaviours (Classic Respond group at 1024 px) |
 | Keyboard | ~99 % | Space on a focused button; F6 cycles compose and read windows |
@@ -92,10 +97,27 @@ Two numbers, kept separate on purpose:
 4. Proofing and reading aids: one proofing language per message; Read Aloud and the Thesaurus are dialogs, not
    panes; Translate needs a server the user sets up.
 5. Mail: Post in This Folder is plain text; Quick Print opens the Print page on Windows; voting buttons only
-   work between MailCraft users.
+   work between Mail users.
+
+### What was checked in the source, and what still needs a decision
+
+A spot check of the list above against the code, on 2026-11-12:
+
+- **Check Accessibility (gap 1)** — confirmed: `crates/engine/src/cmd/review/accessibility.rs` runs the checker
+  and shows warnings while composing, but the command opens a list; there is no pane that keeps checking and
+  offers fix actions.
+- **Linked styles (gap 2)** — confirmed: there is no linked-style code path in the tree; the built-in styles
+  write direct formatting.
+- **SmartArt (gap 3)** — confirmed and refined: there is a SmartArt gallery with a layout list, a text pane and
+  a preview (`crates/ui-egui/src/dialogs/drawing_dlg.rs`). The gap is the number of layouts, not the feature.
+- **Post in This Folder (gap 5)** — confirmed: no `postInFolder` command exists in the registry.
 
 The full audit (per-row classification) is regenerated before each release. Every area is now at 95 % or more;
 the rounds after v0.3.0 work down this list and check the audit with a second, skeptical pass before v1.0.0.
+
+**Next, in order:** re-audit the calendar area (the four rows added on 2026-10-30), then the Options dialog
+(`settings::effect_counts` says 178 of 228 settings take effect), then the areas below 90 %: message list and
+folders, rules and quick steps, import/export and print, and accounts and sync.
 
 ## Needs the owner
 

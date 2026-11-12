@@ -1,7 +1,7 @@
 //! Server copies kept across an edit, inline file names, and long content lines.
 
-use mailcraft_model::calendar::ItemAttachment;
-use mailcraft_model::{Appointment, DateTime};
+use iridium_mail_model::calendar::ItemAttachment;
+use iridium_mail_model::{Appointment, DateTime};
 
 use crate::ics::{self, ImportOptions};
 use crate::keep;
@@ -100,10 +100,10 @@ const SERVER_CAL: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example//E
     DTSTART;TZID=Example/Zone:20261026T100000\r\nDURATION:PT1H\r\nSUMMARY:Sync (late)\r\nEND:VEVENT\r\n\
     END:VCALENDAR\r\n";
 
-/// MailCraft's copy of SERVER_CAL as read (times in UTC, DTEND, one alarm).
+/// Mail's copy of SERVER_CAL as read (times in UTC, DTEND, one alarm).
 fn base_cal(series_extra: &str, keep_late: bool, moved_start: &str) -> String {
     let mut s = String::from(
-        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MailCraft//EN\r\nBEGIN:VEVENT\r\nUID:s-1\r\n\
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Mail//EN\r\nBEGIN:VEVENT\r\nUID:s-1\r\n\
          DTSTAMP:20261101T000000Z\r\nDTSTART:20261012T140000Z\r\nDTEND:20261012T150000Z\r\n\
          RRULE:FREQ=WEEKLY;COUNT=4\r\nSUMMARY:Sync\r\n",
     );
@@ -135,7 +135,7 @@ fn calendars_keep_unmodelled_parts_and_take_changes() {
     assert_eq!(series.matches("BEGIN:VALARM").count(), 2, "alarms unchanged here are the server's: {out}");
     assert!(series.contains("DTSTART;TZID=Example/Zone:20261012T090000") && series.contains("DURATION:PT1H"));
     assert!(!series.contains("DTEND"), "start and end are kept together: {out}");
-    assert!(series.contains("DTSTAMP:20261101T000000Z"), "stamps are MailCraft's: {out}");
+    assert!(series.contains("DTSTAMP:20261101T000000Z"), "stamps are Mail's: {out}");
     assert!(out.contains("X-WR-CALNAME:Work") && out.contains("TZID:Example/Zone"), "{out}");
     // The moved instance (matched across time zone forms) takes the new times, all of them.
     let moved = out.split("BEGIN:VEVENT").find(|e| e.contains("Sync (moved)")).unwrap();
@@ -144,7 +144,7 @@ fn calendars_keep_unmodelled_parts_and_take_changes() {
     assert!(!out.contains("Sync (late)"), "deleted here: {out}");
     assert_eq!(out.matches("BEGIN:VEVENT").count(), 2, "{out}");
 
-    // An instance MailCraft did not read stays.
+    // An instance Mail did not read stays.
     let other = SERVER_CAL.replace(
         "END:VCALENDAR",
         "BEGIN:VEVENT\r\nUID:s-1\r\nRECURRENCE-ID:20261102T140000Z\r\nDTSTART:20261102T150000Z\r\n\
@@ -174,7 +174,7 @@ fn kept_calendars_leave_out_the_files_the_item_holds() {
 #[test]
 fn kept_calendars_keep_the_files_of_events_the_item_does_not_hold() {
     // Regression: files were left out of every event, so the first edit deleted the files of the events
-    // MailCraft did not read (another UID, past the group limit) from the server.
+    // Mail did not read (another UID, past the group limit) from the server.
     let server = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:a@example.com\r\nDTSTART:20261102T090000Z\r\n\
         ATTACH;ENCODING=BASE64;VALUE=BINARY;X-FILENAME=a.txt:eA==\r\nEND:VEVENT\r\n\
         BEGIN:VEVENT\r\nUID:a@example.com\r\nRECURRENCE-ID:20261109T090000Z\r\nDTSTART:20261109T100000Z\r\n\
@@ -202,7 +202,7 @@ fn kept_calendars_keep_the_files_of_events_the_item_does_not_hold() {
 
 #[test]
 fn attendees_go_up_scheduled_by_the_client() {
-    // Regression: the server's ATTENDEE lines (without SCHEDULE-AGENT=CLIENT) were kept when MailCraft's were
+    // Regression: the server's ATTENDEE lines (without SCHEDULE-AGENT=CLIENT) were kept when Mail's were
     // unchanged, so a scheduling server mailed its own invitations on a location change.
     let server = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:m@example.com\r\n\
         DTSTAMP:20261001T000000Z\r\nDTSTART:20261102T090000Z\r\nDTEND:20261102T100000Z\r\nSUMMARY:Plan\r\n\
@@ -221,7 +221,7 @@ fn attendees_go_up_scheduled_by_the_client() {
     assert_eq!(people.len(), 2, "{out}");
     assert!(people.iter().all(|l| l.contains("SCHEDULE-AGENT=CLIENT")), "{people:?}");
     assert!(out.contains("LOCATION:Room 2"), "{out}");
-    // People MailCraft does not model here (a task's) stay, marked as scheduled by the client.
+    // People Mail does not model here (a task's) stay, marked as scheduled by the client.
     let task = "BEGIN:VCALENDAR\r\nBEGIN:VTODO\r\nUID:t@example.com\r\nSUMMARY:Report\r\n\
         ATTENDEE;SCHEDULE-AGENT=SERVER;SCHEDULE-FORCE-SEND=REQUEST:mailto:kim@example.com\r\n\
         END:VTODO\r\nEND:VCALENDAR\r\n";
@@ -234,7 +234,7 @@ fn attendees_go_up_scheduled_by_the_client() {
 }
 
 /// `server` as read, then edited with `edit`, written in 3.0 and merged back on `server`.
-fn edit_card(server: &str, edit: impl Fn(&mut mailcraft_model::Contact)) -> String {
+fn edit_card(server: &str, edit: impl Fn(&mut iridium_mail_model::Contact)) -> String {
     let read = crate::vcf::read_str(server).remove(0);
     let mut base = String::new();
     crate::vcf::write_one(&read, crate::vcf::Version::V3, &mut base);
@@ -248,7 +248,7 @@ fn edit_card(server: &str, edit: impl Fn(&mut mailcraft_model::Contact)) -> Stri
 #[test]
 fn edited_card_fields_replace_every_name_they_are_read_from() {
     // Regression: a field read from another client's name (X-EVOLUTION-SPOUSE, X-SKYPE) kept the old value
-    // next to MailCraft's new line, so other clients went on showing it.
+    // next to Mail's new line, so other clients went on showing it.
     let server = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Pat Example\r\nN:Example;Pat;;;\r\n\
         X-EVOLUTION-SPOUSE:Alex\r\nX-MS-SPOUSE:Alex\r\nRELATED;TYPE=child:Robin\r\n\
         X-SKYPE:alexim\r\nIMPP:skype:alexim\r\nX-AIM:other-account\r\n\
@@ -259,7 +259,7 @@ fn edited_card_fields_replace_every_name_they_are_read_from() {
     });
     assert!(!out.contains("Alex") && !out.contains("alexim"), "the old values are gone: {out}");
     assert!(!out.contains("X-ABLABEL"), "the label of a removed line goes with it: {out}");
-    assert!(out.contains("X-MAILCRAFT-SPOUSE:Sam") && out.contains("IMPP:samim"), "{out}");
+    assert!(out.contains("X-IRIDIUM_MAIL-SPOUSE:Sam") && out.contains("IMPP:samim"), "{out}");
     assert!(out.contains("RELATED;TYPE=child:Robin"), "another relation stays: {out}");
     assert!(out.contains("X-AIM:other-account"), "another IM account stays: {out}");
     let back = crate::vcf::read_str(&out).remove(0);
@@ -273,7 +273,7 @@ fn edited_card_fields_replace_every_name_they_are_read_from() {
 #[test]
 fn lines_past_what_is_shown_survive_an_edit_of_the_ones_shown() {
     // Regression: editing the first e-mail address or the web page deleted the fourth address and the other
-    // web pages, which MailCraft does not show.
+    // web pages, which Mail does not show.
     let server = "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Pat Example\r\nN:Example;Pat;;;\r\n\
         EMAIL:one@example.com\r\nEMAIL:two@example.com\r\nEMAIL:three@example.com\r\nEMAIL:four@example.com\r\n\
         URL:https://www.example.com/pat\r\nURL:https://blog.example.org/\r\nEND:VCARD\r\n";

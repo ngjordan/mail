@@ -3,10 +3,10 @@
 
 #![allow(clippy::expect_used)]
 
-use mailcraft_engine::queries::{FolderRowKind, ListRow, folder_rows, list_rows, view_item_ids};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_engine::{Module, Session};
-use mailcraft_model::{Address, ArrangeBy, FolderRole, ItemId, ListFilter, SortOrder};
+use iridium_mail_engine::queries::{FolderRowKind, ListRow, folder_rows, list_rows, view_item_ids};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_engine::{Module, Session};
+use iridium_mail_model::{Address, ArrangeBy, FolderRole, ItemId, ListFilter, SortOrder};
 use serde_json::json;
 
 fn find(s: &Session, subject: &str) -> ItemId {
@@ -22,7 +22,7 @@ fn groups(rows: &[ListRow]) -> Vec<String> {
         .collect()
 }
 
-fn item_rows(rows: &[ListRow]) -> Vec<mailcraft_engine::queries::ItemRow> {
+fn item_rows(rows: &[ListRow]) -> Vec<iridium_mail_engine::queries::ItemRow> {
     rows.iter()
         .filter_map(|r| match r {
             ListRow::Item(i) => Some(i.clone()),
@@ -33,7 +33,7 @@ fn item_rows(rows: &[ListRow]) -> Vec<mailcraft_engine::queries::ItemRow> {
 
 fn arrange(s: &mut Session, key: ArrangeBy, order: SortOrder) {
     let folder = s.selection.folder;
-    let mut vs = mailcraft_engine::queries::view_settings(s, folder);
+    let mut vs = iridium_mail_engine::queries::view_settings(s, folder);
     vs.arrange_by = key;
     vs.order = order;
     vs.focused_inbox = false;
@@ -106,7 +106,7 @@ fn group_items_match_the_header_count() {
         for r in list_rows(&s) {
             if let ListRow::Group { label, count, .. } = r {
                 assert_eq!(
-                    mailcraft_engine::queries::group_items(&s, &label).len(),
+                    iridium_mail_engine::queries::group_items(&s, &label).len(),
                     count,
                     "{key:?} {label}"
                 );
@@ -199,7 +199,7 @@ fn folder_pane_default_order_and_badges() {
                 let acc = if total == 0 { r.name.clone() } else { format!("{}: {total} items", r.name) };
                 assert_eq!(r.accessible, acc);
             }
-            _ if f.kind == mailcraft_model::FolderKind::Mail => {
+            _ if f.kind == iridium_mail_model::FolderKind::Mail => {
                 let want = if unread == 0 { String::new() } else { unread.to_string() };
                 assert_eq!(r.badge, want, "{}", r.name);
                 let acc = match unread {
@@ -291,13 +291,13 @@ fn every_mailbox_change_is_journaled() {
     assert!(missed.is_empty(), "changes not reproduced by the journal: {missed:?}");
 }
 
-fn journal_then_fail(s: &mut Session, _: &serde_json::Value) -> mailcraft_engine::CmdResult {
+fn journal_then_fail(s: &mut Session, _: &serde_json::Value) -> iridium_mail_engine::CmdResult {
     let ids: Vec<ItemId> = s.mailbox.mail.ids().collect();
     for id in &ids {
         s.mailbox.mail.remove(*id);
     }
-    s.journal(ids.into_iter().map(mailcraft_store::Op::RemoveMail).collect());
-    Err(mailcraft_engine::CmdError::Failed("nope".into()))
+    s.journal(ids.into_iter().map(iridium_mail_store::Op::RemoveMail).collect());
+    Err(iridium_mail_engine::CmdError::Failed("nope".into()))
 }
 
 #[test]
@@ -307,20 +307,20 @@ fn a_failed_command_that_journaled_leaves_the_store_matching_the_rollback() {
     {
         let mut s = Session::open(dir.path()).expect("open");
         s.mailbox = sample_session().mailbox;
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         count = s.mailbox.mail.len();
         let mut specs = s.registry.specs.clone();
-        specs.push(mailcraft_engine::CommandSpec {
+        specs.push(iridium_mail_engine::CommandSpec {
             id: "test.journalThenFail",
             label: "Test",
             location: "Test",
             shortcut: "",
             params: "",
             mutates: true,
-            enabled: mailcraft_engine::always,
+            enabled: iridium_mail_engine::always,
             run: journal_then_fail,
         });
-        s.registry = mailcraft_engine::Registry::new(specs);
+        s.registry = iridium_mail_engine::Registry::new(specs);
         assert!(s.run("test.journalThenFail", &json!({})).is_err());
         assert_eq!(s.mailbox.mail.len(), count, "rolled back in memory");
     }
@@ -328,36 +328,36 @@ fn a_failed_command_that_journaled_leaves_the_store_matching_the_rollback() {
     assert_eq!(s.mailbox.mail.len(), count, "the store matches the rolled-back mailbox");
 }
 
-fn replace_then_fail(s: &mut Session, _: &serde_json::Value) -> mailcraft_engine::CmdResult {
+fn replace_then_fail(s: &mut Session, _: &serde_json::Value) -> iridium_mail_engine::CmdResult {
     s.mailbox.mail.clear();
-    s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
-    Err(mailcraft_engine::CmdError::Failed("nope".into()))
+    s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+    Err(iridium_mail_engine::CmdError::Failed("nope".into()))
 }
 
 #[test]
 fn a_failed_command_that_journaled_without_a_store_queues_the_rollback() {
     let mut s = sample_session();
     for _ in 0..3 {
-        s.journal(vec![mailcraft_store::Op::PutMail(Box::new(
+        s.journal(vec![iridium_mail_store::Op::PutMail(Box::new(
             s.mailbox.mail.items().next().cloned().expect("mail"),
         ))]);
     }
-    s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+    s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
     let base = s.mailbox.clone();
     let mut specs = s.registry.specs.clone();
-    specs.push(mailcraft_engine::CommandSpec {
+    specs.push(iridium_mail_engine::CommandSpec {
         id: "test.journalThenFail",
         label: "Test",
         location: "Test",
         shortcut: "",
         params: "",
         mutates: true,
-        enabled: mailcraft_engine::always,
+        enabled: iridium_mail_engine::always,
         run: replace_then_fail,
     });
-    s.registry = mailcraft_engine::Registry::new(specs);
+    s.registry = iridium_mail_engine::Registry::new(specs);
     assert!(s.run("test.journalThenFail", &json!({})).is_err());
-    let mut replay = mailcraft_model::Mailbox::default();
+    let mut replay = iridium_mail_model::Mailbox::default();
     for op in s.pending_ops.clone() {
         op.apply(&mut replay);
     }
@@ -374,7 +374,7 @@ fn a_growing_journal_is_folded_into_a_snapshot() {
         let mut s = Session::open(dir.path()).expect("open");
         s.checkpoint_bytes = 1;
         s.mailbox = sample_session().mailbox;
-        s.journal(vec![mailcraft_store::Op::Replace(Box::new(s.mailbox.clone()))]);
+        s.journal(vec![iridium_mail_store::Op::Replace(Box::new(s.mailbox.clone()))]);
         s.select_default_folder();
         let id = find(&s, "Analytics summary");
         s.run("nav.selectItem", &json!({"id": id.0})).expect("select");

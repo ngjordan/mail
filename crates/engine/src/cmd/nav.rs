@@ -9,7 +9,7 @@ use crate::cmd::util::{dialog, opt_bool, opt_ids};
 use crate::cmd::view::modules;
 use crate::queries;
 use crate::{CmdError, CmdResult, CommandSpec, Module, SearchScope, Selection, Session, always};
-use mailcraft_model::{FolderId, FolderKind, FolderRole, ItemId, TaskStatus};
+use iridium_mail_model::{FolderId, FolderKind, FolderRole, ItemId, TaskStatus};
 
 pub fn specs() -> Vec<CommandSpec> {
     let module = |id, label, location, shortcut, run| CommandSpec {
@@ -548,7 +548,7 @@ fn step(s: &mut Session, p: &Value, dir: Step) -> CmdResult {
 mod tests {
     use crate::Module;
     use crate::sample::sample_session;
-    use mailcraft_model::FolderRole;
+    use iridium_mail_model::FolderRole;
     use serde_json::json;
 
     #[test]
@@ -699,7 +699,7 @@ mod tests {
         s.run("nav.selectItem", &json!({"id": task})).unwrap();
         assert_eq!(s.view.module, Module::Tasks);
         assert!(s.run("tasks.markComplete", &json!({})).is_ok());
-        assert!(s.mailbox.tasks[&mailcraft_model::ItemId(task)].is_complete());
+        assert!(s.mailbox.tasks[&iridium_mail_model::ItemId(task)].is_complete());
         s.run("nav.selectItem", &json!({"id": note})).unwrap();
         assert_eq!(s.view.module, Module::Notes);
         assert_eq!(s.run("notes.delete", &json!({})).unwrap()["deleted"], json!([note]));
@@ -707,7 +707,7 @@ mod tests {
         s.run("nav.inbox", &json!({})).unwrap();
         let mail = crate::queries::visible_item_ids(&s)[0];
         if let Some(m) = s.mailbox.mail.get_mut(mail) {
-            m.flag = mailcraft_model::FlagState::Flagged {
+            m.flag = iridium_mail_model::FlagState::Flagged {
                 label: "Follow up".into(),
                 start: None,
                 due: None,

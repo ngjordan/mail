@@ -600,7 +600,7 @@ fn message_ids_are_unique_and_deterministic_in_shape() {
     assert_ne!(b.generate_message_id(d, 7), b.generate_message_id(d, 8));
     let mut anon = builder();
     anon.from = None;
-    assert!(anon.generate_message_id(d, 1).ends_with("@mailcraft.invalid"));
+    assert!(anon.generate_message_id(d, 1).ends_with("@iridium-mail.invalid"));
 }
 
 #[test]
@@ -936,14 +936,14 @@ fn review_extra_headers_cannot_duplicate_core_fields() {
         ("From".into(), "evil@example.com".into()),
         ("Bcc".into(), "leak@example.com".into()),
         ("Message-ID".into(), "<dup@x>".into()),
-        ("X-Mailer".into(), "MailCraft".into()),
+        ("X-Mailer".into(), "Mail".into()),
     ];
     let m = must(&b.build());
     assert_eq!(m.headers.get_all("Date").count(), 1);
     assert_eq!(m.headers.get_all("From").count(), 1);
     assert_eq!(m.headers.get_all("Message-ID").count(), 1);
     assert!(m.headers.get("Bcc").is_none());
-    assert_eq!(m.headers.get("X-Mailer"), Some("MailCraft"));
+    assert_eq!(m.headers.get("X-Mailer"), Some("Mail"));
 }
 
 #[test]

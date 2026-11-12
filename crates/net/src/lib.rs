@@ -1,4 +1,4 @@
-//! MailCraft protocol clients: IMAP (RFC 9051/3501 and sync extensions), SMTP submission (RFC 5321/6409),
+//! Mail protocol clients: IMAP (RFC 9051/3501 and sync extensions), SMTP submission (RFC 5321/6409),
 //! JMAP (RFC 8620/8621) with push over server-sent events, Microsoft Graph (REST v1.0: mail folders, messages,
 //! delta queries, sending), OAuth 2.0 (RFC 6749/8628/7636), an IMAP folder
 //! synchroniser, WebDAV with CardDAV (RFC 6352) and CalDAV (RFC 4791) for contacts and tasks, and account
@@ -33,6 +33,6 @@ pub mod translate;
 pub mod transport;
 
 pub use error::{NetError, Result};
-pub use mailcraft_model::Security;
+pub use iridium_mail_model::Security;
 pub use sasl::Credentials;
 pub use transport::{ConnectOptions, TlsOptions};

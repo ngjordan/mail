@@ -18,9 +18,9 @@ use serde_json::{Value, json};
 use super::super::common::{self, Dlg, Out, btn, btn_en, muted, ok_cancel, window, with_state};
 use crate::App;
 use crate::compose::{EditorHost, body_editor_in};
-use mailcraft_engine::Session;
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_model::{BodyFormat, Doc, Mailbox};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_model::{BodyFormat, Doc, Mailbox};
 
 /// Dialog title.
 pub const TITLE: &str = "Signatures and Stationery";
@@ -75,7 +75,7 @@ impl SigEditor {
     }
 
     fn html(&self) -> String {
-        self.compose().map(|c| mailcraft_html::doc_to_html(&c.body)).unwrap_or_default()
+        self.compose().map(|c| iridium_mail_html::doc_to_html(&c.body)).unwrap_or_default()
     }
 }
 
@@ -204,7 +204,7 @@ pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                     }
                     let (family, size) = parse_font_choice(&st.font);
                     let stationery =
-                        mailcraft_engine::compose::stationery(&st.stationery).map_or("none", |s| s.0);
+                        iridium_mail_engine::compose::stationery(&st.stationery).map_or("none", |s| s.0);
                     let err = common::set_options(
                         app,
                         &[
@@ -406,7 +406,7 @@ fn defaults(ui: &mut egui::Ui, app: &mut App, st: &mut SigState, uid: u64, list:
             }
         }
         ui.end_row();
-        let acc = account.map(mailcraft_model::AccountId);
+        let acc = account.map(iridium_mail_model::AccountId);
         for (label, reply, key, salt) in [
             ("New messages:", false, "newMessages", "sig-new"),
             ("Replies/forwards:", true, "replies", "sig-reply"),
@@ -463,7 +463,7 @@ fn font_choice(app: &App) -> String {
 const NO_STATIONERY: &str = "(none)";
 
 fn stationery_choice(app: &App) -> String {
-    mailcraft_engine::compose::stationery(&app.s.settings.text("mail.compose.stationery"))
+    iridium_mail_engine::compose::stationery(&app.s.settings.text("mail.compose.stationery"))
         .map_or_else(|| NO_STATIONERY.to_owned(), |s| s.1.to_owned())
 }
 
@@ -472,7 +472,7 @@ fn stationery_tab(ui: &mut egui::Ui, app: &mut App, st: &mut SigState, uid: u64)
     ui.horizontal(|ui| {
         ui.label("Stationery for new HTML messages:");
         let mut names = vec![NO_STATIONERY];
-        names.extend(mailcraft_engine::compose::STATIONERY.iter().map(|s| s.1));
+        names.extend(iridium_mail_engine::compose::STATIONERY.iter().map(|s| s.1));
         common::combo(ui, ("sstat", uid), &mut st.stationery, &names, 200.0);
     });
     common::heading(ui, app, "New mail messages");

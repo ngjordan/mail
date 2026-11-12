@@ -4,11 +4,11 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
 use egui::RawInput;
-use mailcraft_engine::queries::{ListRow, list_rows};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{ArrangeBy, FolderId};
-use mailcraft_ui_egui::App;
-use mailcraft_ui_egui::menus;
+use iridium_mail_engine::queries::{ListRow, list_rows};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{ArrangeBy, FolderId};
+use iridium_mail_ui_egui::App;
+use iridium_mail_ui_egui::menus;
 
 fn draw(ctx: &egui::Context, app: &mut App, f: impl Fn(&mut egui::Ui, &mut App)) {
     let mut out = ctx.run_ui(RawInput::default(), |ui| f(ui, app));

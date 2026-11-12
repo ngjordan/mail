@@ -1,7 +1,7 @@
 //! Recoverable items: mail, appointments, contacts, tasks and notes that were deleted for good (removed
 //! from the mailbox, not moved to Deleted Items). They stay here for a number of days so Folder › Recover
 //! Deleted Items can put them back, independent of the undo history. The store keeps the bin in its own file
-//! (`mailcraft-store`); the engine fills it after each command and purges it on a schedule.
+//! (`iridium-mail-store`); the engine fills it after each command and purges it on a schedule.
 
 use std::collections::HashSet;
 

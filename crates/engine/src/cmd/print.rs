@@ -1,7 +1,7 @@
 //! `print.*`: Print and Save as PDF (File › Print, `plan/reference/backstage.md`). Builds print content from the
 //! session (Memo Style for items, Table Style for the list, Calendar Daily / Weekly / Monthly, Card / Small
-//! Booklet / Phone Directory for contacts), lays it out with `mailcraft_render::print` and writes a PDF with
-//! `mailcraft_render::pdf`.
+//! Booklet / Phone Directory for contacts), lays it out with `iridium_mail_render::print` and writes a PDF with
+//! `iridium_mail_render::pdf`.
 //!
 //! Printers: [`SAVE_AS_PDF`] writes the PDF to `path`. Any other printer name sends the PDF to the operating
 //! system's print service: on Unix (Linux, the BSDs, macOS) through CUPS `lp`, reading the document from stdin;
@@ -20,16 +20,16 @@ use crate::cmd::calendar::occurrences;
 use crate::cmd::rules::{dialog, write_file};
 use crate::cmd::util::{opt_bool, opt_str, opt_u64};
 use crate::{CmdError, CmdResult, CommandSpec, Module, Notice, Session, always};
-use mailcraft_fonts::FontDb;
-use mailcraft_model::dates::{days_from_civil, days_in_month, local_day, weekday_of_day};
-use mailcraft_model::{
+use iridium_mail_fonts::FontDb;
+use iridium_mail_model::dates::{days_from_civil, days_in_month, local_day, weekday_of_day};
+use iridium_mail_model::{
     Appointment, BusyStatus, Contact, DateTime, Doc, FolderKind, ItemId, ListTime, MailItem, Note, Task,
     TaskPriority, TaskStatus,
 };
-use mailcraft_render::print::{
+use iridium_mail_render::print::{
     CalendarData, CalendarEvent, ContactCard, MemoItem, TableColumn, TableData, paginate, render_page,
 };
-pub use mailcraft_render::print::{
+pub use iridium_mail_render::print::{
     CalendarStyle, ContactStyle, FIELDS, Margins, Orientation, Page, PageSetup, Paper, PrintContent,
     PrintContext,
 };
@@ -336,8 +336,8 @@ fn content(s: &Session, p: &Value, style: &str) -> Result<PrintContent, CmdError
     })
 }
 
-fn people(l: &[mailcraft_model::Address]) -> String {
-    l.iter().map(mailcraft_model::Address::to_display_string).collect::<Vec<_>>().join("; ")
+fn people(l: &[iridium_mail_model::Address]) -> String {
+    l.iter().map(iridium_mail_model::Address::to_display_string).collect::<Vec<_>>().join("; ")
 }
 
 fn push(fields: &mut Vec<(String, String)>, label: &str, value: String) {
@@ -365,20 +365,20 @@ fn memo_item(s: &Session, id: ItemId) -> Option<MemoItem> {
 }
 
 /// Body of a mail item as rich text (sanitised HTML, else plain text, else the preview line).
-pub fn mail_doc(m: &MailItem, body: &mailcraft_model::Body) -> Doc {
+pub fn mail_doc(m: &MailItem, body: &iridium_mail_model::Body) -> Doc {
     match (&body.html, &body.text) {
-        (Some(h), _) => mailcraft_html::html_to_doc(h),
+        (Some(h), _) => iridium_mail_html::html_to_doc(h),
         (None, Some(t)) => Doc::from_plain_text(t),
         (None, None) => Doc::from_plain_text(&m.preview),
     }
 }
 
-fn mail_memo(m: &MailItem, body: &mailcraft_model::Body, tz: i32) -> MemoItem {
+fn mail_memo(m: &MailItem, body: &iridium_mail_model::Body, tz: i32) -> MemoItem {
     let mut f = Vec::new();
     push(
         &mut f,
         "From",
-        m.from.as_ref().map(mailcraft_model::Address::to_display_string).unwrap_or_default(),
+        m.from.as_ref().map(iridium_mail_model::Address::to_display_string).unwrap_or_default(),
     );
     push(&mut f, "Sent", ListTime::long(m.sent.unwrap_or(m.received), tz));
     push(&mut f, "To", people(&m.to));
@@ -413,9 +413,9 @@ fn appointment_memo(a: &Appointment, tz: i32) -> MemoItem {
     push(
         &mut f,
         "Organizer",
-        a.organizer.as_ref().map(mailcraft_model::Address::to_display_string).unwrap_or_default(),
+        a.organizer.as_ref().map(iridium_mail_model::Address::to_display_string).unwrap_or_default(),
     );
-    let att: Vec<mailcraft_model::Address> = a.attendees.iter().map(|x| x.mailbox.clone()).collect();
+    let att: Vec<iridium_mail_model::Address> = a.attendees.iter().map(|x| x.mailbox.clone()).collect();
     push(&mut f, "Attendees", people(&att));
     push(&mut f, "Categories", a.categories.join(", "));
     MemoItem { fields: f, body: Doc::from_plain_text(&a.body) }
@@ -584,7 +584,7 @@ fn calendar(s: &Session, p: &Value, style: &str) -> Result<CalendarData, CmdErro
     let end = parse_day(opt_str(p, "end"));
     let anchor = start.unwrap_or(today);
     let (cs, cy, cm) = {
-        let (y, m, _) = mailcraft_model::dates::civil_from_days(anchor);
+        let (y, m, _) = iridium_mail_model::dates::civil_from_days(anchor);
         (anchor, y, m)
     };
     let (first, last) = match (style, start, end) {
@@ -606,16 +606,17 @@ fn calendar(s: &Session, p: &Value, style: &str) -> Result<CalendarData, CmdErro
     // Window in UTC covering the local days (one extra day either side for offsets).
     let from = DateTime::from_unix(first.saturating_sub(1).saturating_mul(86_400), 0);
     let to = DateTime::from_unix(last.saturating_add(2).saturating_mul(86_400), 0);
-    let folder = opt_u64(p, "folder").map(mailcraft_model::FolderId);
+    let folder = opt_u64(p, "folder").map(iridium_mail_model::FolderId);
     let mut events = Vec::new();
     for a in s.mailbox.appointments.values() {
         if folder.is_some_and(|f| f != a.folder) {
             continue;
         }
         for (st, en) in occurrences(a, from, to, MAX_OCCURRENCES) {
-            let lst = mailcraft_model::dates::LocalTime::of(st, tz);
-            let len = mailcraft_model::dates::LocalTime::of(en, tz);
-            let mins = |l: &mailcraft_model::dates::LocalTime| u32::from(l.hour) * 60 + u32::from(l.minute);
+            let lst = iridium_mail_model::dates::LocalTime::of(st, tz);
+            let len = iridium_mail_model::dates::LocalTime::of(en, tz);
+            let mins =
+                |l: &iridium_mail_model::dates::LocalTime| u32::from(l.hour) * 60 + u32::from(l.minute);
             events.push(CalendarEvent {
                 start_day: lst.day_number,
                 start_min: mins(&lst),
@@ -731,8 +732,8 @@ pub fn pdf_bytes(s: &Session, p: &Value) -> Result<(Vec<u8>, usize, String), Cmd
     let keep = page_range(opt_str(p, "pages"), job.pages.len());
     let pages: Vec<Page> = keep.iter().filter_map(|i| job.pages.get(*i).cloned()).collect();
     let info =
-        mailcraft_render::pdf::PdfInfo { title: job.ctx.title.clone(), author: job.ctx.user_name.clone() };
-    let bytes = mailcraft_render::pdf::write_pdf(&pages, &fonts, &info)
+        iridium_mail_render::pdf::PdfInfo { title: job.ctx.title.clone(), author: job.ctx.user_name.clone() };
+    let bytes = iridium_mail_render::pdf::write_pdf(&pages, &fonts, &info)
         .map_err(|e| CmdError::Failed(e.to_string()))?;
     Ok((bytes, pages.len(), job.ctx.title))
 }
@@ -759,9 +760,9 @@ pub(crate) fn output_pages(
     printer: &str,
     path: Option<&str>,
 ) -> CmdResult {
-    let info = mailcraft_render::pdf::PdfInfo { title: title.to_owned(), author: String::new() };
+    let info = iridium_mail_render::pdf::PdfInfo { title: title.to_owned(), author: String::new() };
     let pdf = |pages: &[Page]| {
-        mailcraft_render::pdf::write_pdf(pages, fonts, &info).map_err(|e| CmdError::Failed(e.to_string()))
+        iridium_mail_render::pdf::write_pdf(pages, fonts, &info).map_err(|e| CmdError::Failed(e.to_string()))
     };
     if printer.eq_ignore_ascii_case(SAVE_AS_PDF) {
         let path = path
@@ -944,13 +945,13 @@ fn preview_cmd(s: &mut Session, p: &Value) -> CmdResult {
         && let Some(obj) = out.as_object_mut()
     {
         let canvas =
-            mailcraft_render::Canvas { width: pv.width, height: pv.height, pixels: premultiply(&pv.rgba) };
+            iridium_mail_render::Canvas { width: pv.width, height: pv.height, pixels: premultiply(&pv.rgba) };
         obj.insert("png".into(), json!(base64::engine::general_purpose::STANDARD.encode(canvas.to_png())));
     }
     Ok(out)
 }
 
-/// Straight-alpha RGBA → premultiplied (what [`mailcraft_render::Canvas`] holds).
+/// Straight-alpha RGBA → premultiplied (what [`iridium_mail_render::Canvas`] holds).
 fn premultiply(rgba: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(rgba.len());
     for &[r, g, b, a] in rgba.as_chunks::<4>().0 {
@@ -1117,8 +1118,8 @@ mod tests {
         // Quick Print without direct printing (tests, tools) opens the Print page even with a printer.
         let mut s = sample_session();
         let id = first_mail(&s);
-        s.selection.items = vec![mailcraft_model::ItemId(id)];
-        s.selection.focus = Some(mailcraft_model::ItemId(id));
+        s.selection.items = vec![iridium_mail_model::ItemId(id)];
+        s.selection.focus = Some(iridium_mail_model::ItemId(id));
         assert!(!s.direct_print);
         assert_eq!(s.run("mail.quickPrint", &json!({"ids": [id]})).unwrap()["dialog"], "print");
     }
@@ -1128,8 +1129,8 @@ mod tests {
         let mut s = sample_session();
         let dir = tmp();
         let id = first_mail(&s);
-        s.selection.items = vec![mailcraft_model::ItemId(id)];
-        s.selection.focus = Some(mailcraft_model::ItemId(id));
+        s.selection.items = vec![iridium_mail_model::ItemId(id)];
+        s.selection.focus = Some(iridium_mail_model::ItemId(id));
         // Without style / printer / path they still open the Print page.
         assert_eq!(s.run("mail.print", &json!({"ids": [id]})).unwrap()["dialog"], "print");
         assert_eq!(s.run("mail.quickPrint", &json!({"ids": [id]})).unwrap()["dialog"], "print");

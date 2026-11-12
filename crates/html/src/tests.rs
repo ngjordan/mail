@@ -2,8 +2,8 @@
 //! conversions, remote resources and hostile input.
 
 use crate::*;
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Align, Block, Inline, ListKind, ParaStyle, TableCell, TextStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Align, Block, Inline, ListKind, ParaStyle, TableCell, TextStyle};
 use proptest::prelude::*;
 
 mod borders;
@@ -1164,7 +1164,7 @@ fn stylesheet_work_is_budgeted_per_document() {
 
 #[test]
 fn font_effects_survive_a_round_trip() {
-    use mailcraft_model::UnderlineKind;
+    use iridium_mail_model::UnderlineKind;
     let st = TextStyle {
         underline: Some(true),
         underline_kind: Some(UnderlineKind::Wavy),
@@ -1213,7 +1213,7 @@ fn font_effects_survive_a_round_trip() {
 fn underline_with_double_strikethrough_survives_a_round_trip() {
     // Regression: `<u style=dotted><s style=double>` read back as a double underline and a single strike,
     // because the strike's decoration style was given to the inherited underline.
-    use mailcraft_model::UnderlineKind;
+    use iridium_mail_model::UnderlineKind;
     let st = TextStyle {
         underline: Some(true),
         underline_kind: Some(UnderlineKind::Dotted),
@@ -1267,7 +1267,10 @@ fn css_decoration_shorthands_and_hostile_values() {
         <span style="letter-spacing: 9999px; vertical-align: -1e30pt">b</span>
         <span style="letter-spacing: normal; font-variant: normal; text-transform: none">c</span></p>"#);
     let a = run_style(&d, "a");
-    assert_eq!((a.underline, a.underline_kind), (Some(true), Some(mailcraft_model::UnderlineKind::Dotted)));
+    assert_eq!(
+        (a.underline, a.underline_kind),
+        (Some(true), Some(iridium_mail_model::UnderlineKind::Dotted))
+    );
     assert_eq!(a.underline_color, Some(Color::rgb(0, 0, 255)));
     let b = run_style(&d, "b");
     assert!(b.spacing_pt.is_some_and(|v| v <= 200.0) && b.position_pt.is_none_or(|v| v >= -200.0));
@@ -1277,7 +1280,7 @@ fn css_decoration_shorthands_and_hostile_values() {
 
 #[test]
 fn paragraph_indents_line_rules_and_breaks_round_trip() {
-    use mailcraft_model::LineRule;
+    use iridium_mail_model::LineRule;
     for (rule, word) in [(LineRule::Exactly, "exactly"), (LineRule::AtLeast, "at-least")] {
         let ps = ParaStyle {
             indent_px: 48.0,

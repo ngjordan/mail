@@ -3,13 +3,13 @@
 //! take a click (the Quick Click flag and category), and the row font from Conditional Formatting.
 //!
 //! The columns, their order, the sort field and the rules come from the engine
-//! (`mailcraft_engine::cmd::view::table`).
+//! (`iridium_mail_engine::cmd::view::table`).
 
 use egui::{Color32, CornerRadius, FontId, Id, Rect, Role, Sense, Stroke, Ui, Vec2, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::view::table::{ModuleRowStyle, ShownColumn, SortField, TableColumn};
-use mailcraft_model::view::TableOther;
+use iridium_mail_engine::cmd::view::table::{ModuleRowStyle, ShownColumn, SortField, TableColumn};
+use iridium_mail_model::view::TableOther;
 
 use super::common::{a11y, paint_text_clipped};
 use crate::App;
@@ -239,9 +239,9 @@ pub(crate) fn categories_cell(
     a11y(&resp, Role::Button, if cats.is_empty() { "No Categories" } else { "Categories" });
     let mut x = cell.min.x + 4.0;
     for name in cats.iter().take(3) {
-        let color = mailcraft_model::Category::find(&app.s.mailbox.categories, name)
+        let color = iridium_mail_model::Category::find(&app.s.mailbox.categories, name)
             .map(|c| c.color)
-            .filter(|c| *c != mailcraft_model::CategoryColor::None)
+            .filter(|c| *c != iridium_mail_model::CategoryColor::None)
             .map(|c| super::common::geom_color(c.rgb()));
         if let Some(color) = color {
             let block = Rect::from_min_size(pos2(x, cell.center().y - 6.0), vec2(8.0, 12.0));
@@ -332,7 +332,7 @@ pub(crate) fn paint_icon(ui: &Ui, app: &mut App, cell: Rect, icon: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::cmd::view::table::{CONTACT_COLUMNS, TASK_COLUMNS};
+    use iridium_mail_engine::cmd::view::table::{CONTACT_COLUMNS, TASK_COLUMNS};
 
     fn cols(all: &'static [TableColumn], ids: &[&str]) -> Vec<ShownColumn> {
         ids.iter()

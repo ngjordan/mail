@@ -47,7 +47,7 @@ jobs:
           case "$v" in *-*) pre=true ;; *) pre=false ;; esac
           echo "version=$v" >>"$GITHUB_OUTPUT"
           echo "prerelease=$pre" >>"$GITHUB_OUTPUT"
-          echo "MailCraft $v (prerelease: $pre)"
+          echo "Mail $v (prerelease: $pre)"
 
   linux:
     needs: version-check
@@ -78,7 +78,7 @@ jobs:
           path: |
             /usr/local/cargo/registry
             /usr/local/cargo/git
-            ~/.cache/mailcraft-packaging
+            ~/.cache/iridium-mail-packaging
             target
           key: release-linux-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
       - name: Packaging tools (apt, nfpm)
@@ -122,7 +122,7 @@ jobs:
       - name: AppImage opens its window offline (Ubuntu 22.04, Xvfb)
         env:
           CONTAINER: docker
-        run: packaging/linux/appimage-test.sh --self-test "dist/linux/MailCraft-${{ matrix.arch }}.AppImage"
+        run: packaging/linux/appimage-test.sh --self-test "dist/linux/Mail-${{ matrix.arch }}.AppImage"
 
   flatpak:
     needs: linux
@@ -149,7 +149,7 @@ jobs:
           key: flatpak-freedesktop-25.08
       - name: Flatpak bundle
         run: |
-          tarball="$(ls dist/linux/mailcraft-*-linux-x86_64.tar.gz)"
+          tarball="$(ls dist/linux/iridium-mail-*-linux-x86_64.tar.gz)"
           packaging/linux/flatpak/flatpak-bundle.sh --tarball "$tarball" --arch x86_64 --out dist/flatpak
       - uses: actions/upload-artifact@v4
         with:
@@ -217,7 +217,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-ChildItem dist -Filter *.msi | Select-Object -First 1).FullName
-          ./packaging/windows/check-icon.ps1 -Exe target/x86_64-pc-windows-msvc/release/mailcraft.exe -Msi $msi
+          ./packaging/windows/check-icon.ps1 -Exe target/x86_64-pc-windows-msvc/release/iridium-mail.exe -Msi $msi
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64
@@ -307,7 +307,7 @@ jobs:
           range="$TAG"
           [ -n "$prev" ] && range="$prev..$TAG"
           {
-            echo "MailCraft $VERSION."
+            echo "Mail $VERSION."
             echo
             echo "Downloads: Linux (tar.gz, .deb, .rpm, AppImage, Flatpak), Windows (MSI, zip), macOS (DMG), FreeBSD (tar.gz, pkg) and web (zip). Check them against SHA256SUMS."
             echo
@@ -327,7 +327,7 @@ jobs:
             # A re-run: replace the files of the existing release.
             gh release upload "$TAG" dist/release/* --clobber
           else
-            flags=(--verify-tag --title "MailCraft $VERSION" --notes-file dist/notes.md)
+            flags=(--verify-tag --title "Mail $VERSION" --notes-file dist/notes.md)
             [ "$PRERELEASE" = true ] && flags+=(--prerelease)
             gh release create "$TAG" "${flags[@]}" dist/release/*
           fi

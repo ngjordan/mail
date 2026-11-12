@@ -216,7 +216,7 @@ fn definitions_parse_cleanly() {
 
 #[test]
 fn every_command_id_exists_in_the_registry() {
-    let reg = mailcraft_engine::cmd::registry();
+    let reg = iridium_mail_engine::cmd::registry();
     let mut missing = Vec::new();
     for (at, c) in all_cmds() {
         if reg.get(&c.id).is_none() {
@@ -231,7 +231,7 @@ fn every_command_id_exists_in_the_registry() {
 fn every_command_has_a_mapped_catalog_counterpart_or_is_known() {
     // Every id we use is one the feature catalog maps somewhere (or one of our own few additions).
     let catalog: BTreeSet<&str> =
-        mailcraft_engine::catalog::catalog_rows().iter().filter_map(|r| r.id).collect();
+        iridium_mail_engine::catalog::catalog_rows().iter().filter_map(|r| r.id).collect();
     // Module commands act on the selected module item (the catalog maps some of these to mail.* ids).
     // Sign sits next to Encrypt once S/MIME is set up; the observed window had no digital ID to show it.
     // Delete on the Shape Format tab removes the selected drawing (the observed tab relied on the Delete key).
@@ -298,7 +298,7 @@ fn every_icon_is_from_the_shared_list() {
         assert!(ICONS.contains(i), "{i}");
     }
     // Dynamic items use fixed icons too.
-    let app = App::new(mailcraft_engine::sample::sample_session());
+    let app = App::new(iridium_mail_engine::sample::sample_session());
     for src in state::SOURCES {
         for item in state::dyn_items(&app, Surface::Main, src) {
             if !ok(item.icon) {
@@ -380,7 +380,7 @@ fn control_keytips_are_unique_within_a_tab() {
 
 #[test]
 fn tabs_per_surface_and_mode() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.s.view.simplified_ribbon = true;
     assert_eq!(tabs(&app, Surface::Main), ["Home", "Send / Receive", "View", "Help"]);
     app.s.view.simplified_ribbon = false;
@@ -398,7 +398,7 @@ fn tabs_per_surface_and_mode() {
     );
     assert_eq!(tabs(&app, Surface::Read(1)), ["Message", "Help"]);
     // Module Home tabs replace the Mail one.
-    app.s.view.module = mailcraft_engine::Module::Calendar;
+    app.s.view.module = iridium_mail_engine::Module::Calendar;
     let home = resolve_tab(&app, Surface::Main, "Home").unwrap();
     assert_eq!(home.surface, "calendar");
     assert_eq!(resolve_tab(&app, Surface::Main, "Help").unwrap().surface, "main");
@@ -408,18 +408,18 @@ fn tabs_per_surface_and_mode() {
 #[test]
 fn calendar_colour_and_contact_tag_states() {
     use serde_json::json;
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
-    app.s.view.module = mailcraft_engine::Module::Calendar;
+    app.s.view.module = iridium_mail_engine::Module::Calendar;
     assert!(state::is_on(&app, Surface::Main, &mem, "calcolor:Automatic"));
     app.run("calendar.color", json!({"color": "Navy Blue"}));
     assert!(state::is_on(&app, Surface::Main, &mem, "calcolor:Navy_Blue"));
     assert!(!state::is_on(&app, Surface::Main, &mem, "calcolor:Automatic"));
     // Clear Flag and Clear All Categories need a flagged / categorised contact.
     let id = app.run("people.new", json!({"fullName": "Tag Test"})).unwrap()["id"].as_u64().unwrap();
-    app.s.view.module = mailcraft_engine::Module::People;
+    app.s.view.module = iridium_mail_engine::Module::People;
     app.ui.module_selection = Some(id);
-    app.s.selection.items = vec![mailcraft_model::ItemId(id)];
+    app.s.selection.items = vec![iridium_mail_model::ItemId(id)];
     assert!(!state::is_on(&app, Surface::Main, &mem, "pim:hasFlag"));
     assert!(!state::is_on(&app, Surface::Main, &mem, "pim:hasCategories"));
     app.run("people.flag", json!({"ids": [id], "kind": "today"})).expect("flag");
@@ -438,7 +438,7 @@ fn calendar_colour_and_contact_tag_states() {
 
 #[test]
 fn toggles_reflect_state() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
     assert!(state::is_on(&app, Surface::Main, &mem, "rp:right"));
     app.run("view.readingPane", serde_json::json!({"position": "bottom"}));
@@ -459,7 +459,7 @@ fn toggles_reflect_state() {
 
 #[test]
 fn params_templates_fill() {
-    let app = App::new(mailcraft_engine::sample::sample_session());
+    let app = App::new(iridium_mail_engine::sample::sample_session());
     let v = state::fill(
         r#"{"on":"$!on","n":"$value","x":"$id"}"#,
         true,
@@ -477,7 +477,7 @@ fn params_templates_fill() {
 /// Message › Zoom in a read window zooms that window: the button passes the window's message.
 #[test]
 fn read_window_zoom_names_the_window_message() {
-    let app = App::new(mailcraft_engine::sample::sample_session());
+    let app = App::new(iridium_mail_engine::sample::sample_session());
     let v = state::with_context(&app, Surface::Read(9), "view.zoom", serde_json::json!({}));
     assert_eq!(v, serde_json::json!({"ids": [9]}));
     let v = state::with_context(&app, Surface::Main, "view.zoom", serde_json::json!({}));
@@ -486,9 +486,9 @@ fn read_window_zoom_names_the_window_message() {
 
 #[test]
 fn read_window_quick_steps_act_on_the_window_message() {
-    use mailcraft_model::ItemId;
+    use iridium_mail_model::ItemId;
     let ctx = egui::Context::default();
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let inbox = app.s.selection.folder;
     let items: Vec<ItemId> = app.s.mailbox.items_in(inbox).iter().map(|m| m.id).collect();
     let (selected, open) = (items[0], items[1]);
@@ -503,7 +503,7 @@ fn read_window_quick_steps_act_on_the_window_message() {
         .mailbox
         .folders
         .values()
-        .find(|f| f.role == Some(mailcraft_model::FolderRole::Archive))
+        .find(|f| f.role == Some(iridium_mail_model::FolderRole::Archive))
         .map(|f| f.id)
         .unwrap();
     let act = state::Action {
@@ -528,9 +528,9 @@ fn read_window_quick_steps_act_on_the_window_message() {
 
 #[test]
 fn read_window_commands_act_on_the_window_message_without_touching_the_list_selection() {
-    use mailcraft_model::{FlagState, ItemId};
+    use iridium_mail_model::{FlagState, ItemId};
     let ctx = egui::Context::default();
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let inbox = app.s.selection.folder;
     let open = app.s.mailbox.items_in(inbox).first().map(|m| m.id).unwrap();
     // Clear All Categories needs a category to clear.
@@ -568,7 +568,7 @@ fn read_window_commands_act_on_the_window_message_without_touching_the_list_sele
     state::run(&ctx, &mut app, surface, &mut state::Mem::default(), &resend);
     assert_eq!(app.s.composes.len(), composes, "nothing is resent before the question is answered");
     assert!(
-        app.s.notices.iter().any(|n| matches!(n, mailcraft_engine::Notice::OpenDialog(d, p)
+        app.s.notices.iter().any(|n| matches!(n, iridium_mail_engine::Notice::OpenDialog(d, p)
             if d == "confirm" && p["params"]["ids"] == serde_json::json!([open.0]))),
         "the question names the window's message"
     );
@@ -584,14 +584,14 @@ fn read_window_commands_act_on_the_window_message_without_touching_the_list_sele
 
 #[test]
 fn tasks_follow_up_buttons_show_the_selected_rows_flag() {
-    use mailcraft_model::ItemId;
+    use iridium_mail_model::ItemId;
     // Selects a To-Do List row as the Tasks view does.
     fn pick(app: &mut App, id: u64) {
         app.ui.module_selection = Some(id);
         app.s.selection.items = vec![ItemId(id)];
         app.s.selection.focus = Some(ItemId(id));
     }
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.run("nav.tasks", serde_json::json!({}));
     let id = app
         .run("tasks.new", serde_json::json!({"subject": "Plan the trip"}))
@@ -625,7 +625,7 @@ fn tasks_follow_up_buttons_show_the_selected_rows_flag() {
 #[test]
 fn keytips_select_tabs_and_run_commands() {
     let ctx = egui::Context::default();
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.s.view.simplified_ribbon = false;
     assert_eq!(keytip(&ctx, &mut app, Surface::Main, "V"), KeytipHit::Tab("View"));
     assert_eq!(selected_tab(&app, Surface::Main), "View");
@@ -640,14 +640,14 @@ fn keytips_select_tabs_and_run_commands() {
     assert_eq!(state::load_mem(&ctx, Surface::Main).open_request.as_deref(), Some("PN"));
     // "Alt, V, P N, B": Reading Pane › Bottom.
     assert_eq!(keytip(&ctx, &mut app, Surface::Main, "VPNB"), KeytipHit::Done);
-    assert_eq!(app.reading_pane_pos(), mailcraft_model::ReadingPanePos::Bottom);
+    assert_eq!(app.reading_pane_pos(), iridium_mail_model::ReadingPanePos::Bottom);
     assert_eq!(state::load_mem(&ctx, Surface::Main).open_request, None);
 }
 
 #[test]
 fn keytips_reach_dropdown_entries_and_split_menus() {
     let ctx = egui::Context::default();
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let first = app.s.mailbox.mail.ids().next().unwrap();
     app.run("nav.selectItem", serde_json::json!({"id": first.0}));
     app.run("mail.flag", serde_json::json!({"kind": "clear"}));
@@ -664,7 +664,7 @@ fn keytips_reach_dropdown_entries_and_split_menus() {
     assert_eq!(keytip(&ctx, &mut app, Surface::Main, "HUT"), KeytipHit::Done);
     assert!(matches!(
         app.s.mailbox.mail.get(first).map(|m| &m.flag),
-        Some(mailcraft_model::FlagState::Flagged { .. })
+        Some(iridium_mail_model::FlagState::Flagged { .. })
     ));
     // Submenus: "Alt, H, N, U, P" = New Email › E-mail Message Using › Plain Text.
     let composes = app.s.composes.len();
@@ -685,7 +685,7 @@ fn keytips_reach_dropdown_entries_and_split_menus() {
 #[test]
 fn read_window_keytips_follow_the_observed_ribbon() {
     let ctx = egui::Context::default();
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.s.view.simplified_ribbon = true;
     let folder = app.s.selection.folder;
     let item = app.s.mailbox.mail.items().find(|m| m.folder == folder).map(|m| m.id.0).unwrap();
@@ -693,9 +693,9 @@ fn read_window_keytips_follow_the_observed_ribbon() {
     // uia/read-window-ribbon.txt: Mark Unread "U", Follow Up "W", Archive "O 1", Zoom "Q 1".
     assert_eq!(keytip(&ctx, &mut app, surface, "HW"), KeytipHit::Menu);
     assert_eq!(state::load_mem(&ctx, surface).open_request.as_deref(), Some("W"));
-    let read = app.s.mailbox.mail.get(mailcraft_model::ItemId(item)).map(|m| m.read);
+    let read = app.s.mailbox.mail.get(iridium_mail_model::ItemId(item)).map(|m| m.read);
     assert_eq!(keytip(&ctx, &mut app, surface, "HU"), KeytipHit::Done);
-    assert_ne!(app.s.mailbox.mail.get(mailcraft_model::ItemId(item)).map(|m| m.read), read);
+    assert_ne!(app.s.mailbox.mail.get(iridium_mail_model::ItemId(item)).map(|m| m.read), read);
     let d = defs();
     let tab = d.tab("read", true, "Message").unwrap();
     let keys: Vec<&str> = tab.groups.iter().flat_map(|g| g.ctls.iter()).map(|c| c.key.as_str()).collect();
@@ -706,7 +706,7 @@ fn read_window_keytips_follow_the_observed_ribbon() {
 
 #[test]
 fn keytip_for_an_overflowed_control_opens_the_more_menu() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.s.view.simplified_ribbon = true;
     let mut h = harness(app, Surface::Main, 600.0);
     h.run();
@@ -733,7 +733,7 @@ fn both_ribbon_modes_render() {
     use egui_kittest::kittest::Queryable;
     for simplified in [true, false] {
         for width in [1920.0, 1024.0, 640.0] {
-            let mut app = App::new(mailcraft_engine::sample::sample_session());
+            let mut app = App::new(iridium_mail_engine::sample::sample_session());
             app.s.view.simplified_ribbon = simplified;
             app.ui.keytips = Some("H".into());
             let mut h = harness(app, Surface::Main, width);
@@ -765,7 +765,7 @@ fn both_ribbon_modes_render() {
 fn compose_read_search_and_module_ribbons_render() {
     use egui_kittest::kittest::Queryable;
     for simplified in [true, false] {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         app.s.view.simplified_ribbon = simplified;
         let cid =
             app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
@@ -777,31 +777,32 @@ fn compose_read_search_and_module_ribbons_render() {
             h.state_mut().ui.ribbon_tab.insert(format!("compose:{cid}"), tab.into());
             h.run();
         }
-        let app = std::mem::replace(h.state_mut(), App::new(mailcraft_engine::sample::sample_session()));
+        let app = std::mem::replace(h.state_mut(), App::new(iridium_mail_engine::sample::sample_session()));
         drop(h);
         let mut h = harness(app, Surface::Read(item), 1200.0);
         h.run();
         assert!(h.query_by_label("Forward").is_some());
-        let mut app = std::mem::replace(h.state_mut(), App::new(mailcraft_engine::sample::sample_session()));
+        let mut app =
+            std::mem::replace(h.state_mut(), App::new(iridium_mail_engine::sample::sample_session()));
         drop(h);
         app.ui.search_active = true;
         for module in [
-            mailcraft_engine::Module::Mail,
-            mailcraft_engine::Module::Calendar,
-            mailcraft_engine::Module::People,
-            mailcraft_engine::Module::Tasks,
-            mailcraft_engine::Module::Notes,
+            iridium_mail_engine::Module::Mail,
+            iridium_mail_engine::Module::Calendar,
+            iridium_mail_engine::Module::People,
+            iridium_mail_engine::Module::Tasks,
+            iridium_mail_engine::Module::Notes,
         ] {
             app.s.view.module = module;
             let mut h = harness(app, Surface::Main, 1600.0);
             h.run();
-            if module == mailcraft_engine::Module::Mail {
+            if module == iridium_mail_engine::Module::Mail {
                 // The Search tab comes forward when search becomes active.
                 assert!(h.query_by_label("Has Attachments").is_some());
                 h.state_mut().ui.ribbon_tab.insert("main".into(), "Home".into());
             }
             h.run();
-            app = std::mem::replace(h.state_mut(), App::new(mailcraft_engine::sample::sample_session()));
+            app = std::mem::replace(h.state_mut(), App::new(iridium_mail_engine::sample::sample_session()));
         }
     }
 }
@@ -812,11 +813,11 @@ fn compose_read_search_and_module_ribbons_render() {
 fn show_as_conversations_asks_for_the_scope() {
     use egui_kittest::kittest::Queryable;
     for simplified in [false, true] {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         app.s.view.simplified_ribbon = simplified;
         app.ui.ribbon_tab.insert("main".into(), "View".into());
         let folder = app.s.selection.folder;
-        let before = mailcraft_engine::queries::view_settings(&app.s, folder).conversations;
+        let before = iridium_mail_engine::queries::view_settings(&app.s, folder).conversations;
         let mut h = harness(app, Surface::Main, 1920.0);
         h.run();
         if simplified {
@@ -828,7 +829,7 @@ fn show_as_conversations_asks_for_the_scope() {
         h.run();
         let app = h.state();
         assert_eq!(
-            mailcraft_engine::queries::view_settings(&app.s, folder).conversations,
+            iridium_mail_engine::queries::view_settings(&app.s, folder).conversations,
             before,
             "nothing changes before the answer (simplified={simplified})"
         );
@@ -840,7 +841,7 @@ fn show_as_conversations_asks_for_the_scope() {
 /// they change elsewhere, e.g. from the list's context menu or in another folder), not remembered clicks.
 #[test]
 fn conversation_settings_menu_follows_the_engine() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.run("view.conversations", serde_json::json!({"on": true, "scope": "all"}));
     let mem = state::Mem::default();
     let items = defs().menu("conversationSettings").unwrap();
@@ -878,7 +879,7 @@ fn conversation_settings_menu_follows_the_engine() {
 
 #[test]
 fn search_tab_recent_searches_and_toggles() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let items = state::dyn_items(&app, Surface::Main, "recentSearches");
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].label, "No Recent Searches");
@@ -913,7 +914,7 @@ fn search_tab_recent_searches_and_toggles() {
 
 #[test]
 fn search_tools_locations_categories_and_empty_recent_searches() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
     // No Recent Searches is a greyed-out placeholder.
     let recent = state::expand_items(&app, Surface::Main, &mem, &defs().menus["recentSearches"]);
@@ -955,12 +956,12 @@ fn search_tools_locations_categories_and_empty_recent_searches() {
 
 #[test]
 fn module_view_galleries_and_calendar_view_commands() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let tasks: Vec<String> =
         state::dyn_items(&app, Surface::Main, "views:tasks").into_iter().map(|d| d.label).collect();
     assert!(tasks.iter().any(|l| l == "Server Tasks"), "{tasks:?}");
     // In the Calendar, View-tab commands carry the calendar's view state in and out in the same frame.
-    app.s.view.module = mailcraft_engine::Module::Calendar;
+    app.s.view.module = iridium_mail_engine::Module::Calendar;
     let ctx = egui::Context::default();
     let mut mem = state::Mem::default();
     let act = state::Action {
@@ -978,9 +979,9 @@ fn module_view_galleries_and_calendar_view_commands() {
 
 #[test]
 fn notes_change_view_lists_saved_views_and_checks_the_current_one() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let notes =
-        app.s.mailbox.folders.values().find(|f| f.kind == mailcraft_model::FolderKind::Notes).unwrap().id;
+        app.s.mailbox.folders.values().find(|f| f.kind == iridium_mail_model::FolderKind::Notes).unwrap().id;
     app.run("nav.selectFolder", serde_json::json!({"folder": notes.0})).unwrap();
     let items = state::dyn_items(&app, Surface::Main, "views:notes");
     assert_eq!(
@@ -995,10 +996,10 @@ fn notes_change_view_lists_saved_views_and_checks_the_current_one() {
     // The menu's entries run Change View with the saved view's name.
     run_entry(&mut app, Surface::Main, "notesChangeView", "Icon");
     run_entry(&mut app, Surface::Main, "notesChangeView", "Mine");
-    let st = mailcraft_engine::cmd::view::modules::state(
+    let st = iridium_mail_engine::cmd::view::modules::state(
         &app.s,
         notes,
-        mailcraft_engine::cmd::view::modules::ModuleKind::Notes,
+        iridium_mail_engine::cmd::view::modules::ModuleKind::Notes,
     );
     assert_eq!((st.view.as_str(), st.name.as_str()), ("Notes List", "Mine"));
     // Icon arrangement toggles follow the engine, not UI memory.
@@ -1017,9 +1018,9 @@ fn notes_change_view_lists_saved_views_and_checks_the_current_one() {
 
 #[test]
 fn calendar_toggles_follow_the_calendar_view() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
-    app.s.view.module = mailcraft_engine::Module::Calendar;
+    app.s.view.module = iridium_mail_engine::Module::Calendar;
     // Month view (the default): Time Scale, Working Hours and the Daily Task List are greyed out.
     assert!(state::is_on(&app, Surface::Main, &mem, "calview:timeScale.30"));
     for cmd in ["calendar.timeScale", "calendar.workingHours", "calendar.dailyTaskList"] {
@@ -1055,7 +1056,7 @@ fn calendar_toggles_follow_the_calendar_view() {
     assert!(!state::is_on(&app, Surface::Main, &mem, "dl:headers"));
     assert_eq!(
         state::is_on(&app, Surface::Main, &mem, "slowHeaders"),
-        mailcraft_engine::sync::cmds::slow_headers_only(&app.s)
+        iridium_mail_engine::sync::cmds::slow_headers_only(&app.s)
     );
     let entries = menu_entries(&app, Surface::Main, "downloadPreferences");
     assert_eq!(entries.len(), 4);
@@ -1081,7 +1082,7 @@ fn run_entry(app: &mut App, surface: Surface, menu: &str, label: &str) {
 
 #[test]
 fn change_view_lists_saved_mail_views() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     assert!(state::dyn_items(&app, Surface::Main, "views:mail").is_empty());
     app.run("view.saveViewAs", serde_json::json!({"name": "Mine", "confirm": true})).unwrap();
     let views = state::dyn_items(&app, Surface::Main, "views:mail");
@@ -1089,7 +1090,7 @@ fn change_view_lists_saved_mail_views() {
     // Pick Compact, then the saved view from the Change View menu: the folder shows it again.
     run_entry(&mut app, Surface::Main, "changeView", "Compact");
     let folder = app.s.selection.folder;
-    let name = mailcraft_engine::cmd::view::mail::current_view_name;
+    let name = iridium_mail_engine::cmd::view::mail::current_view_name;
     assert_eq!(name(&app.s, folder), "Compact");
     run_entry(&mut app, Surface::Main, "changeView", "Mine");
     assert_eq!(name(&app.s, folder), "Mine");
@@ -1098,7 +1099,7 @@ fn change_view_lists_saved_mail_views() {
 
 #[test]
 fn theme_colour_swatches_follow_the_compose_theme() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let cid = app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
     let s = Surface::Compose(cid);
     let base = menu_entries(&app, s, "fontColor");
@@ -1117,13 +1118,13 @@ fn theme_colour_swatches_follow_the_compose_theme() {
     let (_, _, after) = accent(&menu_entries(&app, s, "fontColor"));
     assert_ne!(before, after, "the swatch shows the new theme's Accent 1");
     let c = app.s.composes.get(&cid).unwrap();
-    let want = mailcraft_engine::cmd::format::theme_color(c, "accent1", 0).unwrap();
+    let want = iridium_mail_engine::cmd::format::theme_color(c, "accent1", 0).unwrap();
     assert_eq!(after, Some([want.r, want.g, want.b]));
 }
 
 #[test]
 fn high_contrast_only_hides_low_contrast_pens() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let cid = app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
     let s = Surface::Compose(cid);
     let pens = |app: &App| -> Vec<String> {
@@ -1151,7 +1152,7 @@ fn high_contrast_only_hides_low_contrast_pens() {
 
 #[test]
 fn font_high_contrast_only_also_filters_the_theme_shades() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let cid = app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
     let s = Surface::Compose(cid);
     let shades = |app: &App| -> Vec<String> {
@@ -1180,7 +1181,7 @@ fn font_high_contrast_only_also_filters_the_theme_shades() {
 
 #[test]
 fn styles_gallery_lists_created_styles() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let cid = app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
     let s = Surface::Compose(cid);
     let before = state::dyn_items(&app, s, "styles").len();
@@ -1198,7 +1199,7 @@ fn styles_gallery_lists_created_styles() {
 
 #[test]
 fn show_all_folders_a_to_z_reads_the_engine() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
     let toggle = defs()
         .tabs
@@ -1218,13 +1219,13 @@ fn show_all_folders_a_to_z_reads_the_engine() {
     );
     assert_eq!(
         state::is_on(&app, Surface::Main, &mem, "allaz"),
-        mailcraft_engine::cmd::folder::show_all_az_on(&app.s)
+        iridium_mail_engine::cmd::folder::show_all_az_on(&app.s)
     );
 }
 
 #[test]
 fn followup_menu_entries_send_the_engine_params() {
-    let app = App::new(mailcraft_engine::sample::sample_session());
+    let app = App::new(iridium_mail_engine::sample::sample_session());
     let find =
         |menu: &str, label: &str| defs().menu(menu).unwrap().iter().find(|i| i.label == label).cloned();
     let slow = find("downloadPreferences", "On Slow Connections Download Only Headers").unwrap();
@@ -1241,7 +1242,7 @@ fn followup_menu_entries_send_the_engine_params() {
 }
 
 fn compose_app() -> (App, u64) {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let cid = app.run("mail.newEmail", serde_json::Value::Null).and_then(|v| v["compose"].as_u64()).unwrap();
     (app, cid)
 }
@@ -1436,12 +1437,12 @@ fn page_color_menu_has_theme_and_standard_colours() {
 
 #[test]
 fn module_ribbon_state_follows_the_folder_and_selection() {
-    use mailcraft_engine::cmd::view::modules;
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    use iridium_mail_engine::cmd::view::modules;
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let tasks =
-        app.s.mailbox.folders.values().find(|f| f.kind == mailcraft_model::FolderKind::Tasks).unwrap().id;
+        app.s.mailbox.folders.values().find(|f| f.kind == iridium_mail_model::FolderKind::Tasks).unwrap().id;
     app.run("nav.selectFolder", serde_json::json!({"folder": tasks.0})).unwrap();
-    app.s.view.module = mailcraft_engine::Module::Tasks;
+    app.s.view.module = iridium_mail_engine::Module::Tasks;
     let mem = state::Mem::default();
     // Change View: the built-in views, then the saved ones; the shown view is checked.
     let on = |app: &App| -> Vec<String> {
@@ -1493,8 +1494,14 @@ fn module_ribbon_state_follows_the_folder_and_selection() {
         state::dyn_items(&app, Surface::Main, "categories").iter().any(|d| d.label == "Red category" && d.on)
     );
     // The People Arrange By is greyed out in the People view (no arrangement there).
-    let contacts =
-        app.s.mailbox.folders.values().find(|f| f.kind == mailcraft_model::FolderKind::Contacts).unwrap().id;
+    let contacts = app
+        .s
+        .mailbox
+        .folders
+        .values()
+        .find(|f| f.kind == iridium_mail_model::FolderKind::Contacts)
+        .unwrap()
+        .id;
     app.run("nav.selectFolder", serde_json::json!({"folder": contacts.0})).unwrap();
     assert!(app.s.enabled("view.arrangeBy").is_some());
     app.run("view.changeView", serde_json::json!({"name": "List"})).unwrap();
@@ -1515,7 +1522,7 @@ fn run_entry_toggle(app: &mut App, label: &str) {
 
 #[test]
 fn work_offline_and_download_preferences_show_the_engine_state() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     let mem = state::Mem::default();
     assert!(!state::is_on(&app, Surface::Main, &mem, "offline"));
     app.run("sendReceive.workOffline", serde_json::json!({})).unwrap();
@@ -1525,14 +1532,14 @@ fn work_offline_and_download_preferences_show_the_engine_state() {
             || state::is_on(&app, Surface::Main, &mem, "dl:headersThenFull")
             || state::is_on(&app, Surface::Main, &mem, "dl:headers")
     );
-    let (mode, slow) = mailcraft_engine::sync::cmds::shown_preferences(&app.s);
+    let (mode, slow) = iridium_mail_engine::sync::cmds::shown_preferences(&app.s);
     assert!(state::is_on(&app, Surface::Main, &mem, &format!("dl:{mode}")));
     assert_eq!(state::is_on(&app, Surface::Main, &mem, "slowHeaders"), slow);
     // Exactly one download mode is checked, and it follows a change.
     let modes = ["full", "headersThenFull", "headers"];
     for want in ["headers", "full", "headersThenFull"] {
         app.run("sendReceive.preferences", serde_json::json!({"mode": want})).unwrap();
-        assert_eq!(mailcraft_engine::sync::cmds::shown_preferences(&app.s).0, want);
+        assert_eq!(iridium_mail_engine::sync::cmds::shown_preferences(&app.s).0, want);
         for m in modes {
             assert_eq!(
                 state::is_on(&app, Surface::Main, &mem, &format!("dl:{m}")),
@@ -1546,20 +1553,20 @@ fn work_offline_and_download_preferences_show_the_engine_state() {
         let before = state::is_on(&app, Surface::Main, &mem, "slowHeaders");
         app.run("sendReceive.preferences", serde_json::json!({"slowHeadersOnly": "toggle"})).unwrap();
         assert_eq!(state::is_on(&app, Surface::Main, &mem, "slowHeaders"), !before);
-        assert_eq!(mailcraft_engine::sync::cmds::shown_preferences(&app.s).1, !before);
+        assert_eq!(iridium_mail_engine::sync::cmds::shown_preferences(&app.s).1, !before);
     }
 }
 
 #[test]
 fn share_calendar_menu_lists_each_calendar() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.run("calendar.addCalendar", serde_json::json!({"source": "blank", "name": "Team"}));
     let items = state::dyn_items(&app, Surface::Main, "shareCalendars");
     let names: Vec<&str> = items.iter().map(|d| d.label.as_str()).collect();
     assert_eq!(names.first(), Some(&"Calendar"), "the default calendar comes first: {names:?}");
     let team = items.iter().find(|d| d.label == "Team").expect("a new calendar gets its own entry");
     let id = team.vars.iter().find(|(k, _)| *k == "$id").map(|(_, v)| v.clone()).unwrap();
-    let folder = mailcraft_model::FolderId(id.as_u64().unwrap());
+    let folder = iridium_mail_model::FolderId(id.as_u64().unwrap());
     assert_eq!(app.s.mailbox.folder(folder).map(|f| f.name.as_str()), Some("Team"));
 }
 
@@ -1567,8 +1574,8 @@ fn share_calendar_menu_lists_each_calendar() {
 /// Folder or the Server group, and the modules' Folder Pane menu has no Favorites.
 #[test]
 fn people_tabs_and_the_module_folder_pane_menu() {
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
-    app.s.view.module = mailcraft_engine::Module::People;
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
+    app.s.view.module = iridium_mail_engine::Module::People;
     let labels = |app: &App, name: &str| -> Vec<String> {
         resolve_tab(app, Surface::Main, name)
             .unwrap()
@@ -1584,7 +1591,7 @@ fn people_tabs_and_the_module_folder_pane_menu() {
     assert!(sr.contains(&"Work Offline".to_owned()) && sr.contains(&"Download Preferences".to_owned()));
     assert!(!sr.contains(&"Download Headers".to_owned()), "{sr:?}");
     // Mail keeps its own.
-    app.s.view.module = mailcraft_engine::Module::Mail;
+    app.s.view.module = iridium_mail_engine::Module::Mail;
     assert!(labels(&app, "Folder").contains(&"New Search Folder...".to_owned()));
     let menu = defs().menus.get("moduleFolderPane").unwrap();
     assert!(menu.iter().all(|i| i.label != "Favorites"));
@@ -1634,9 +1641,9 @@ fn formatting_buttons_have_icons_of_their_own() {
 #[test]
 fn simplified_gallery_arrow_follows_its_last_chip() {
     use egui_kittest::kittest::Queryable;
-    let mut app = App::new(mailcraft_engine::sample::sample_session());
+    let mut app = App::new(iridium_mail_engine::sample::sample_session());
     app.s.view.simplified_ribbon = true;
-    app.s.view.module = mailcraft_engine::Module::Notes;
+    app.s.view.module = iridium_mail_engine::Module::Notes;
     let mut h = harness(app, Surface::Main, 1920.0);
     h.run();
     let chips: Vec<egui::Rect> = ["Icon", "Notes List", "Last 7 Days"]

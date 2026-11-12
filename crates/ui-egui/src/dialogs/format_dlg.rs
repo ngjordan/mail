@@ -11,7 +11,7 @@ use super::common::{self, Dlg, Out, btn, footer, muted, ok_cancel, primary, wind
 use super::compose_dlg::{Form, Kind, cmd, f, run_form};
 use crate::App;
 use crate::body::{BodyOptions, BodyView};
-use mailcraft_model::rich::{Align, Block, Doc, Inline, LineRule, ParaStyle, TextStyle, UnderlineKind};
+use iridium_mail_model::rich::{Align, Block, Doc, Inline, LineRule, ParaStyle, TextStyle, UnderlineKind};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -62,8 +62,8 @@ fn preview(ui: &mut Ui, view: &mut BodyView, doc: &Doc, height: f32) {
 
 fn rgb_of(v: Option<&Value>) -> Option<[u8; 3]> {
     let c = match v? {
-        Value::String(s) => mailcraft_geom::Color::parse_hex(s)?,
-        other => serde_json::from_value::<mailcraft_geom::Color>(other.clone()).ok()?,
+        Value::String(s) => iridium_mail_geom::Color::parse_hex(s)?,
+        other => serde_json::from_value::<iridium_mail_geom::Color>(other.clone()).ok()?,
     };
     Some([c.r, c.g, c.b])
 }
@@ -131,12 +131,12 @@ impl FontVals {
             family: s
                 .get("font_family")
                 .and_then(Value::as_str)
-                .unwrap_or(mailcraft_fonts::BODY_FAMILY)
+                .unwrap_or(iridium_mail_fonts::BODY_FAMILY)
                 .to_owned(),
             size: s
                 .get("size_pt")
                 .and_then(Value::as_f64)
-                .map_or_else(|| format!("{}", mailcraft_fonts::BODY_SIZE_PT), |n| format!("{n}")),
+                .map_or_else(|| format!("{}", iridium_mail_fonts::BODY_SIZE_PT), |n| format!("{n}")),
             bold: b("bold"),
             italic: b("italic"),
             color: rgb_of(s.get("color")),
@@ -170,10 +170,10 @@ impl FontVals {
                 .map(|v| v.clamp(1.0, 72.0)),
             bold: some(self.bold),
             italic: some(self.italic),
-            color: self.color.map(|c| mailcraft_geom::Color::rgb(c[0], c[1], c[2])),
+            color: self.color.map(|c| iridium_mail_geom::Color::rgb(c[0], c[1], c[2])),
             underline: some(self.underline > 0),
             underline_kind: kind.filter(|k| *k != UnderlineKind::Single && self.underline > 0),
-            underline_color: self.underline_color.map(|c| mailcraft_geom::Color::rgb(c[0], c[1], c[2])),
+            underline_color: self.underline_color.map(|c| iridium_mail_geom::Color::rgb(c[0], c[1], c[2])),
             strike: some(self.strike),
             double_strike: some(self.double_strike),
             superscript: some(self.superscript),
@@ -643,7 +643,7 @@ fn paragraph(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
             }
             common::heading(ui, app, "Preview");
             let grey = TextStyle {
-                color: Some(mailcraft_geom::Color::rgb(0xa0, 0xa0, 0xa0)),
+                color: Some(iridium_mail_geom::Color::rgb(0xa0, 0xa0, 0xa0)),
                 size_pt: Some(8.0),
                 ..TextStyle::default()
             };
@@ -862,7 +862,7 @@ fn colors(ctx: &Context, app: &mut App, d: &Dlg<'_>, target: String) -> Out {
                     ui.label("Hex:");
                     let r = ui.add(egui::TextEdit::singleline(&mut st.hex).desired_width(80.0));
                     if r.changed()
-                        && let Some(c) = mailcraft_geom::Color::parse_hex(st.hex.trim())
+                        && let Some(c) = iridium_mail_geom::Color::parse_hex(st.hex.trim())
                     {
                         st.rgb = [c.r, c.g, c.b];
                     }

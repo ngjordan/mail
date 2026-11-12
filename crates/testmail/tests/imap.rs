@@ -5,7 +5,7 @@ mod common;
 use std::time::{Duration, Instant};
 
 use common::*;
-use mailcraft_testmail::{Config, DateTime};
+use iridium_mail_testmail::{Config, DateTime};
 
 #[test]
 fn greeting_capability_login() {

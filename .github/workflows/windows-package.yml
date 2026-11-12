@@ -8,7 +8,7 @@ on:
   push:
     branches: [master]
     paths:
-      - apps/mailcraft/**
+      - apps/iridium-mail/**
       - crates/**
       - Cargo.toml
       - Cargo.lock
@@ -17,7 +17,7 @@ on:
       - .github/workflows/windows-package.yml
   pull_request:
     paths:
-      - apps/mailcraft/**
+      - apps/iridium-mail/**
       - crates/**
       - Cargo.toml
       - Cargo.lock
@@ -52,7 +52,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = (Get-ChildItem dist -Filter *.msi | Select-Object -First 1).FullName
-          ./packaging/windows/check-icon.ps1 -Exe target/x86_64-pc-windows-msvc/release/mailcraft.exe -Msi $msi
+          ./packaging/windows/check-icon.ps1 -Exe target/x86_64-pc-windows-msvc/release/iridium-mail.exe -Msi $msi
       - uses: actions/upload-artifact@v4
         with:
           name: windows-msi

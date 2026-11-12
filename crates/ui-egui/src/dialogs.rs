@@ -118,7 +118,7 @@ pub fn open(app: &mut App, name: &str, params: Value) {
         "mainWindow" => {
             // Open in New Window: another main window on the folder (or, past the limit, the folder here).
             if let Some(f) = params.get("folder").and_then(Value::as_u64)
-                && crate::explorer::open(app, mailcraft_model::FolderId(f)).is_none()
+                && crate::explorer::open(app, iridium_mail_model::FolderId(f)).is_none()
             {
                 app.run("nav.selectFolder", json!({"folder": f}));
             }
@@ -126,7 +126,7 @@ pub fn open(app: &mut App, name: &str, params: Value) {
         // Rename Folder edits the name in the folder pane when the pane shows it (the dialog otherwise).
         "renameFolder"
             if params.get("inline").and_then(Value::as_bool) != Some(false)
-                && app.s.view.folder_pane == mailcraft_model::FolderPaneState::Normal
+                && app.s.view.folder_pane == iridium_mail_model::FolderPaneState::Normal
                 && params.get("folder").and_then(Value::as_u64).is_some() =>
         {
             let folder = params.get("folder").and_then(Value::as_u64).unwrap_or(0);
@@ -166,13 +166,13 @@ pub fn confirm(app: &mut App, title: &str, text: &str, command: &str, params: Va
 
 /// Moves `Notice::OpenDialog` notices from the session into `app.ui.dialogs` (other notices stay queued).
 pub fn take_notices(app: &mut App) {
-    if !app.s.notices.iter().any(|n| matches!(n, mailcraft_engine::Notice::OpenDialog(..))) {
+    if !app.s.notices.iter().any(|n| matches!(n, iridium_mail_engine::Notice::OpenDialog(..))) {
         return;
     }
     let all = std::mem::take(&mut app.s.notices);
     for n in all {
         match n {
-            mailcraft_engine::Notice::OpenDialog(name, params) => open(app, &name, params),
+            iridium_mail_engine::Notice::OpenDialog(name, params) => open(app, &name, params),
             other => app.s.notices.push(other),
         }
     }
@@ -204,12 +204,12 @@ pub fn form_visuals(ui: &mut egui::Ui, theme: &crate::theme::Theme) {
 }
 
 /// Address (or name for local data files) shown for an account in dialogs and the backstage.
-pub fn account_label(a: &mailcraft_model::Account) -> String {
+pub fn account_label(a: &iridium_mail_model::Account) -> String {
     common::account_title(a)
 }
 
 /// File › Options › Search › "Highlight search terms in the results" (the profile setting `search.highlight`).
-pub fn search_highlight_on(s: &mailcraft_engine::Session) -> bool {
+pub fn search_highlight_on(s: &iridium_mail_engine::Session) -> bool {
     s.settings.bool("search.highlight")
 }
 

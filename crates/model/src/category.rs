@@ -1,6 +1,6 @@
 //! Colour categories (Color Categories dialog: name, colour, shortcut key).
 
-use mailcraft_geom::Color;
+use iridium_mail_geom::Color;
 use serde::{Deserialize, Serialize};
 
 /// The 25 preset category colours plus None. Our own palette (not sampled from any other product).

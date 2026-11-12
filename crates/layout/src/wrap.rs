@@ -1,4 +1,4 @@
-//! Text wrapping around floating drawings ([`mailcraft_model::Drawing::wrap`]).
+//! Text wrapping around floating drawings ([`iridium_mail_model::Drawing::wrap`]).
 //!
 //! Each drawing that the text wraps around (Square, Tight, Through, Top and Bottom; not behind the text)
 //! blocks horizontal bands of the page: Square blocks its box (turned with the drawing, plus a gap),
@@ -7,8 +7,8 @@
 //! table cells) goes in the widest free stretch of its band; a band with no stretch wide enough is skipped
 //! down to where the drawing ends. Drawings in a group or a canvas wrap with their group or canvas.
 
-use mailcraft_model::Doc;
-use mailcraft_model::rich::WrapStyle;
+use iridium_mail_model::Doc;
+use iridium_mail_model::rich::WrapStyle;
 
 /// Gap between a wrapped drawing and the text beside it / above and below it (px at 100 %).
 pub const WRAP_GAP_X: f32 = 9.0;
@@ -199,7 +199,7 @@ fn tight_bands(pts: &[(f32, f32)], zoom: f32, out: &mut Vec<[f32; 4]>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::rich::Drawing;
+    use iridium_mail_model::rich::Drawing;
 
     fn doc(ds: Vec<Drawing>) -> Doc {
         Doc { drawings: ds, ..Doc::default() }
@@ -265,10 +265,10 @@ mod tests {
     }
 
     fn laid(wrap: WrapStyle, text: &str) -> crate::Layout {
-        let fonts = mailcraft_fonts::FontDb::bundled();
+        let fonts = iridium_mail_fonts::FontDb::bundled();
         let d = Drawing { id: 1, x: 0.0, y: 0.0, w: 120.0, h: 80.0, wrap, ..Drawing::default() };
         let mut doc = doc(vec![d]);
-        doc.blocks.push(mailcraft_model::Block::text_paragraph(text));
+        doc.blocks.push(iridium_mail_model::Block::text_paragraph(text));
         crate::layout_doc(&doc, &fonts, &crate::LayoutOptions { width: 500.0, ..Default::default() })
     }
 

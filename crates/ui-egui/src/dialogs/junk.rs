@@ -11,8 +11,8 @@ use serde_json::{Value, json};
 
 use super::common::{self, Dlg, Out, btn, btn_en, muted, primary, window, with_state};
 use crate::{App, FileFilter};
-use mailcraft_model::junk::{COMMON_ENCODINGS, COMMON_TLDS, normalize_entry};
-use mailcraft_model::{JunkLevel, JunkList, JunkSettings};
+use iridium_mail_model::junk::{COMMON_ENCODINGS, COMMON_TLDS, normalize_entry};
+use iridium_mail_model::{JunkLevel, JunkList, JunkSettings};
 
 /// Tabs, in order.
 pub(crate) const TABS: [&str; 5] =
@@ -414,7 +414,7 @@ mod tests {
     use super::*;
     use egui_kittest::Harness;
     use egui_kittest::kittest::Queryable;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn harness(app: App) -> Harness<'static, App> {
         let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(

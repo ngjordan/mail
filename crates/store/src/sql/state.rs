@@ -16,8 +16,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::{Mutex, PoisonError};
 
-use mailcraft_model::account::AccountSync;
-use mailcraft_model::{AccountId, Folder, FolderId, ItemId, MailItem, Mailbox};
+use iridium_mail_model::account::AccountSync;
+use iridium_mail_model::{AccountId, Folder, FolderId, ItemId, MailItem, Mailbox};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::Serialize;
 
@@ -54,7 +54,7 @@ fn parse<T: serde::de::DeserializeOwned>(what: &str, s: &str) -> Result<T> {
 /// The whole configuration of `mb` (every part set).
 pub fn full_state(mb: &Mailbox) -> SmallState {
     SmallState {
-        accounts: Some(mb.accounts.iter().map(mailcraft_model::Account::without_sync).collect()),
+        accounts: Some(mb.accounts.iter().map(iridium_mail_model::Account::without_sync).collect()),
         categories: Some(mb.categories.clone()),
         rules: Some(mb.rules.clone()),
         quick_steps: Some(mb.quick_steps.clone()),
@@ -354,7 +354,7 @@ impl Known {
             Op::RemoveFolder(id) => {
                 c.prepare_cached("DELETE FROM folders WHERE id = ?1")?.execute([to_sql_id(id.0)])?;
                 // As Op::apply: the folder's view settings go with it.
-                let views: Option<BTreeMap<FolderId, mailcraft_model::ViewSettings>> =
+                let views: Option<BTreeMap<FolderId, iridium_mail_model::ViewSettings>> =
                     config_part(c, "views")?;
                 if let Some(mut views) = views
                     && views.remove(id).is_some()
@@ -364,7 +364,7 @@ impl Known {
             }
             Op::PutAccount(account) => {
                 // The whole account, sync state included, matched by id (appended when missing).
-                let mut accounts: Vec<mailcraft_model::Account> =
+                let mut accounts: Vec<iridium_mail_model::Account> =
                     config_part(c, "accounts")?.unwrap_or_default();
                 let bare = account.without_sync();
                 match accounts.iter_mut().find(|a| a.id == account.id) {

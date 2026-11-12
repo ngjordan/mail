@@ -57,7 +57,7 @@ pub fn definitions() -> Vec<Value> {
         json!({
             "name": "list_commands",
             "title": "List commands",
-            "description": "Every MailCraft command (everything the ribbon, menus and shortcuts can do): id, label, \
+            "description": "Every Mail command (everything the ribbon, menus and shortcuts can do): id, label, \
                 UI location, shortcut, parameter description and whether it is enabled right now. Run one with \
                 run_command.",
             "inputSchema": {
@@ -73,7 +73,7 @@ pub fn definitions() -> Vec<Value> {
         json!({
             "name": "run_command",
             "title": "Run command",
-            "description": "Runs a MailCraft command by id (e.g. mail.reply, mail.markRead, folder.new, view.readingPane) \
+            "description": "Runs a Mail command by id (e.g. mail.reply, mail.markRead, folder.new, view.readingPane) \
                 with its JSON params, exactly as the ribbon or a shortcut would (undo, enabled checks). Most commands \
                 act on the current selection; use select first or pass ids/folder params. Returns the command's \
                 result and any notices (dialogs or info bars it asked the UI to show).",
@@ -175,7 +175,7 @@ pub fn definitions() -> Vec<Value> {
         json!({
             "name": "parity",
             "title": "Feature parity",
-            "description": "How much of the observed feature catalog MailCraft implements: totals, percent, \
+            "description": "How much of the observed feature catalog Mail implements: totals, percent, \
                 per-area counts and missing command ids.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": false},
             "annotations": read_only("Feature parity"),
@@ -200,7 +200,7 @@ pub fn call(backend: &mut dyn Backend, name: &str, args: &Value) -> Option<ToolR
         "select" => select(backend, args),
         "search" => search(backend, args),
         "status" => backend.query("status", &json!({})).map_err(ToolError),
-        "parity" => Ok(mailcraft_engine::catalog::parity(&mailcraft_engine::cmd::registry())),
+        "parity" => Ok(iridium_mail_engine::catalog::parity(&iridium_mail_engine::cmd::registry())),
         _ => return None,
     };
     Some(r)

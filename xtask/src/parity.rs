@@ -4,7 +4,7 @@
 use std::fmt::Write as _;
 use std::path::Path;
 
-use mailcraft_engine::{catalog, cmd};
+use iridium_mail_engine::{catalog, cmd};
 use serde_json::Value;
 
 use crate::TaskResult;
@@ -55,7 +55,7 @@ pub fn render(p: &Value, commands: usize) -> String {
     let _ = writeln!(
         md,
         "**{implemented} of {mapped}** mapped features have a registered command (**{}**). The catalog \
-         has {total} rows; {na} are not applicable to MailCraft. The registry has {commands} commands.\n",
+         has {total} rows; {na} are not applicable to Mail. The registry has {commands} commands.\n",
         pct(implemented, mapped)
     );
     let _ = writeln!(md, "## By area\n");

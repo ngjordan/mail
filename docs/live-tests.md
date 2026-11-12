@@ -1,6 +1,6 @@
 # Live server tests
 
-The normal test suite runs against the local test servers only (`mailcraft-testmail`, 127.0.0.1, synthetic
+The normal test suite runs against the local test servers only (`iridium-mail-testmail`, 127.0.0.1, synthetic
 users). `crates/engine/tests/live_servers.rs` holds a second, opt-in suite that drives the engine like a user
 against a real mail server, to find what the local servers do not show. It never runs in CI: every test is
 `#[ignore]`, and returns early unless the settings below are present.
@@ -19,7 +19,7 @@ against a real mail server, to find what the local servers do not show. It never
 | `live_ews_mail` (`live_ews.rs`) | an Exchange (EWS) account: sign-in, folders, receive, read state, flags and categories, moves, a new folder, uploads, delete, sending to itself with the Sent copy |
 | `live_ews_contacts_calendar_tasks` (`live_ews.rs`) | contacts, a recurring series with a changed occurrence, and tasks over EWS, both ways |
 | `live_dav_against_the_same_server` (`live_ews.rs`) | the same mailbox's CardDAV / CalDAV: contacts, a recurring series and a task over DAV, checked through EWS |
-| `mailcraft-net` `live_ews.rs` | the EWS client itself: Autodiscover, sign-in, Out of Office settings, free/busy |
+| `iridium-mail-net` `live_ews.rs` | the EWS client itself: Autodiscover, sign-in, Out of Office settings, free/busy |
 | `live_jmap_contacts_and_calendars` | a JMAP account with no DAV settings whose server offers JMAP for Contacts and Calendars: contacts and a recurring series with an exception, both ways |
 
 ## Rules the tests keep
@@ -37,7 +37,7 @@ Set the server and the test mailbox in the environment (never in a file under ve
 export MC_LIVE_STALWART_HOST=mail.example.com      # IMAPS 993, POP3S 995, SMTPS 465, HTTPS 443
 export MC_LIVE_STALWART_USER=test-mailbox@example.com
 export MC_LIVE_STALWART_PASS='…'
-cargo test -p mailcraft-engine --test live_servers -- --ignored --test-threads=1
+cargo test -p iridium-mail-engine --test live_servers -- --ignored --test-threads=1
 ```
 
 The Exchange tests (`crates/engine/tests/live_ews.rs`, `crates/net/tests/live_ews.rs`) read their own
@@ -52,8 +52,8 @@ export MC_LIVE_EWS_PASS='…'
 export MC_LIVE_EWS_CA=path/to/server.pem          # optional
 export MC_LIVE_EWS_ADDR=192.0.2.10                # optional
 export MC_LIVE_DAV_URL=https://mail.example.com/dav/   # optional, the DAV test
-cargo test -p mailcraft-engine --test live_ews -- --ignored --test-threads=1
-cargo test -p mailcraft-net --test live_ews -- --ignored --test-threads=1
+cargo test -p iridium-mail-engine --test live_ews -- --ignored --test-threads=1
+cargo test -p iridium-mail-net --test live_ews -- --ignored --test-threads=1
 ```
 
 Run them one after another (`--test-threads=1`): they share the mailbox, and a push test should not see

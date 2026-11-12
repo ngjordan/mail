@@ -16,9 +16,9 @@ use crate::cmd::calendar::occurrences;
 use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::compose::ComposeAttachment;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::dates::ListTime;
-use mailcraft_model::rich::TableCell;
-use mailcraft_model::{Appointment, Block, DateTime, FolderId, FolderKind, Inline, ParaStyle, TextStyle};
+use iridium_mail_model::dates::ListTime;
+use iridium_mail_model::rich::TableCell;
+use iridium_mail_model::{Appointment, Block, DateTime, FolderId, FolderKind, Inline, ParaStyle, TextStyle};
 
 /// Date-range presets of the dialog: (id, label).
 pub const RANGES: [(&str, &str); 7] = [
@@ -69,7 +69,7 @@ pub fn calendar_folders(s: &Session) -> Vec<(FolderId, String)> {
 /// First and last day numbers (in the session's offset) of a range preset, counted from `today`.
 fn preset_days(today: i64, range: &str) -> Option<(i64, i64)> {
     let month_bounds = |day: i64, ahead: u8| {
-        let (y, m, _) = mailcraft_model::dates::civil_from_days(day);
+        let (y, m, _) = iridium_mail_model::dates::civil_from_days(day);
         let (y, m) = if ahead == 0 {
             (y, m)
         } else if m == 12 {
@@ -77,8 +77,8 @@ fn preset_days(today: i64, range: &str) -> Option<(i64, i64)> {
         } else {
             (y, m + 1)
         };
-        let first = mailcraft_model::dates::days_from_civil(y, m, 1)?;
-        let len = i64::from(mailcraft_model::dates::days_in_month(y, m));
+        let first = iridium_mail_model::dates::days_from_civil(y, m, 1)?;
+        let len = i64::from(iridium_mail_model::dates::days_in_month(y, m));
         Some((first, first.saturating_add(len.saturating_sub(1))))
     };
     match range {
@@ -222,7 +222,7 @@ pub(super) fn calendar(s: &mut Session, p: &Value) -> CmdResult {
     let mut listed = 0usize;
     for day in d0..=d1 {
         let midnight = day_start(day, tz);
-        let weekday = usize::from(mailcraft_model::dates::weekday_of_day(day).0);
+        let weekday = usize::from(iridium_mail_model::dates::weekday_of_day(day).0);
         if working && !work_week.get(weekday).copied().unwrap_or(true) {
             continue;
         }
@@ -302,7 +302,7 @@ pub(super) fn calendar(s: &mut Session, p: &Value) -> CmdResult {
                     ))]
                 })
                 .collect();
-            blocks.push(Block::List { kind: mailcraft_model::rich::ListKind::Bullet, items });
+            blocks.push(Block::List { kind: iridium_mail_model::rich::ListKind::Bullet, items });
         }
         listed = listed.saturating_add(today_items.len());
         for o in &today_items {
@@ -326,7 +326,7 @@ pub(super) fn calendar(s: &mut Session, p: &Value) -> CmdResult {
             .map(|(start, end, a)| ics_event(a, *start, *end, detail, include_private))
             .collect();
         let refs: Vec<&Appointment> = redacted.iter().collect();
-        Some(mailcraft_formats::ics::write(&refs, &[], None, s.now()))
+        Some(iridium_mail_formats::ics::write(&refs, &[], None, s.now()))
     } else {
         None
     };
@@ -396,7 +396,7 @@ fn ics_event(
 mod tests {
     use super::super::super::compose::tests::{open, session};
     use super::*;
-    use mailcraft_model::{BusyStatus, ItemId, Recurrence};
+    use iridium_mail_model::{BusyStatus, ItemId, Recurrence};
 
     fn appt(s: &mut Session, folder: FolderId, subject: &str, day: u8, h: u8, mins: i64) -> ItemId {
         let id = ItemId(s.mailbox.alloc_id());
@@ -459,7 +459,7 @@ mod tests {
         assert!(t.contains("Busy  Private") && !t.contains("Doctor"), "{t}");
 
         // Working hours only: the 6:00 run is outside 8:00-17:00.
-        s.composes.get_mut(&cid).unwrap().body = mailcraft_model::Doc::default();
+        s.composes.get_mut(&cid).unwrap().body = iridium_mail_model::Doc::default();
         let r = s
             .run("insert.calendar", &json!({"range": "today", "workingHours": true, "includePrivate": true}))
             .unwrap();
@@ -468,7 +468,7 @@ mod tests {
         assert!(!t.contains("Early run") && t.contains("Doctor") && t.contains("Working hours only"), "{t}");
 
         // Another calendar, next 7 days: the weekly item recurs on the 12th.
-        s.composes.get_mut(&cid).unwrap().body = mailcraft_model::Doc::default();
+        s.composes.get_mut(&cid).unwrap().body = iridium_mail_model::Doc::default();
         let r = s
             .run(
                 "insert.calendar",
@@ -529,16 +529,16 @@ mod tests {
 
     #[test]
     fn presets_cover_the_expected_days() {
-        let today = mailcraft_model::dates::days_from_civil(2026, 10, 21).unwrap();
+        let today = iridium_mail_model::dates::days_from_civil(2026, 10, 21).unwrap();
         assert_eq!(preset_days(today, "today"), Some((today, today)));
         assert_eq!(preset_days(today, "next7"), Some((today, today + 6)));
         let (a, b) = preset_days(today, "thisMonth").unwrap();
-        assert_eq!(mailcraft_model::dates::civil_from_days(a), (2026, 10, 1));
-        assert_eq!(mailcraft_model::dates::civil_from_days(b), (2026, 10, 31));
-        let dec = mailcraft_model::dates::days_from_civil(2026, 12, 5).unwrap();
+        assert_eq!(iridium_mail_model::dates::civil_from_days(a), (2026, 10, 1));
+        assert_eq!(iridium_mail_model::dates::civil_from_days(b), (2026, 10, 31));
+        let dec = iridium_mail_model::dates::days_from_civil(2026, 12, 5).unwrap();
         let (a, b) = preset_days(dec, "nextMonth").unwrap();
-        assert_eq!(mailcraft_model::dates::civil_from_days(a), (2027, 1, 1));
-        assert_eq!(mailcraft_model::dates::civil_from_days(b), (2027, 1, 31));
+        assert_eq!(iridium_mail_model::dates::civil_from_days(a), (2027, 1, 1));
+        assert_eq!(iridium_mail_model::dates::civil_from_days(b), (2027, 1, 31));
         assert_eq!(preset_days(today, "fortnight"), None);
     }
 }

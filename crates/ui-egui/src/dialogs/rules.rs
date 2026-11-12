@@ -15,7 +15,7 @@ use super::common::{
 };
 use super::folders::last_error;
 use crate::App;
-use mailcraft_model::{FolderId, Importance, Rule, RuleAction, RuleCondition, Sensitivity};
+use iridium_mail_model::{FolderId, Importance, Rule, RuleAction, RuleCondition, Sensitivity};
 
 #[cfg(test)]
 #[path = "rules_tests.rs"]
@@ -766,7 +766,7 @@ fn value_editor(
                 );
             }
             Val::Form => {
-                let forms: Vec<&str> = mailcraft_model::rule::FORMS.iter().map(|(n, _)| *n).collect();
+                let forms: Vec<&str> = iridium_mail_model::rule::FORMS.iter().map(|(n, _)| *n).collect();
                 if s.text.trim().is_empty() {
                     s.text = "Message".into();
                 }
@@ -1090,7 +1090,7 @@ fn rule_created(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                     muted(
                         ui,
                         app,
-                        "It runs only while MailCraft is open, because some of its actions happen in this app.",
+                        "It runs only while Mail is open, because some of its actions happen in this app.",
                     );
                 }
                 let folder = app.s.selection.folder;
@@ -1581,7 +1581,7 @@ fn rules_options(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                             .hint_text("/path/to/my-rules.mcrules")
                             .desired_width(330.0),
                     );
-                    let filter = crate::FileFilter::new("MailCraft rules", &["mcrules", "json"]);
+                    let filter = crate::FileFilter::new("Mail rules", &["mcrules", "json"]);
                     if common::browse_button(ui, app) {
                         let picked = if app.s.mailbox.rules.is_empty() {
                             common::browse_open(app, "Import Rules", &[filter], &st.path)
@@ -1888,7 +1888,7 @@ fn wizard_body(ctx: &Context, ui: &mut Ui, app: &mut App, uid: u64, w: &mut Wiza
                         }
                         if i == TEMPLATE_MOBILE {
                             ui.add_enabled(false, egui::Button::selectable(false, *label)).on_disabled_hover_text(
-                                "Alerts to a mobile device need a text messaging service, which MailCraft does not have.",
+                                "Alerts to a mobile device need a text messaging service, which Mail does not have.",
                             );
                             continue;
                         }
@@ -2075,7 +2075,7 @@ fn finish_wizard(ctx: &Context, app: &mut App, w: &mut Wizard) -> Out {
     if w.draft.is_client_only() || w.draft.conds.get(29).is_some_and(|s| s.on) {
         Out::close_open(
             "message",
-            json!({"title": "Rules Wizard", "text": "MailCraft carries out this rule itself, so it acts only on mail that arrives while MailCraft is running."}),
+            json!({"title": "Rules Wizard", "text": "Mail carries out this rule itself, so it acts only on mail that arrives while Mail is running."}),
         )
     } else {
         Out::Close

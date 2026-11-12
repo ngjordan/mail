@@ -1,5 +1,5 @@
 //! `drawing.*`: the floating drawing objects of the compose body (text boxes, shapes, WordArt, drawing
-//! canvases, groups; see [`mailcraft_model::Drawing`]) and the Shape Format tab that edits them: select
+//! canvases, groups; see [`iridium_mail_model::Drawing`]) and the Shape Format tab that edits them: select
 //! (one or several), move and size (the editor's drag handles end in `drawing.move` / `drawing.size`), text,
 //! Shape Fill (colours, gradients, pictures), Shape Outline (colour, weight, dashes), Shape Effects (with
 //! galleries and options), Shape Quick Styles, Text Fill, Text Outline, Text Effects (with Transform), WordArt
@@ -34,8 +34,8 @@ use super::insert::shapes;
 use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::compose::ComposeState;
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Align, Drawing, DrawingKind, VAlign, WrapStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Align, Drawing, DrawingKind, VAlign, WrapStyle};
 
 /// Deepest group nesting followed.
 const MAX_NEST: usize = 32;
@@ -341,7 +341,7 @@ fn color_choice(s: &Session, p: &Value) -> Result<Option<Option<Color>>, CmdErro
         None => Ok(None),
         Some(Value::Null) => Ok(Some(None)),
         Some(Value::String(t)) if t.eq_ignore_ascii_case("none") => Ok(Some(None)),
-        Some(Value::String(t)) => mailcraft_html::parse_css_color(t)
+        Some(Value::String(t)) => iridium_mail_html::parse_css_color(t)
             .map(|c| Some(Some(c)))
             .ok_or_else(|| CmdError::Params(format!("`{t}` is not a colour"))),
         Some(_) => Err(CmdError::Params("`color` must be a colour or null".into())),
@@ -1071,7 +1071,7 @@ fn align_text(s: &mut Session, p: &Value) -> CmdResult {
             d.valign = v;
         }
         // Explicit alignment: the shape no longer centres its text by itself.
-        if d.kind == DrawingKind::Shape && d.text_style == mailcraft_model::TextStyle::default() {
+        if d.kind == DrawingKind::Shape && d.text_style == iridium_mail_model::TextStyle::default() {
             d.text_style.size_pt = Some(11.0);
         }
         Ok(())

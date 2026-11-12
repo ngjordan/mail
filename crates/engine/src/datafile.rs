@@ -23,7 +23,7 @@
 //! Save writes it there on demand ([`save_linked`]), so the file can be copied, moved and opened in another
 //! profile. A data file can be protected by a password: the file is then encrypted ([`seal`]: a key derived
 //! with PBKDF2-HMAC-SHA256, RFC 8018, AES-256-CBC and an HMAC-SHA256 tag over the header and the
-//! ciphertext, see `mailcraft_smime::seal`; files of the earlier unauthenticated format still open), and the
+//! ciphertext, see `iridium_mail_smime::seal`; files of the earlier unauthenticated format still open), and the
 //! password is kept in the session's secret store, never in the mailbox. The encryption covers the file
 //! only: while the data file is open its items live unencrypted in the profile like any other data file's,
 //! and its password is remembered in the profile's secret store (the OS keyring where there is one, the
@@ -51,15 +51,19 @@ use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
 use crate::{CmdError, Session};
-use mailcraft_model::account::{AccountSync, CredentialKind};
-use mailcraft_model::mailbox::MAX_FOLDER_NAME_CHARS;
-use mailcraft_model::{
+use iridium_mail_model::account::{AccountSync, CredentialKind};
+use iridium_mail_model::mailbox::MAX_FOLDER_NAME_CHARS;
+use iridium_mail_model::{
     Account, AccountId, AccountKind, Appointment, Body, Contact, Folder, FolderId, ItemId, MailItem, Note,
     Task, ViewSettings,
 };
 
 /// `format` field of a closed data file.
-pub const FORMAT: &str = "mailcraft-data-file";
+pub const FORMAT: &str = "iridium-mail-data-file";
+/// The `format` field of a data file written before the rename. It is read, never
+/// written: a closed data file holds mail, and refusing one because the marker
+/// changed would lose it.
+pub const FORMAT_LEGACY: &str = "mailcraft-data-file";
 /// Current version of the format.
 pub const VERSION: u32 = 1;
 /// File extension of closed data files.
@@ -76,7 +80,7 @@ const MAX_IN_MEMORY: usize = 64;
 
 /// A mail item of a data file, with its content inline (a data file is self-contained; in the profile the
 /// content lives in the body store). The JSON is the item's own fields plus `body` and `raw`, as every data
-/// file has had: `body` is always written (MailCraft before storage stage S5 needs it), `raw` is the source
+/// file has had: `body` is always written (Mail before storage stage S5 needs it), `raw` is the source
 /// as a number array, or null.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct DataMail {
@@ -351,7 +355,7 @@ fn create_temp(path: &Path) -> std::io::Result<(PathBuf, std::fs::File)> {
     };
     let mut last = None;
     for attempt in 0u32..16 {
-        let token = mailcraft_smime::random_secret()
+        let token = iridium_mail_smime::random_secret()
             .map(|t| t.chars().take(16).collect::<String>())
             .unwrap_or_else(|_| {
                 let nanos = std::time::SystemTime::now()
@@ -393,7 +397,7 @@ fn write_durable(
         return Err(e);
     }
     let dir = path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
-    mailcraft_store::journal::sync_dir(dir);
+    iridium_mail_store::journal::sync_dir(dir);
     Ok(())
 }
 
@@ -403,7 +407,7 @@ fn check_size(bytes: &[u8], cap: u64) -> Result<(), CmdError> {
     let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
     if len > cap {
         return Err(CmdError::Failed(format!(
-            "the data file would take {len} bytes, more than the {cap} bytes MailCraft can open again; move \
+            "the data file would take {len} bytes, more than the {cap} bytes Mail can open again; move \
              some of its mail to another data file first"
         )));
     }
@@ -503,13 +507,13 @@ fn read_capped(path: &Path, cap: u64) -> Result<Vec<u8>, CmdError> {
 /// Parses a closed data file.
 pub fn parse(bytes: &[u8]) -> Result<DataFileImage, CmdError> {
     let image: DataFileImage = serde_json::from_slice(bytes)
-        .map_err(|e| CmdError::Failed(format!("this is not a MailCraft data file ({e})")))?;
-    if image.format != FORMAT {
-        return Err(CmdError::Failed("this is not a MailCraft data file".into()));
+        .map_err(|e| CmdError::Failed(format!("this is not a Mail data file ({e})")))?;
+    if image.format != FORMAT && image.format != FORMAT_LEGACY {
+        return Err(CmdError::Failed("this is not a Mail data file".into()));
     }
     if image.version == 0 || image.version > VERSION {
         return Err(CmdError::Failed(format!(
-            "this data file was written by a newer MailCraft (format {})",
+            "this data file was written by a newer Mail (format {})",
             image.version
         )));
     }
@@ -744,7 +748,7 @@ pub fn attach_report(s: &mut Session, image: DataFileImage) -> Result<(AccountId
         m.body_evicted = false;
         // The content goes to this profile's body store (the source; a body record only for a body the
         // source does not give).
-        let content = mailcraft_store::Content {
+        let content = iridium_mail_store::Content {
             source: raw.filter(|r| !r.is_empty()),
             body: (!body.is_empty()).then_some(body),
         };
@@ -805,7 +809,9 @@ pub fn attach_report(s: &mut Session, image: DataFileImage) -> Result<(AccountId
 // Standalone data files
 
 /// `format` of a data file protected by a password: the data file, encrypted ([`seal`]).
-pub const SEALED_FORMAT: &str = "mailcraft-data-file-sealed";
+pub const SEALED_FORMAT: &str = "iridium-mail-data-file-sealed";
+/// The sealed marker of a file written before the rename. Read, never written.
+pub const SEALED_FORMAT_LEGACY: &str = "mailcraft-data-file-sealed";
 /// Version of the protected format written now. Version 2 adds the HMAC-SHA256 tag over header and
 /// ciphertext and the password check value; version 1 files (no tag) still open, and are written as
 /// version 2 the next time they are saved.
@@ -825,7 +831,7 @@ const CIPHER: &str = "aes-256-cbc";
 const AUTH: &str = "hmac-sha256";
 
 /// What the tag of a protected data file of format `version` is bound to: the format, that version and its
-/// algorithms (the round count, salt and IV are added by `mailcraft_smime::seal`). A file is checked against
+/// algorithms (the round count, salt and IV are added by `iridium_mail_smime::seal`). A file is checked against
 /// the version it declares, so files of an earlier version keep opening once a later one is written.
 fn seal_context(version: u32) -> String {
     format!("{SEALED_FORMAT};version={version};kdf={KDF};cipher={CIPHER};auth={AUTH}")
@@ -890,6 +896,7 @@ pub fn secret_key(account: AccountId) -> String {
 pub fn is_sealed(bytes: &[u8]) -> bool {
     let mut rest = bytes.get(..bytes.len().min(256)).unwrap_or_default();
     let quoted = format!("\"{SEALED_FORMAT}\"");
+    let quoted_legacy = format!("\"{SEALED_FORMAT_LEGACY}\"");
     let mut eat = |token: &[u8]| -> bool {
         match rest.trim_ascii_start().strip_prefix(token) {
             Some(after) => {
@@ -899,7 +906,13 @@ pub fn is_sealed(bytes: &[u8]) -> bool {
             None => false,
         }
     };
-    eat(b"{") && eat(b"\"format\"") && eat(b":") && eat(quoted.as_bytes()) && (eat(b",") || eat(b"}"))
+    // `eat` consumes nothing when the token does not match, so the legacy marker can be
+    // tried after the current one.
+    eat(b"{")
+        && eat(b"\"format\"")
+        && eat(b":")
+        && (eat(quoted.as_bytes()) || eat(quoted_legacy.as_bytes()))
+        && (eat(b",") || eat(b"}"))
 }
 
 /// A password that can protect a data file: 1 to [`MAX_PASSWORD_CHARS`] characters, no control characters.
@@ -919,7 +932,7 @@ pub fn seal(bytes: &[u8], password: &str) -> Result<Vec<u8>, CmdError> {
     check_password(password)?;
     let fail = |e: String| CmdError::Failed(format!("cannot protect the data file: {e}"));
     let sealed =
-        mailcraft_smime::seal::seal(bytes, password, SEAL_ROUNDS, seal_context(SEALED_VERSION).as_bytes())
+        iridium_mail_smime::seal::seal(bytes, password, SEAL_ROUNDS, seal_context(SEALED_VERSION).as_bytes())
             .map_err(|e| fail(e.to_string()))?;
     let Some(auth) = &sealed.auth else {
         return Err(fail("no authentication tag".into()));
@@ -953,26 +966,29 @@ fn fixed_bytes<const N: usize>(t: &str) -> Result<[u8; N], CmdError> {
 }
 
 /// The header of a protected data file checked and decoded (the data left empty), with the file itself.
-fn sealed_parts(bytes: &[u8]) -> Result<(SealedIn<'_>, mailcraft_smime::seal::Sealed), CmdError> {
+fn sealed_parts(bytes: &[u8]) -> Result<(SealedIn<'_>, iridium_mail_smime::seal::Sealed), CmdError> {
     let file: SealedIn<'_> = serde_json::from_slice(bytes).map_err(|_| damaged())?;
-    if file.format != SEALED_FORMAT {
+    if file.format != SEALED_FORMAT && file.format != SEALED_FORMAT_LEGACY {
         return Err(CmdError::Failed("this data file is not protected by a password".into()));
     }
     if file.version == 0 || file.version > SEALED_VERSION {
         return Err(CmdError::Failed(format!(
-            "this data file was written by a newer MailCraft (format {})",
+            "this data file was written by a newer Mail (format {})",
             file.version
         )));
     }
     if file.kdf != KDF || file.cipher != CIPHER || (file.version >= 2 && file.auth != AUTH) {
-        return Err(CmdError::Failed("this data file is protected in a way MailCraft cannot open".into()));
+        return Err(CmdError::Failed("this data file is protected in a way Mail cannot open".into()));
     }
     let auth = if file.version >= 2 {
-        Some(mailcraft_smime::seal::Auth { check: fixed_bytes(&file.check)?, mac: fixed_bytes(&file.tag)? })
+        Some(iridium_mail_smime::seal::Auth {
+            check: fixed_bytes(&file.check)?,
+            mac: fixed_bytes(&file.tag)?,
+        })
     } else {
         None
     };
-    let sealed = mailcraft_smime::seal::Sealed {
+    let sealed = iridium_mail_smime::seal::Sealed {
         rounds: file.rounds,
         salt: fixed_bytes(&file.salt)?,
         iv: fixed_bytes(&file.iv)?,
@@ -982,17 +998,17 @@ fn sealed_parts(bytes: &[u8]) -> Result<(SealedIn<'_>, mailcraft_smime::seal::Se
     Ok((file, sealed))
 }
 
-/// An error of `mailcraft_smime::seal` as the user sees it (`authenticated`: the file has a tag, so a wrong
+/// An error of `iridium_mail_smime::seal` as the user sees it (`authenticated`: the file has a tag, so a wrong
 /// password and a damaged file are told apart).
-fn seal_error(e: mailcraft_smime::SmimeError, authenticated: bool) -> CmdError {
+fn seal_error(e: iridium_mail_smime::SmimeError, authenticated: bool) -> CmdError {
     match e {
-        mailcraft_smime::SmimeError::Password if authenticated => {
+        iridium_mail_smime::SmimeError::Password if authenticated => {
             CmdError::Params("the password is wrong".into())
         }
-        mailcraft_smime::SmimeError::Password => {
+        iridium_mail_smime::SmimeError::Password => {
             CmdError::Params("the password is wrong, or the data file is damaged".into())
         }
-        mailcraft_smime::SmimeError::Malformed(_) => CmdError::Failed(
+        iridium_mail_smime::SmimeError::Malformed(_) => CmdError::Failed(
             "this protected data file is damaged, or was changed without the password: it was not opened"
                 .into(),
         ),
@@ -1011,7 +1027,7 @@ pub fn unseal(bytes: &[u8], password: &str) -> Result<Zeroizing<Vec<u8>>, CmdErr
     let context = seal_context(file.version);
     drop(file);
     let authenticated = sealed.auth.is_some();
-    mailcraft_smime::seal::open(sealed, password, context.as_bytes())
+    iridium_mail_smime::seal::open(sealed, password, context.as_bytes())
         .map_err(|e| seal_error(e, authenticated))
 }
 
@@ -1026,11 +1042,11 @@ pub fn check_sealed_password(bytes: &[u8], password: &str) -> Result<(), CmdErro
         sealed.data = base64::engine::general_purpose::STANDARD.decode(head).map_err(|_| damaged())?;
     }
     let authenticated = sealed.auth.is_some();
-    mailcraft_smime::seal::check_password(&sealed, password).map_err(|e| seal_error(e, authenticated))
+    iridium_mail_smime::seal::check_password(&sealed, password).map_err(|e| seal_error(e, authenticated))
 }
 
 /// `path` made absolute against the current folder (as it is now), so a data file linked to a relative
-/// path is written back to the same file even when MailCraft later runs from elsewhere.
+/// path is written back to the same file even when Mail later runs from elsewhere.
 pub fn absolute(path: &Path) -> PathBuf {
     std::path::absolute(path).unwrap_or_else(|_| path.to_path_buf())
 }
@@ -1205,7 +1221,7 @@ fn image_bytes(s: &Session, account: AccountId) -> Result<Zeroizing<Vec<u8>>, Cm
 }
 
 /// Notes the files of the standalone data files open in this profile as they are on disk now (at start-up),
-/// so a file another program or MailCraft instance writes afterwards is not overwritten.
+/// so a file another program or Mail instance writes afterwards is not overwritten.
 pub(crate) fn note_linked_files(s: &mut Session) {
     let linked: Vec<(AccountId, PathBuf)> = s
         .mailbox
@@ -1228,7 +1244,7 @@ pub fn save_linked(s: &mut Session, account: AccountId) -> Result<PathBuf, CmdEr
 /// whose file is still there) is not written again. Returns the path and whether it was written.
 ///
 /// A file that changed on disk since this session last read or wrote it (another program, or another
-/// MailCraft profile with the same file open, wrote it) is never overwritten. When this data file has no
+/// Mail profile with the same file open, wrote it) is never overwritten. When this data file has no
 /// changes of its own since then, nothing is written: the file already holds everything, and newer. When it
 /// has, it goes to a new file next to it instead (`<name> (copy N).mcdata`), the data file stays linked to
 /// that copy, and a notice says so. Nothing is lost on either side. The new link is in the mailbox only:
@@ -1258,7 +1274,7 @@ pub(crate) fn save_linked_as(
         // it is made.
         if changed_elsewhere && !only_if_changed {
             s.notify(crate::Notice::Info(format!(
-                "{} was changed by another program since MailCraft opened it. This data file has no changes \
+                "{} was changed by another program since Mail opened it. This data file has no changes \
                  of its own since then, so the file was left as it is.",
                 path.display()
             )));
@@ -1289,7 +1305,7 @@ pub(crate) fn save_linked_as(
             l.path = copy.display().to_string();
         }
         s.notify(crate::Notice::Info(format!(
-            "{} was changed by another program since MailCraft opened it, so it was left as it is. The data \
+            "{} was changed by another program since Mail opened it, so it was left as it is. The data \
              file \"{name}\" was saved to {} instead.",
             path.display(),
             copy.display()
@@ -1320,7 +1336,7 @@ pub fn create_linked(
         kind: AccountKind::Local,
         display_name: name.to_owned(),
         is_default: false,
-        data_file: Some(mailcraft_model::account::DataFileLink {
+        data_file: Some(iridium_mail_model::account::DataFileLink {
             path: path.display().to_string(),
             protected: password.is_some(),
         }),
@@ -1403,7 +1419,7 @@ pub fn open_linked(
     };
     if let Some(a) = s.mailbox.accounts.iter_mut().find(|a| a.id == id) {
         a.data_file =
-            Some(mailcraft_model::account::DataFileLink { path: path.display().to_string(), protected });
+            Some(iridium_mail_model::account::DataFileLink { path: path.display().to_string(), protected });
     }
     if let (true, Some(pw)) = (protected, password)
         && let Err(e) = s.secrets.set(&secret_key(id), pw)
@@ -1477,19 +1493,19 @@ pub(crate) mod tests {
     /// file whose name contained it was taken for a protected one and could never be opened.
     #[test]
     fn only_the_format_field_makes_a_file_protected() {
-        let named = plain_file("mailcraft-data-file-sealed notes");
+        let named = plain_file("iridium-mail-data-file-sealed notes");
         assert!(String::from_utf8_lossy(&named).contains(SEALED_FORMAT));
         assert!(!is_sealed(&named), "a plain data file named after the format");
-        assert_eq!(parse(&named).unwrap().account.display_name, "mailcraft-data-file-sealed notes");
+        assert_eq!(parse(&named).unwrap().account.display_name, "iridium-mail-data-file-sealed notes");
         let sealed = seal(&plain_file("x"), "pw-1").unwrap();
         assert!(is_sealed(&sealed));
-        assert!(is_sealed(b" {\n \"format\" : \"mailcraft-data-file-sealed\" , \"version\":2}"));
-        assert!(is_sealed(br#"{"format":"mailcraft-data-file-sealed"}"#));
+        assert!(is_sealed(b" {\n \"format\" : \"iridium-mail-data-file-sealed\" , \"version\":2}"));
+        assert!(is_sealed(br#"{"format":"iridium-mail-data-file-sealed"}"#));
         for not in [
-            &br#"{"format":"mailcraft-data-file-sealed-x"}"#[..],
-            br#"{"version":2,"format":"mailcraft-data-file-sealed"}"#,
-            br#"{"format":"mailcraft-data-file","note":"mailcraft-data-file-sealed"}"#,
-            br#"["format","mailcraft-data-file-sealed"]"#,
+            &br#"{"format":"iridium-mail-data-file-sealed-x"}"#[..],
+            br#"{"version":2,"format":"iridium-mail-data-file-sealed"}"#,
+            br#"{"format":"iridium-mail-data-file","note":"iridium-mail-data-file-sealed"}"#,
+            br#"["format","iridium-mail-data-file-sealed"]"#,
             b"",
             b"{",
         ] {
@@ -1500,7 +1516,7 @@ pub(crate) mod tests {
     #[test]
     fn new_protected_files_use_600000_rounds_and_the_authenticated_format() {
         const { assert!(PASSWORD_ROUNDS >= 600_000) };
-        const { assert!(PASSWORD_ROUNDS <= mailcraft_smime::seal::MAX_ROUNDS, "files written now must open") };
+        const { assert!(PASSWORD_ROUNDS <= iridium_mail_smime::seal::MAX_ROUNDS, "files written now must open") };
         let bytes = seal(&plain_file("x"), "pw-1").unwrap();
         let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(v["version"], SEALED_VERSION);
@@ -1540,9 +1556,9 @@ pub(crate) mod tests {
     /// A file of the earlier, unauthenticated format (version 1) as it was written.
     pub(crate) fn v1_file(plain: &[u8], password: &str) -> Vec<u8> {
         use base64::Engine;
-        let s = mailcraft_smime::seal::seal_v1(plain, password, 1_000).unwrap();
+        let s = iridium_mail_smime::seal::seal_v1(plain, password, 1_000).unwrap();
         let b64 = base64::engine::general_purpose::STANDARD;
-        // In the field order the earlier MailCraft wrote (`format` first).
+        // In the field order the earlier Mail wrote (`format` first).
         format!(
             r#"{{"format":"{SEALED_FORMAT}","version":1,"kdf":"{KDF}","rounds":{},"salt":"{}","cipher":"{CIPHER}","iv":"{}","data":"{}"}}"#,
             s.rounds,
@@ -1638,7 +1654,7 @@ pub(crate) mod tests {
     #[test]
     fn lists_past_the_cap_stop_while_reading() {
         let view = serde_json::to_string(&ViewSettings::default()).unwrap();
-        let mut text = String::from(r#"{"format":"mailcraft-data-file","version":1,"views":["#);
+        let mut text = String::from(r#"{"format":"iridium-mail-data-file","version":1,"views":["#);
         for i in 0..=MAX_FOLDERS {
             if i > 0 {
                 text.push(',');
@@ -1649,7 +1665,7 @@ pub(crate) mod tests {
         let e = parse(text.as_bytes()).unwrap_err();
         assert!(e.to_string().contains(&format!("more than {MAX_FOLDERS} entries")), "{e}");
         let ok =
-            format!(r#"{{"format":"mailcraft-data-file","version":1,"views":[[1,{view}]],"folders":[]}}"#);
+            format!(r#"{{"format":"iridium-mail-data-file","version":1,"views":[[1,{view}]],"folders":[]}}"#);
         assert_eq!(parse(ok.as_bytes()).unwrap().views.len(), 1);
     }
 
@@ -1673,11 +1689,11 @@ pub(crate) mod tests {
         use base64::Engine;
         assert_eq!(
             seal_context(2),
-            "mailcraft-data-file-sealed;version=2;kdf=pbkdf2-sha256;cipher=aes-256-cbc;auth=hmac-sha256"
+            "iridium-mail-data-file-sealed;version=2;kdf=pbkdf2-sha256;cipher=aes-256-cbc;auth=hmac-sha256"
         );
         let b64 = base64::engine::general_purpose::STANDARD;
         let write = |declared: u32, tagged: u32| -> Vec<u8> {
-            let sealed = mailcraft_smime::seal::seal(
+            let sealed = iridium_mail_smime::seal::seal(
                 &plain_file("Kept"),
                 "pw-1",
                 1_000,
@@ -1717,7 +1733,7 @@ pub(crate) mod tests {
         let mut s = Session::open(profile.path()).unwrap();
         let file = dir.path().join("Notes.mcdata");
         let id = create_linked(&mut s, "Notes", &file, None).unwrap();
-        let inbox = s.mailbox.role_folder(id, mailcraft_model::FolderRole::Inbox).unwrap();
+        let inbox = s.mailbox.role_folder(id, iridium_mail_model::FolderRole::Inbox).unwrap();
         let mut item = MailItem { folder: inbox, subject: "A".into(), ..Default::default() };
         s.store_source(&mut item, b"Subject: A\r\n\r\nbody one\r\n").unwrap();
         let m = s.mailbox.add_mail(item);

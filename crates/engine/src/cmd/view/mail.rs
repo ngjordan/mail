@@ -18,7 +18,7 @@
 //! hidden from the Customize Status Bar menu.
 //!
 //! **Pinned messages** (Quick Action Pin / Unpin, `mail.pin`) are marked on the message (`MailItem::pinned`,
-//! which Reset View leaves alone) and listed at the top of the folder's list. MailCraft 0.1 kept them in a
+//! which Reset View leaves alone) and listed at the top of the folder's list. Mail 0.1 kept them in a
 //! reserved entry of the folder's view state; [`migrate_view_pins`] moves those onto the messages.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,8 +29,8 @@ use serde_json::{Map, Value, json};
 use super::{dialog, parse_layout, settings};
 use crate::cmd::util::{opt_bool, opt_str, req_str};
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_model::view::{ExpandDefault, MAX_GROUP_LEVELS, MAX_SORT_KEYS, SortOrder, TableOther};
-use mailcraft_model::{
+use iridium_mail_model::view::{ExpandDefault, MAX_GROUP_LEVELS, MAX_SORT_KEYS, SortOrder, TableOther};
+use iridium_mail_model::{
     ArrangeBy, DateTime, FlagState, FolderId, FolderKind, FolderRole, Importance, ItemId, ListTime, MailItem,
     Sensitivity, ViewLayout, ViewSettings,
 };
@@ -307,13 +307,13 @@ impl CustomFilter {
             }
         }
         if !self.from.trim().is_empty() {
-            let who: Vec<&mailcraft_model::Address> = m.from.iter().chain(m.sender.iter()).collect();
+            let who: Vec<&iridium_mail_model::Address> = m.from.iter().chain(m.sender.iter()).collect();
             if !any_person(&self.from, &who) {
                 return false;
             }
         }
         if !self.sent_to.trim().is_empty() {
-            let who: Vec<&mailcraft_model::Address> = m.to.iter().chain(m.cc.iter()).collect();
+            let who: Vec<&iridium_mail_model::Address> = m.to.iter().chain(m.cc.iter()).collect();
             if !any_person(&self.sent_to, &who) {
                 return false;
             }
@@ -386,7 +386,7 @@ impl CustomFilter {
 }
 
 /// `list` (`;` or `,` separated) names someone in `who` (name or address contains the text).
-fn any_person(list: &str, who: &[&mailcraft_model::Address]) -> bool {
+fn any_person(list: &str, who: &[&iridium_mail_model::Address]) -> bool {
     list.split([';', ',']).map(|p| p.trim().to_lowercase()).filter(|p| !p.is_empty()).any(|p| {
         who.iter().any(|a| {
             a.addr.to_lowercase().contains(&p)
@@ -469,7 +469,7 @@ pub fn is_overdue(s: &Session, m: &MailItem) -> bool {
 }
 
 /// Longest header block scanned for an expiry date.
-pub const HEADER_SCAN: usize = mailcraft_store::legacy::HEADER_SCAN;
+pub const HEADER_SCAN: usize = iridium_mail_store::legacy::HEADER_SCAN;
 
 /// The message's expiry date (`Expiry-Date` or `Expires`, RFC 4021), read from its source when the source was
 /// stored (no file read: this paints rows).
@@ -479,7 +479,7 @@ pub fn expiry(m: &MailItem) -> Option<DateTime> {
 
 /// The expiry date of the message whose source is (or starts with) `raw`.
 pub fn expiry_in(raw: &[u8]) -> Option<DateTime> {
-    mailcraft_store::legacy::expiry_in(raw)
+    iridium_mail_store::legacy::expiry_in(raw)
 }
 
 /// The message's expiry date (see [`expiry`]; kept for batch callers such as AutoArchive).
@@ -716,7 +716,7 @@ pub(super) fn apply_settings(s: &mut Session, folder: FolderId, p: &Value) -> Cm
             None => Ok(None),
             Some(v) => {
                 let n = v.as_u64().ok_or_else(|| CmdError::Params(format!("`{key}` must be a font size")))?;
-                Ok(Some(mailcraft_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX))))
+                Ok(Some(iridium_mail_model::view::clamp_font(u8::try_from(n).unwrap_or(u8::MAX))))
             }
         }
     };
@@ -904,7 +904,7 @@ pub fn custom_filter(s: &Session, folder: FolderId) -> Option<CustomFilter> {
 // ---------------------------------------------------------------------------------------------------------
 // Cell text
 
-fn person_text(list: &[&mailcraft_model::Address], format: &str) -> String {
+fn person_text(list: &[&iridium_mail_model::Address], format: &str) -> String {
     list.iter()
         .map(|a| match format {
             "address" => a.addr.clone(),
@@ -994,7 +994,7 @@ pub fn cell_text(s: &Session, m: &MailItem, id: &str, format: &str) -> String {
         "replyTo" => person_text(&m.reply_to.iter().collect::<Vec<_>>(), format),
         "sender" => person_text(&m.sender.iter().chain(m.from.iter()).take(1).collect::<Vec<_>>(), format),
         "read" => if m.read { "Yes" } else { "No" }.to_owned(),
-        "conversation" => mailcraft_model::subject::strip_prefixes(&m.subject).trim().to_owned(),
+        "conversation" => iridium_mail_model::subject::strip_prefixes(&m.subject).trim().to_owned(),
         "messageClass" => message_class(m).to_owned(),
         "followUpFlag" => match &m.flag {
             FlagState::Flagged { label, .. } if label.trim().is_empty() => "Follow up".to_owned(),
@@ -1011,19 +1011,19 @@ pub fn cell_text(s: &Session, m: &MailItem, id: &str, format: &str) -> String {
             format,
         ),
         "response" => match m.response {
-            mailcraft_model::ResponseState::None => "",
-            mailcraft_model::ResponseState::Replied(_) => "Replied",
-            mailcraft_model::ResponseState::RepliedAll(_) => "Replied to All",
-            mailcraft_model::ResponseState::Forwarded(_) => "Forwarded",
+            iridium_mail_model::ResponseState::None => "",
+            iridium_mail_model::ResponseState::Replied(_) => "Replied",
+            iridium_mail_model::ResponseState::RepliedAll(_) => "Replied to All",
+            iridium_mail_model::ResponseState::Forwarded(_) => "Forwarded",
         }
         .to_owned(),
         "responseTime" => date_text(
             s,
             match m.response {
-                mailcraft_model::ResponseState::None => None,
-                mailcraft_model::ResponseState::Replied(t)
-                | mailcraft_model::ResponseState::RepliedAll(t)
-                | mailcraft_model::ResponseState::Forwarded(t) => Some(t),
+                iridium_mail_model::ResponseState::None => None,
+                iridium_mail_model::ResponseState::Replied(t)
+                | iridium_mail_model::ResponseState::RepliedAll(t)
+                | iridium_mail_model::ResponseState::Forwarded(t) => Some(t),
             },
             format,
         ),
@@ -1060,7 +1060,7 @@ pub fn pinned_in(s: &Session, folder: FolderId) -> usize {
     s.mailbox.mail.items().filter(|m| m.pinned && m.folder == folder).count()
 }
 
-/// Moves the pins MailCraft 0.1 kept in the folders' view state (`PINNED` entries) onto the messages, and
+/// Moves the pins Mail 0.1 kept in the folders' view state (`PINNED` entries) onto the messages, and
 /// drops those entries. 0.1 showed a pinned message pinned wherever it was moved, so a listed message that
 /// is now in another folder stays pinned there too (at most [`MAX_PINNED`] per folder); pins of messages
 /// that are gone are dropped. Returns how many messages were pinned.
@@ -1912,7 +1912,7 @@ pub(super) fn summary(s: &Session, folder: FolderId) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Address, Mailbox};
+    use iridium_mail_model::{Address, Mailbox};
 
     fn session() -> Session {
         let mut s = Session::new(Mailbox::new_local("Test"));
@@ -2189,7 +2189,7 @@ mod tests {
         let b = add(&mut s, MailItem { subject: "b".into(), received: now, ..Default::default() });
         let elsewhere = s.mailbox.create_folder(f, "Elsewhere").unwrap();
         s.mailbox.move_items(&[b], elsewhere).unwrap();
-        // MailCraft 0.1 kept the pins as a reserved entry of the folder's view state.
+        // Mail 0.1 kept the pins as a reserved entry of the folder's view state.
         s.view.collapsed_groups.insert(f, vec!["Today".into(), format!("{PINNED}[{},{},424242]", a.0, b.0)]);
         assert_eq!(migrate_view_pins(&mut s), 2);
         assert!(s.mailbox.mail.get(a).unwrap().pinned);
@@ -2250,7 +2250,7 @@ mod tests {
         run(&mut s, "view.reverseSort", json!({}));
         run(&mut s, "view.manageViews", json!({"op": "update", "name": "Fresh"}));
         let fresh = saved_views(&s).into_iter().find(|v| v.name == "Fresh").unwrap();
-        assert_eq!(fresh.settings.order, mailcraft_model::SortOrder::Ascending);
+        assert_eq!(fresh.settings.order, iridium_mail_model::SortOrder::Ascending);
         run(&mut s, "view.manageViews", json!({"op": "delete", "name": "Fresh"}));
         assert_eq!(current_view_name(&s, sent), "Preview");
         run(&mut s, "view.manageViews", json!({"op": "reset", "name": "Single"}));

@@ -1,7 +1,7 @@
 //! Contacts and calendars of a JMAP account over JMAP itself: address books and cards (JMAP for Contacts,
 //! RFC 9610: AddressBook/get, ContactCard/query, /get, /set) and calendars and events (JMAP for Calendars:
 //! Calendar/get, CalendarEvent/query, /get, /set), when the server offers `urn:ietf:params:jmap:contacts` /
-//! `urn:ietf:params:jmap:calendars`. Tasks have no JMAP counterpart MailCraft uses: they stay on the
+//! `urn:ietf:params:jmap:calendars`. Tasks have no JMAP counterpart Mail uses: they stay on the
 //! account's CalDAV server, if it has one.
 //!
 //! **One synchronisation for both protocols.** [`Store`] gives the DAV synchroniser (`dav.rs`) the view of
@@ -10,22 +10,22 @@
 //! (the reserved `.invalid` name never reaches the network); an object's address is made from its UID like
 //! a DAV resource name made here ([`pim::resource_url`]), and its tag is a hash of the object as the server
 //! returned it. Reading converts JSContact / JSCalendar to the model ([`super::jscontact`],
-//! [`super::jscalendar`]) and writes MailCraft's own vCard / iCalendar text of it; writing reads that text
+//! [`super::jscalendar`]) and writes Mail's own vCard / iCalendar text of it; writing reads that text
 //! back into the mapped properties. An update sends only the mapped properties whose value differs from the
 //! server's object read the same way, so a property the edit did not touch is never rewritten (with what
-//! MailCraft cannot show inside it: further organizations, a photo stored as a blob, further alerts, …), and
-//! a property MailCraft does not map stays as it is. A property the edit did change is replaced whole by
-//! MailCraft's version of it. Conditional writes are checked against the tag of the object as it is just
+//! Mail cannot show inside it: further organizations, a photo stored as a blob, further alerts, …), and
+//! a property Mail does not map stays as it is. A property the edit did change is replaced whole by
+//! Mail's version of it. Conditional writes are checked against the tag of the object as it is just
 //! before the write. Events are written with `sendSchedulingMessages: false`: the server never mails
-//! attendees on MailCraft's behalf.
+//! attendees on Mail's behalf.
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use mailcraft_model::DateTime;
-use mailcraft_net::dav::{Fetched, Listing, Precondition, Resource};
-use mailcraft_net::jmap::{CALENDARS, CONTACTS, JmapClient};
-use mailcraft_net::{NetError, http::percent_encode};
+use iridium_mail_model::DateTime;
+use iridium_mail_net::dav::{Fetched, Listing, Precondition, Resource};
+use iridium_mail_net::jmap::{CALENDARS, CONTACTS, JmapClient};
+use iridium_mail_net::{NetError, http::percent_encode};
 use serde_json::{Map, Value, json};
 
 use super::pim::{self, PimKind};
@@ -57,7 +57,7 @@ fn collection_id(url: &str, kind: PimKind) -> Option<String> {
     if id.is_empty() || id.contains('/') {
         return None;
     }
-    Some(mailcraft_net::http::percent_decode(id, false))
+    Some(iridium_mail_net::http::percent_decode(id, false))
 }
 
 /// The capability, object type, collection type, query filter and membership property of `kind`.
@@ -223,7 +223,7 @@ impl<'a> Store<'a> {
         Ok(Listing { collection: collection.to_owned(), resources, dropped })
     }
 
-    /// The text of the objects at `urls` (MailCraft's own vCard / iCalendar of each).
+    /// The text of the objects at `urls` (Mail's own vCard / iCalendar of each).
     pub(super) fn multiget(&self, urls: &[String]) -> Result<Vec<Fetched>, NetError> {
         let missing: Vec<String> = {
             let cache = self.cache.borrow();
@@ -259,7 +259,7 @@ impl<'a> Store<'a> {
             }
             PimKind::Tasks | PimKind::Calendar => {
                 let (items, uid) = jscalendar::to_appointments(v, self.tz_offset_min)?;
-                let refs: Vec<&mailcraft_model::Appointment> = items.iter().collect();
+                let refs: Vec<&iridium_mail_model::Appointment> = items.iter().collect();
                 Some(pim::event_calendar(&refs, &uid, self.now))
             }
         }
@@ -285,7 +285,7 @@ impl<'a> Store<'a> {
         create: Map<String, Value>,
         update: Map<String, Value>,
         destroy: &[String],
-    ) -> Result<mailcraft_net::jmap::SetResult, NetError> {
+    ) -> Result<iridium_mail_net::jmap::SetResult, NetError> {
         let mut extra = Map::new();
         if self.kind != PimKind::Contacts {
             extra.insert("sendSchedulingMessages".into(), json!(false));
@@ -307,7 +307,7 @@ impl<'a> Store<'a> {
         Ok(Some(tag))
     }
 
-    /// Writes `data` at `url` in `collection` (see [`mailcraft_net::dav::DavClient::put`]: a failed
+    /// Writes `data` at `url` in `collection` (see [`iridium_mail_net::dav::DavClient::put`]: a failed
     /// precondition is HTTP 412).
     pub(super) fn put(
         &self,
@@ -348,7 +348,7 @@ impl<'a> Store<'a> {
                 }
                 // Only the properties this edit changed are written: the server's object is read the way the
                 // edited copy was (through the model), and a property whose value comes out the same is left
-                // alone, with everything MailCraft does not show in it (a second organization, a photo
+                // alone, with everything Mail does not show in it (a second organization, a photo
                 // stored as a blob, further alerts, …).
                 let base = self.text_of(&current).and_then(|t| self.props_of(t.as_bytes())).map(|(b, _)| b);
                 let mut patch = Map::new();

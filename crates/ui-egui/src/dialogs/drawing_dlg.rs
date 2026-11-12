@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use super::common::{Dlg, Out, btn, footer, heading, muted, primary, window, with_state};
 use super::compose_dlg::cmd;
 use crate::App;
-use mailcraft_engine::cmd::insert::{chart, icons, smartart};
+use iridium_mail_engine::cmd::insert::{chart, icons, smartart};
 
 mod format_shape;
 
@@ -62,13 +62,13 @@ fn png_texture(
     key: &str,
     png: impl FnOnce() -> Option<Vec<u8>>,
 ) -> Option<egui::TextureHandle> {
-    let id = egui::Id::unique(("mailcraft-dialog-png", key));
+    let id = egui::Id::unique(("iridium-mail-dialog-png", key));
     if let Some(t) = ctx.data(|d| d.get_temp::<Option<egui::TextureHandle>>(id)) {
         return t;
     }
     let tex = png()
         .and_then(|data| crate::body::decode_image(&data))
-        .map(|img| ctx.load_texture(format!("mailcraft-dialog-{key}"), img, egui::TextureOptions::LINEAR));
+        .map(|img| ctx.load_texture(format!("iridium-mail-dialog-{key}"), img, egui::TextureOptions::LINEAR));
     ctx.data_mut(|d| d.insert_temp(id, tex.clone()));
     tex
 }
@@ -77,7 +77,7 @@ fn png_texture(
 type Preview = (String, Option<egui::TextureHandle>);
 
 fn preview_id(uid: u64) -> egui::Id {
-    egui::Id::unique(("mailcraft-dialog-preview", uid))
+    egui::Id::unique(("iridium-mail-dialog-preview", uid))
 }
 
 /// The preview of dialog `uid` for `key` (the chart or graphic it shows): one texture per dialog, replaced
@@ -95,7 +95,7 @@ fn preview_texture(
         return t;
     }
     let tex = png().and_then(|data| crate::body::decode_image(&data)).map(|img| {
-        ctx.load_texture(format!("mailcraft-dialog-preview-{uid}"), img, egui::TextureOptions::LINEAR)
+        ctx.load_texture(format!("iridium-mail-dialog-preview-{uid}"), img, egui::TextureOptions::LINEAR)
     });
     ctx.data_mut(|d| d.insert_temp::<Preview>(id, (key.to_owned(), tex.clone())));
     tex

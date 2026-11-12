@@ -1,15 +1,15 @@
 [package]
-name = "mailcraft-formats"
-description = "MailCraft file formats: EML, MBOX, MSG item (.msg, MS-OXMSG over MS-CFB), iCalendar (RFC 5545), vCard (RFC 6350/2426), CSV contacts, PST files (read only, MS-PST)"
+name = "iridium-mail-formats"
+description = "Mail file formats: EML, MBOX, MSG item (.msg, MS-OXMSG over MS-CFB), iCalendar (RFC 5545), vCard (RFC 6350/2426), CSV contacts, PST files (read only, MS-PST)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-mailcraft-mime.workspace = true
-mailcraft-model.workspace = true
-mailcraft-store.workspace = true
+iridium-mail-mime.workspace = true
+iridium-mail-model.workspace = true
+iridium-mail-store.workspace = true
 thiserror.workspace = true
 log.workspace = true
 encoding_rs.workspace = true
@@ -23,7 +23,7 @@ miniz_oxide.workspace = true
 outlook-pst.workspace = true
 
 [dev-dependencies]
-mailcraft-testmail.workspace = true
+iridium-mail-testmail.workspace = true
 proptest.workspace = true
 tempfile.workspace = true
 

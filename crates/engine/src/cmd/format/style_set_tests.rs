@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::Session;
 use crate::cmd::compose::tests::{open, session};
-use mailcraft_model::{Block, Inline};
+use iridium_mail_model::{Block, Inline};
 
 fn doc_with_headings() -> (Session, u64) {
     let mut s = session();
@@ -54,7 +54,7 @@ fn capitalized_numbered_and_lines_sets_differ_as_named() {
     assert!(headings(&s, id).iter().all(|(_, caps, ruled)| *caps && !ruled));
     s.run("format.styleSet", &json!({"name": "Lines (Simple)"})).unwrap();
     assert!(headings(&s, id).iter().all(|(_, caps, ruled)| !*caps && *ruled));
-    let html = mailcraft_html::doc_to_html(&s.composes[&id].body);
+    let html = iridium_mail_html::doc_to_html(&s.composes[&id].body);
     assert!(html.contains("border-bottom:"), "{html}");
     s.run("format.styleSet", &json!({"name": "Black & White (Numbered)"})).unwrap();
     let h: Vec<String> = headings(&s, id)
@@ -79,7 +79,7 @@ fn capitalized_numbered_and_lines_sets_differ_as_named() {
 fn style_sets_take_off_only_the_heading_lines_they_drew() {
     // Regression: a Lines set replaced a heading's box with a bottom rule, and every other set (also run on
     // each theme change) removed any bottom-only border, the user's own included.
-    use mailcraft_model::BorderLine;
+    use iridium_mail_model::BorderLine;
     let (mut s, id) = doc_with_headings();
     let at = |s: &mut Session, path: usize| {
         s.run(
@@ -93,7 +93,7 @@ fn style_sets_take_off_only_the_heading_lines_they_drew() {
     s.run("format.borders", &json!({"kind": "bottom", "style": "dotted", "width": 1.5})).unwrap();
     at(&mut s, 2);
     s.run("format.borders", &json!({"kind": "outside"})).unwrap();
-    let borders = |s: &Session| -> Vec<Option<mailcraft_model::ParaBorders>> {
+    let borders = |s: &Session| -> Vec<Option<iridium_mail_model::ParaBorders>> {
         s.composes[&id]
             .body
             .blocks

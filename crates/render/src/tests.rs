@@ -1,7 +1,7 @@
 use super::*;
-use mailcraft_fonts::FontId;
-use mailcraft_geom::{Point, Rect};
-use mailcraft_layout::DisplayItem;
+use iridium_mail_fonts::FontId;
+use iridium_mail_geom::{Point, Rect};
+use iridium_mail_layout::DisplayItem;
 use proptest::prelude::*;
 
 const BG: Color = Color::WHITE;
@@ -435,7 +435,7 @@ fn bad_scale_falls_back() {
 
 fn bundled_has_outlines() -> Option<FontDb> {
     let db = FontDb::bundled();
-    let font = db.resolve(mailcraft_fonts::UI_FAMILY, 400, false);
+    let font = db.resolve(iridium_mail_fonts::UI_FAMILY, 400, false);
     let g = db.glyph_id(font, 'H');
     if g != 0 && !db.outline(font, g, 16.0).is_empty() { Some(db) } else { None }
 }
@@ -446,7 +446,7 @@ fn text_produces_some_non_background_pixels() {
     let Some(db) = bundled_has_outlines() else {
         return;
     };
-    let font = db.resolve(mailcraft_fonts::UI_FAMILY, 400, false);
+    let font = db.resolve(iridium_mail_fonts::UI_FAMILY, 400, false);
     let mut item = text("Hello", 2.0, 20.0, 16.0, false, false);
     if let DisplayItem::Text { font: f, .. } = &mut item {
         *f = font;
@@ -794,7 +794,7 @@ fn pen_advance_matches_layout_measure_with_fallback() {
     let mut checked = 0;
     'outer: for cp in 0x80u32..0x3000 {
         let Some(c) = char::from_u32(cp) else { continue };
-        if mailcraft_fonts::is_zero_width(c) {
+        if iridium_mail_fonts::is_zero_width(c) {
             continue;
         }
         for f in 0..n {
@@ -850,7 +850,7 @@ fn missing_glyph_draws_notdef_in_requested_face() {
     let Some(db) = bundled_has_outlines() else {
         return;
     };
-    let font = db.resolve(mailcraft_fonts::UI_FAMILY, 400, false);
+    let font = db.resolve(iridium_mail_fonts::UI_FAMILY, 400, false);
     let c = '\u{10FFFD}';
     if !db.outline(font, 0, 16.0).is_empty()
         && (0..db.faces.len()).all(|i| db.glyph_id(FontId(i as u16), c) == 0)
@@ -868,7 +868,7 @@ fn missing_glyph_draws_notdef_in_requested_face() {
 fn stacked_combining_marks_are_bounded() {
     // 200k zero-advance marks on one spot: must finish quickly and keep the underline as long as the base.
     let db = FontDb::bundled();
-    let font = db.resolve(mailcraft_fonts::UI_FAMILY, 400, false);
+    let font = db.resolve(iridium_mail_fonts::UI_FAMILY, 400, false);
     let mut s = String::from("a");
     s.extend(std::iter::repeat_n('\u{0301}', 200_000));
     let mut item = text(&s, 2.0, 20.0, 16.0, true, true);

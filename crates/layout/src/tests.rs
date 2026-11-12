@@ -1,10 +1,10 @@
-//! Layout tests. Font advances come from `mailcraft-fonts`, which may be a stub or real fonts, so these tests
+//! Layout tests. Font advances come from `iridium-mail-fonts`, which may be a stub or real fonts, so these tests
 //! assert relationships (ordering, containment, counts) rather than exact pixel widths.
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_model::rich::{Align, ListKind, TableCell};
-use mailcraft_model::{Block, Doc, Inline, ParaStyle, TextStyle};
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_model::rich::{Align, ListKind, TableCell};
+use iridium_mail_model::{Block, Doc, Inline, ParaStyle, TextStyle};
 use proptest::prelude::*;
 
 use crate::{DisplayItem, Layout, LayoutOptions, TextPos, layout_doc};
@@ -1097,7 +1097,7 @@ fn arb_style() -> impl Strategy<Value = TextStyle> {
                     highlight,
                     underline: u,
                     underline_kind: kind
-                        .and_then(|k| mailcraft_model::UnderlineKind::ALL.get(k))
+                        .and_then(|k| iridium_mail_model::UnderlineKind::ALL.get(k))
                         .map(|(k, _)| *k),
                     double_strike: small.map(|s| !s),
                     small_caps: small,
@@ -1158,9 +1158,9 @@ fn arb_para_style() -> impl Strategy<Value = ParaStyle> {
                 (
                     px,
                     if exact {
-                        mailcraft_model::LineRule::Exactly
+                        iridium_mail_model::LineRule::Exactly
                     } else {
-                        mailcraft_model::LineRule::AtLeast
+                        iridium_mail_model::LineRule::AtLeast
                     },
                 )
             }),
@@ -1436,10 +1436,10 @@ fn underline_styles_and_double_strike_draw_lines() {
     let count_lines =
         |l: &Layout| l.display.items.iter().filter(|i| matches!(i, DisplayItem::Line { .. })).count();
     for (kind, min) in [
-        (mailcraft_model::UnderlineKind::Double, 2),
-        (mailcraft_model::UnderlineKind::Dotted, 3),
-        (mailcraft_model::UnderlineKind::Dashed, 2),
-        (mailcraft_model::UnderlineKind::Wavy, 3),
+        (iridium_mail_model::UnderlineKind::Double, 2),
+        (iridium_mail_model::UnderlineKind::Dotted, 3),
+        (iridium_mail_model::UnderlineKind::Dashed, 2),
+        (iridium_mail_model::UnderlineKind::Wavy, 3),
     ] {
         let st = TextStyle { underline: Some(true), underline_kind: Some(kind), ..Default::default() };
         let l = lay(&doc(vec![para(vec![styled("underlined words", st)])]), 600.0);
@@ -1473,7 +1473,7 @@ fn indents_first_line_and_fixed_line_heights() {
         indent_px: 40.0,
         right_indent_px: 30.0,
         first_line_px: -20.0,
-        line_px: Some((40.0, mailcraft_model::LineRule::Exactly)),
+        line_px: Some((40.0, iridium_mail_model::LineRule::Exactly)),
         ..Default::default()
     };
     let d = doc(vec![Block::Paragraph { style, inlines: vec![text(&long)] }]);
@@ -1490,7 +1490,7 @@ fn indents_first_line_and_fixed_line_heights() {
     }
     // At least: never smaller than the text, at least the value.
     let at_least =
-        ParaStyle { line_px: Some((4.0, mailcraft_model::LineRule::AtLeast)), ..Default::default() };
+        ParaStyle { line_px: Some((4.0, iridium_mail_model::LineRule::AtLeast)), ..Default::default() };
     let l = lay(&doc(vec![Block::Paragraph { style: at_least, inlines: vec![text("x")] }]), 300.0);
     assert!((l.index.lines[0].rect.h - base_lines[0].rect.h).abs() < 0.01);
     // A first-line indent bigger than the width does not break layout.

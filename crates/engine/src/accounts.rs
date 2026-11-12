@@ -14,7 +14,7 @@
 //!
 //! OAuth 2.0 sign-in (`accounts.oauthSignIn`) runs the device authorization grant (RFC 8628) or the
 //! authorization-code flow with PKCE through a loopback redirect (RFC 7636, RFC 8252) on a background thread,
-//! for providers from the bundled public metadata (`mailcraft_net::oauth::builtin_providers`) or custom
+//! for providers from the bundled public metadata (`iridium_mail_net::oauth::builtin_providers`) or custom
 //! endpoints. The user supplies the client id; none is built in.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -26,8 +26,8 @@ use serde_json::{Map, Value, json};
 
 use crate::cmd::util::opt_bool;
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session, always};
-use mailcraft_model::account::CredentialKind;
-use mailcraft_model::{
+use iridium_mail_model::account::CredentialKind;
+use iridium_mail_model::{
     Account, AccountId, AccountKind, DavSettings, FolderId, FolderRole, QuickStepAction, RuleAction,
     Security, ServerSettings,
 };
@@ -106,7 +106,7 @@ pub struct FileSecretStore {
     map: BTreeMap<String, String>,
 }
 
-const SECRETS_NOTE: &str = "MailCraft account secrets. NOT ENCRYPTED: protect this file like a password list. \
+const SECRETS_NOTE: &str = "Mail account secrets. NOT ENCRYPTED: protect this file like a password list. \
      It is kept out of the mailbox data files on purpose, and only used where no OS keyring is available.";
 
 impl FileSecretStore {
@@ -114,7 +114,7 @@ impl FileSecretStore {
     pub fn open(dir: &Path) -> Result<FileSecretStore, String> {
         let path = dir.join(SECRETS_FILE);
         tighten_permissions(&path);
-        let map = match mailcraft_store::journal::read_capped(&path, MAX_SECRETS_BYTES) {
+        let map = match iridium_mail_store::journal::read_capped(&path, MAX_SECRETS_BYTES) {
             Ok(None) => BTreeMap::new(),
             Ok(Some(bytes)) => {
                 let v: Value = serde_json::from_slice(&bytes)
@@ -274,7 +274,7 @@ pub fn pem_certificates(pem: &str) -> Result<Vec<Vec<u8>>, String> {
 // =======================================================================================================
 
 /// Service name under which secrets are kept in the OS credential store.
-pub const KEYRING_SERVICE: &str = "MailCraft";
+pub const KEYRING_SERVICE: &str = "Mail";
 
 /// Where a [`KeyringSecretStore`] keeps secrets: the OS credential store, or a stand-in in tests.
 pub trait KeyBackend: Send {
@@ -286,18 +286,18 @@ pub trait KeyBackend: Send {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl KeyBackend for mailcraft_net::keychain::Keychain {
+impl KeyBackend for iridium_mail_net::keychain::Keychain {
     fn get(&self, key: &str) -> Result<Option<String>, String> {
-        mailcraft_net::keychain::Keychain::get(self, key)
+        iridium_mail_net::keychain::Keychain::get(self, key)
     }
     fn set(&self, key: &str, secret: &str) -> Result<(), String> {
-        mailcraft_net::keychain::Keychain::set(self, key, secret)
+        iridium_mail_net::keychain::Keychain::set(self, key, secret)
     }
     fn remove(&self, key: &str) -> Result<(), String> {
-        mailcraft_net::keychain::Keychain::remove(self, key)
+        iridium_mail_net::keychain::Keychain::remove(self, key)
     }
     fn name(&self) -> String {
-        mailcraft_net::keychain::Keychain::store_name().to_owned()
+        iridium_mail_net::keychain::Keychain::store_name().to_owned()
     }
 }
 
@@ -391,7 +391,7 @@ impl Session {
         if self.secrets.encrypted() {
             return Ok(self.secrets.location());
         }
-        let kc = mailcraft_net::keychain::Keychain::open(KEYRING_SERVICE)?;
+        let kc = iridium_mail_net::keychain::Keychain::open(KEYRING_SERVICE)?;
         self.move_secrets_to(Box::new(kc))
     }
 
@@ -690,7 +690,7 @@ pub struct AccountPrefs {
     pub groups: Vec<crate::sync::groups::SendReceiveGroup>,
 }
 
-const OPTIONS_NOTE: &str = "MailCraft account options and send/receive bookkeeping. No secrets.";
+const OPTIONS_NOTE: &str = "Mail account options and send/receive bookkeeping. No secrets.";
 
 /// Loaded [`AccountPrefs`] of a session (read lazily from the data folder).
 #[derive(Debug, Default)]
@@ -718,7 +718,7 @@ pub(crate) fn load_prefs(s: &mut Session) {
     slot.loaded = true;
     let Some(dir) = dir else { return };
     let path = dir.join(ACCOUNT_OPTIONS_FILE);
-    match mailcraft_store::journal::read_capped(&path, MAX_OPTIONS_BYTES) {
+    match iridium_mail_store::journal::read_capped(&path, MAX_OPTIONS_BYTES) {
         Ok(None) => {}
         Ok(Some(bytes)) => match serde_json::from_slice::<AccountPrefs>(&bytes) {
             Ok(p) => {
@@ -1165,10 +1165,10 @@ pub(crate) fn account_settings_json(s: &Session, a: &Account) -> Value {
     })
 }
 
-fn shared_kind_name(k: mailcraft_model::account::SharedKind) -> &'static str {
+fn shared_kind_name(k: iridium_mail_model::account::SharedKind) -> &'static str {
     match k {
-        mailcraft_model::account::SharedKind::OtherUser => "otherUser",
-        mailcraft_model::account::SharedKind::Shared => "shared",
+        iridium_mail_model::account::SharedKind::OtherUser => "otherUser",
+        iridium_mail_model::account::SharedKind::Shared => "shared",
     }
 }
 
@@ -1675,17 +1675,17 @@ fn autodiscover_ews(
     password: &str,
     confirmed: Vec<String>,
 ) -> Result<Result<String, (String, String)>, CmdError> {
-    use mailcraft_net::ews::autodiscover::{Probe, autodiscover};
+    use iridium_mail_net::ews::autodiscover::{Probe, autodiscover};
     let user =
         incoming.get("username").and_then(Value::as_str).filter(|u| !u.trim().is_empty()).unwrap_or(address);
     let mechanism = incoming.get("auth").and_then(Value::as_str).unwrap_or_default();
-    let signer = mailcraft_net::ews::Signer::new(mailcraft_net::ews::EwsAuth::from_mechanism(
+    let signer = iridium_mail_net::ews::Signer::new(iridium_mail_net::ews::EwsAuth::from_mechanism(
         mechanism, user, password,
     ));
     let mut o = s.sync.discovery.autodiscover();
     if o.urls.is_empty() {
         o.urls =
-            mailcraft_net::ews::autodiscover::AUTODISCOVER_URLS.iter().map(|u| (*u).to_owned()).collect();
+            iridium_mail_net::ews::autodiscover::AUTODISCOVER_URLS.iter().map(|u| (*u).to_owned()).collect();
     }
     if let Some(pem) = incoming.get("extraRootPem").and_then(Value::as_str).filter(|p| !p.trim().is_empty()) {
         o.http.tls.extra_roots_der.extend(pem_certificates(pem).map_err(CmdError::Params)?);
@@ -2014,7 +2014,7 @@ fn token_url_ok(url: &str) -> bool {
 fn oauth_providers(_: &mut Session, _: &Value) -> CmdResult {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let list: Vec<Value> = mailcraft_net::oauth::builtin_providers()
+        let list: Vec<Value> = iridium_mail_net::oauth::builtin_providers()
             .iter()
             .map(|p| {
                 let mut flows = vec!["browser"];
@@ -2027,7 +2027,7 @@ fn oauth_providers(_: &mut Session, _: &Value) -> CmdResult {
         Ok(json!({
             "providers": list,
             "custom": true,
-            "note": "Enter the client id of an application you registered with the provider; MailCraft has none built in.",
+            "note": "Enter the client id of an application you registered with the provider; Mail has none built in.",
         }))
     }
     #[cfg(target_arch = "wasm32")]
@@ -2075,7 +2075,7 @@ fn oauth_binding(p: &Value) -> Result<OAuthBinding, CmdError> {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let list = mailcraft_net::oauth::builtin_providers();
+        let list = iridium_mail_net::oauth::builtin_providers();
         let Some(bp) = list.iter().find(|x| x.id == provider) else {
             return Err(CmdError::Params(format!(
                 "unknown provider `{provider}` (see accounts.oauthProviders)"
@@ -2093,8 +2093,8 @@ fn oauth_binding(p: &Value) -> Result<OAuthBinding, CmdError> {
             }
             let t = t.to_ascii_lowercase();
             let named = ["common", "organizations", "consumers"].contains(&t.as_str());
-            let domain = t.contains('.') && mailcraft_net::autoconfig::valid_host(&t);
-            if !(named || domain || mailcraft_net::discover::is_guid(&t)) {
+            let domain = t.contains('.') && iridium_mail_net::autoconfig::valid_host(&t);
+            if !(named || domain || iridium_mail_net::discover::is_guid(&t)) {
                 return Err(CmdError::Params(format!(
                     "`tenant` must be a tenant id (GUID) or domain name, not `{t}`"
                 )));
@@ -2160,13 +2160,13 @@ fn oauth_sign_in(s: &mut Session, p: &Value) -> CmdResult {
 }
 
 /// A Graph account signs in for Microsoft Graph's delegated permissions instead of the mail protocols' (one
-/// token serves one resource): the Microsoft provider gets `mailcraft_net::graph::MAIL_SCOPES` and the contacts, calendars and
-/// tasks permissions (`mailcraft_net::graph::pim::PIM_SCOPES`) in place of its IMAP/POP/SMTP scopes; a custom provider
+/// token serves one resource): the Microsoft provider gets `iridium_mail_net::graph::MAIL_SCOPES` and the contacts, calendars and
+/// tasks permissions (`iridium_mail_net::graph::pim::PIM_SCOPES`) in place of its IMAP/POP/SMTP scopes; a custom provider
 /// without scopes gets them too.
 fn graph_scopes(b: &mut OAuthBinding) {
     #[cfg(not(target_arch = "wasm32"))]
     if b.provider == "microsoft" || (b.provider == "custom" && b.scopes.is_empty()) {
-        b.scopes = mailcraft_net::graph::scopes(&mailcraft_net::graph::pim::PIM_SCOPES);
+        b.scopes = iridium_mail_net::graph::scopes(&iridium_mail_net::graph::pim::PIM_SCOPES);
     }
     #[cfg(target_arch = "wasm32")]
     let _ = b;

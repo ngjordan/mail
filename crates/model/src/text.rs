@@ -1,5 +1,5 @@
 //! Small text helpers shared by previews and rule matching. Deliberately crude: real HTML handling is
-//! `mailcraft-html`'s job (a higher layer); here we only need something readable for a one-line preview.
+//! `iridium-mail-html`'s job (a higher layer); here we only need something readable for a one-line preview.
 
 /// Characters kept in the list preview line.
 pub const PREVIEW_CHARS: usize = 255;

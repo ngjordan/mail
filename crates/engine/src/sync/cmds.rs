@@ -18,7 +18,7 @@ use crate::accounts::{DownloadMode, account_options, apply_option_params, find_a
 use crate::cmd::util::opt_bool;
 use crate::sync::Plan;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::{AccountId, AccountKind, FolderId, ItemId, MailItem};
+use iridium_mail_model::{AccountId, AccountKind, FolderId, ItemId, MailItem};
 
 /// Parameters of `sendReceive.preferences`.
 pub const PREFERENCES_PARAMS: &str = r#"{"account"?: number|string (default: every account, the All Accounts group), "mode"?: "full"|"headersThenFull"|"headers", "slowHeadersOnly"?: bool|"toggle" (on slow connections download only headers), "downloadMonths"?: number|null (first download: mail from the past N months; null = all), "include"?: bool (member of All Accounts: F9 and scheduled runs), "intervalMinutes"?: number|null (scheduled send/receive; null = Options › Advanced), "push"?: bool (new mail pushed with IMAP IDLE), "pollMinutes"?: number}"#;
@@ -52,7 +52,7 @@ pub fn rest_on_server(s: &Session, id: ItemId) -> bool {
 
 /// The error for work that needs the whole of messages only whose header is on this computer (`missing`,
 /// see [`rest_on_server`]): `doing` says what was refused ("moved out of their account", "copied"…). Their
-/// download starts now unless MailCraft works offline, so the same command works once they have arrived.
+/// download starts now unless Mail works offline, so the same command works once they have arrived.
 pub(crate) fn not_downloaded(s: &mut Session, missing: &[ItemId], doing: &str) -> CmdError {
     let started = !s.view.work_offline && download_now(s, missing).is_ok_and(|n| n > 0);
     let (what, it) = match missing.len() {
@@ -335,7 +335,7 @@ pub fn preferences(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::rules::tests::session;
-    use mailcraft_model::{Account, ServerSettings};
+    use iridium_mail_model::{Account, ServerSettings};
 
     fn imap(s: &mut Session) -> AccountId {
         let id = s.mailbox.add_account(Account {
@@ -356,7 +356,7 @@ mod tests {
         let body = s
             .add_message(
                 MailItem { folder: inbox, ..Default::default() },
-                &mailcraft_store::Content::source(b"x".to_vec()),
+                &iridium_mail_store::Content::source(b"x".to_vec()),
             )
             .unwrap();
         let head = s.mailbox.add_mail(MailItem { folder: inbox, ..Default::default() });
@@ -413,7 +413,7 @@ mod tests {
         let full = s
             .add_message(
                 MailItem { folder: inbox, ..Default::default() },
-                &mailcraft_store::Content::source(b"x".to_vec()),
+                &iridium_mail_store::Content::source(b"x".to_vec()),
             )
             .unwrap();
         s.sync.prefs.data.marked.insert(full.0, false);

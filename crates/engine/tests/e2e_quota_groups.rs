@@ -1,4 +1,4 @@
-//! End to end against the local test servers (`mailcraft-testmail`, 127.0.0.1 only, synthetic users):
+//! End to end against the local test servers (`iridium-mail-testmail`, 127.0.0.1 only, synthetic users):
 //! the mailbox quota (IMAP GETQUOTAROOT, JMAP Quota/get) reaching the status, and user-defined Send/Receive
 //! groups (define, run by name, F9, schedule).
 
@@ -6,9 +6,9 @@
 
 use std::time::Duration;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderRole, Mailbox};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderRole, Mailbox};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";
@@ -78,23 +78,23 @@ fn imap_quota_reaches_the_status() {
     srv.seed_message(ALICE, "INBOX", &message("Quota one"), &[]).unwrap();
     let mut s = session();
     let a = add_imap(&mut s, &srv, ALICE, ALICE_PW);
-    assert!(mailcraft_engine::sync::account_quota(&s, a).is_none(), "nothing known before a run");
+    assert!(iridium_mail_engine::sync::account_quota(&s, a).is_none(), "nothing known before a run");
     run(&mut s, "sendReceive.all", json!({}));
     assert!(s.wait_for_sync(WAIT), "{:?}", s.sync_status());
-    let q = mailcraft_engine::sync::account_quota(&s, a).expect("quota after receiving");
+    let q = iridium_mail_engine::sync::account_quota(&s, a).expect("quota after receiving");
     assert_eq!(q.limit, 1024 * 1024);
     assert!(q.used > 0 && q.used < q.limit);
     assert_eq!(q.percent(), Some(0));
     assert!(q.text().contains("of 1.0 MB used"), "{}", q.text());
     let st = run(&mut s, "sendReceive.status", json!({}));
     assert_eq!(st["accounts"][0]["quota"]["limit"], 1024 * 1024);
-    let (name, _) = mailcraft_engine::sync::status_quota(&s).expect("status bar quota");
+    let (name, _) = iridium_mail_engine::sync::status_quota(&s).expect("status bar quota");
     assert!(!name.is_empty());
     // The limit goes away: the next run clears it.
     srv.set_quota(ALICE, None).unwrap();
     run(&mut s, "sendReceive.all", json!({}));
     assert!(s.wait_for_sync(WAIT));
-    assert!(mailcraft_engine::sync::account_quota(&s, a).is_none());
+    assert!(iridium_mail_engine::sync::account_quota(&s, a).is_none());
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn jmap_quota_reaches_the_status() {
     let a = AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap());
     run(&mut s, "sendReceive.all", json!({}));
     assert!(s.wait_for_sync(WAIT), "{:?}", s.sync_status());
-    let q = mailcraft_engine::sync::account_quota(&s, a).expect("JMAP quota");
+    let q = iridium_mail_engine::sync::account_quota(&s, a).expect("JMAP quota");
     assert_eq!(q.limit, 10_000);
     assert!(q.percent().unwrap() > 0);
     assert!(q.messages.is_some());
@@ -213,16 +213,16 @@ fn scheduled_group_runs_when_due() {
     let srv = servers();
     let mut s = session();
     let alice = add_imap(&mut s, &srv, ALICE, ALICE_PW);
-    s.fixed_now = Some(mailcraft_engine::model::DateTime::from_unix(1_800_000_000, 0));
+    s.fixed_now = Some(iridium_mail_engine::model::DateTime::from_unix(1_800_000_000, 0));
     let g =
         json!({"name": "Every 5", "members": [{"account": alice.0}], "include": false, "everyMinutes": 5});
     run(&mut s, "sendReceive.defineGroups", json!({"action": "save", "group": g}));
     s.poll_sync(); // starts the clock
     srv.seed_message(ALICE, "INBOX", &message("Scheduled"), &[]).unwrap();
-    s.fixed_now = Some(mailcraft_engine::model::DateTime::from_unix(1_800_000_000 + 4 * 60, 0));
+    s.fixed_now = Some(iridium_mail_engine::model::DateTime::from_unix(1_800_000_000 + 4 * 60, 0));
     s.poll_sync();
     assert!(!s.sync_busy(), "not due yet");
-    s.fixed_now = Some(mailcraft_engine::model::DateTime::from_unix(1_800_000_000 + 5 * 60, 0));
+    s.fixed_now = Some(iridium_mail_engine::model::DateTime::from_unix(1_800_000_000 + 5 * 60, 0));
     s.poll_sync();
     assert!(s.wait_for_sync(WAIT), "{:?}", s.sync_status());
     assert!(has(&s, alice, "Scheduled"));

@@ -332,7 +332,7 @@ fn domain_of(addr: &str) -> String {
     let d = addr.rsplit_once('@').map(|(_, d)| d).unwrap_or_default();
     let d: String = d.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '.' || *c == '-').collect();
     let d = d.trim_matches('.');
-    if d.is_empty() { "mailcraft.invalid".to_owned() } else { d.to_owned() }
+    if d.is_empty() { "iridium-mail.invalid".to_owned() } else { d.to_owned() }
 }
 
 fn clean_id(id: &str) -> String {

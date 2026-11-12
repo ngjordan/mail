@@ -60,8 +60,8 @@ pub fn run(root: &Path) -> TaskResult {
         total.tests = total.tests.saturating_add(c.tests);
     }
     println!("{:<20} {:>9} {:>11} {:>6}", "total", total.src_lines, total.test_lines, total.tests);
-    let reg = mailcraft_engine::cmd::registry();
-    let rows = mailcraft_engine::catalog::catalog_rows().len();
+    let reg = iridium_mail_engine::cmd::registry();
+    let rows = iridium_mail_engine::catalog::catalog_rows().len();
     println!("commands registered: {}; catalog rows: {rows}", reg.len());
     Ok(())
 }

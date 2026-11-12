@@ -1,7 +1,7 @@
 //! Compose state: new messages, replies, forwards (window or inline in the reading pane), plus the body editor
 //! model that the `compose.*`, `format.*`, `insert.*` and `review.*` commands act on.
 //!
-//! Body positions are [`DocPos`], the serialisable twin of [`mailcraft_layout::TextPos`]: a block path through
+//! Body positions are [`DocPos`], the serialisable twin of [`iridium_mail_layout::TextPos`]: a block path through
 //! nested blocks (lists add `[item, block_in_item]`, quotes and containers `[child]`, tables
 //! `[row, cell, block_in_cell]`) and a char offset into the flattened inline text of a *leaf* block, where a
 //! line break and an image each count as one char. Leaf blocks (where a caret can sit) are paragraphs,
@@ -23,10 +23,10 @@ pub use find::{
 };
 pub use sort::{MAX_THEN_BY, SortKey, SortKind, SortSpec};
 
-use mailcraft_geom::Color;
-use mailcraft_layout::TextPos;
-use mailcraft_model::rich::{Align, ListKind, TableCell};
-use mailcraft_model::{
+use iridium_mail_geom::Color;
+use iridium_mail_layout::TextPos;
+use iridium_mail_model::rich::{Align, ListKind, TableCell};
+use iridium_mail_model::{
     Block, BodyFormat, BorderEdge, BorderLine, DateTime, Doc, FlagState, FolderId, Importance, Inline,
     ItemId, ParaBorders, ParaStyle, Sensitivity, TableBorders, TextStyle,
 };
@@ -167,7 +167,7 @@ pub struct Bookmark {
 
 /// Flag for Recipients (Follow Up › Custom): the follow-up flag sent with the message. It travels as
 /// `X-Message-Flag` (the label), RFC 2156 `Reply-By` (the due date) and [`RECIPIENT_REMINDER_HEADER`] (the
-/// reminder), so MailCraft and other clients that read these headers flag the received copy.
+/// reminder), so Mail and other clients that read these headers flag the received copy.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RecipientFlag {
@@ -178,7 +178,7 @@ pub struct RecipientFlag {
 }
 
 /// Header carrying a Flag for Recipients reminder time (RFC 5322 date).
-pub const RECIPIENT_REMINDER_HEADER: &str = mailcraft_model::item::RECIPIENT_REMINDER_HEADER;
+pub const RECIPIENT_REMINDER_HEADER: &str = iridium_mail_model::item::RECIPIENT_REMINDER_HEADER;
 
 /// One in-app clipboard entry.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -205,7 +205,7 @@ pub struct BuildingBlock {
     /// Floating drawings saved with the entry (Save Selection to Text Box Gallery with a text box selected),
     /// placed relative to the top left corner of the box around them; inserted back as drawings.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub drawings: Vec<mailcraft_model::rich::Drawing>,
+    pub drawings: Vec<iridium_mail_model::rich::Drawing>,
 }
 
 /// Most drawings one saved building block keeps.
@@ -416,7 +416,7 @@ pub struct ComposeState {
     pub zoom: Option<u16>,
     pub signature: Option<SignatureBlock>,
     pub inline_images: Vec<InlineImage>,
-    /// Pictures MailCraft drew (shapes, SmartArt, WordArt) with what they were drawn from, so a theme change
+    /// Pictures Mail drew (shapes, SmartArt, WordArt) with what they were drawn from, so a theme change
     /// redraws them (see `cmd::insert::redraw_generated`).
     pub generated: Vec<GeneratedPicture>,
     pub bookmarks: Vec<Bookmark>,
@@ -515,7 +515,7 @@ pub struct ComposeState {
     pub preview_key: Option<String>,
 
     // --- floating drawing objects (`cmd::drawing`) ---
-    /// The selected drawing object of the body (its [`mailcraft_model::Drawing::id`]); with more than one
+    /// The selected drawing object of the body (its [`iridium_mail_model::Drawing::id`]); with more than one
     /// selected, the one picked last (the others are in `also_selected`).
     pub selected_drawing: Option<u32>,
     /// The other selected drawings (Shift- or Ctrl-click, a drag around them, the Selection pane).
@@ -1800,12 +1800,12 @@ impl ComposeState {
         let first = self.inline_images.len().saturating_add(1);
         // Among len + 1 candidates at least one is free.
         for n in first..=first.saturating_add(self.inline_images.len()) {
-            let cid = format!("image{n:03}.c{}@mailcraft.invalid", self.id);
+            let cid = format!("image{n:03}.c{}@iridium-mail.invalid", self.id);
             if !self.inline_images.iter().any(|i| i.content_id == cid) {
                 return cid;
             }
         }
-        format!("image.c{}.{}@mailcraft.invalid", self.id, self.inline_images.len())
+        format!("image.c{}.{}@iridium-mail.invalid", self.id, self.inline_images.len())
     }
 
     /// Embeds an image (referenced as `cid:`) and inserts it at the caret.
@@ -2384,10 +2384,10 @@ impl ComposeState {
         self.insert_text(text);
     }
 
-    /// Pastes HTML at the caret, replacing the selection: sanitised through `mailcraft_html::html_to_doc`;
+    /// Pastes HTML at the caret, replacing the selection: sanitised through `iridium_mail_html::html_to_doc`;
     /// a plain-text body gets the text only (one editor undo step).
     pub fn paste_html(&mut self, html: &str) {
-        let doc = mailcraft_html::html_to_doc(html);
+        let doc = iridium_mail_html::html_to_doc(html);
         self.ensure_body();
         self.checkpoint();
         let mode =
@@ -2476,7 +2476,7 @@ impl ComposeState {
     /// "<subject>.eml").
     pub fn attach_message(
         &mut self,
-        m: &mailcraft_model::MailItem,
+        m: &iridium_mail_model::MailItem,
         source: Vec<u8>,
     ) -> Result<usize, String> {
         // Slashes in a subject are not paths here.
@@ -3111,7 +3111,10 @@ pub fn signature_blocks(body: &Doc, format: BodyFormat) -> Vec<Block> {
 }
 
 /// The account a compose sends from: the one whose address is in its From field, else the default account.
-pub fn compose_account(mb: &mailcraft_model::Mailbox, from: &str) -> Option<mailcraft_model::AccountId> {
+pub fn compose_account(
+    mb: &iridium_mail_model::Mailbox,
+    from: &str,
+) -> Option<iridium_mail_model::AccountId> {
     let addr = crate::cmd::compose::parse_field_mailbox(from).map(|m| m.addr);
     addr.and_then(|a| {
         mb.accounts.iter().find(|x| !x.address.trim().is_empty() && x.address.trim().eq_ignore_ascii_case(&a))
@@ -3125,7 +3128,7 @@ pub fn compose_account(mb: &mailcraft_model::Mailbox, from: &str) -> Option<mail
 /// paragraph. Reply / forward: between the caret paragraph and the quoted header. The caret goes to the
 /// start of the body. Does nothing (false) for drafts, when the compose already has a signature or no
 /// default applies.
-pub fn insert_default_signature(mb: &mailcraft_model::Mailbox, c: &mut ComposeState) -> bool {
+pub fn insert_default_signature(mb: &iridium_mail_model::Mailbox, c: &mut ComposeState) -> bool {
     if c.signature.is_some() {
         return false;
     }
@@ -3178,7 +3181,7 @@ pub fn insert_default_signature(mb: &mailcraft_model::Mailbox, c: &mut ComposeSt
 }
 
 /// [`insert_default_signature`] by value (for builders that return a fresh [`ComposeState`]).
-pub fn with_default_signature(mb: &mailcraft_model::Mailbox, mut c: ComposeState) -> ComposeState {
+pub fn with_default_signature(mb: &iridium_mail_model::Mailbox, mut c: ComposeState) -> ComposeState {
     insert_default_signature(mb, &mut c);
     c
 }
@@ -4426,7 +4429,7 @@ pub const THEME_COLOR_SLOTS: [&str; 12] = [
 /// Index of Accent 1 in a palette.
 pub const ACCENT1: usize = 4;
 
-/// Colour sets (Options › Colors). Palettes drawn for MailCraft (names as observed); each is
+/// Colour sets (Options › Colors). Palettes drawn for Mail (names as observed); each is
 /// dark 1, light 1, dark 2, light 2, accents 1–6, hyperlink, followed hyperlink.
 pub const THEME_COLOR_SETS: &[(&str, [u32; 12])] = &[
     (
@@ -4667,7 +4670,7 @@ pub const THEME_COLOR_SETS: &[(&str, [u32; 12])] = &[
 pub const COLOR_GALLERY_LEN: usize = 24;
 
 /// Font sets (Options › Fonts): name, heading font, body font. Proprietary names map to bundled
-/// substitutes when rendered (`mailcraft-fonts`).
+/// substitutes when rendered (`iridium-mail-fonts`).
 pub const THEME_FONT_SETS: &[(&str, &str, &str)] = &[
     ("Office", "Aptos Display", "Aptos"),
     ("Office 2013 - 2022", "Calibri Light", "Calibri"),
@@ -4717,7 +4720,7 @@ pub const THEME_EFFECTS: &[&str] = &[
 ];
 
 /// Stationery for new HTML messages (More Stationery…, Personal Stationery): id, name, page colour, document
-/// theme. MailCraft's own set.
+/// theme. Mail's own set.
 pub const STATIONERY: &[(&str, &str, u32, &str)] = &[
     ("clearDay", "Clear Day", 0xEEF6FC, "Facet"),
     ("linen", "Linen", 0xFAF6EE, "Organic"),
@@ -4877,7 +4880,7 @@ pub struct StyleSet {
     pub numbered: bool,
 }
 
-/// Style sets drawn for MailCraft (names as observed).
+/// Style sets drawn for Mail (names as observed).
 pub const STYLE_SETS: &[StyleSet] = &[
     StyleSet {
         name: "Default",
@@ -6099,7 +6102,7 @@ impl ComposeState {
         out.join("\n")
     }
 
-    /// Writes the list formats into `html` (from `mailcraft_html::doc_to_html` of this body): a list whose
+    /// Writes the list formats into `html` (from `iridium_mail_html::doc_to_html` of this body): a list whose
     /// format has a CSS keyword gets `list-style-type`; others get `list-style-type:none` and the marker text
     /// at the start of each item.
     pub fn apply_list_formats_html(&self, html: &str) -> String {
@@ -6517,7 +6520,7 @@ mod tests {
 #[cfg(test)]
 mod depth_tests {
     use super::*;
-    use mailcraft_model::{Account, AccountKind, Mailbox};
+    use iridium_mail_model::{Account, AccountKind, Mailbox};
 
     fn doc(lines: &[&str]) -> ComposeState {
         let mut c = ComposeState {
@@ -6649,7 +6652,7 @@ mod depth_tests {
         assert_eq!(c.remove_attachment(2).map(|a| a.filename), Some("x.bin".into()));
         assert!(c.remove_attachment(2).is_none());
         assert_eq!(c.attachments_size(), 2);
-        let m = mailcraft_model::MailItem { subject: "Q3: plan / budget?".into(), ..Default::default() };
+        let m = iridium_mail_model::MailItem { subject: "Q3: plan / budget?".into(), ..Default::default() };
         let i = c
             .attach_message(
                 &m,
@@ -6676,7 +6679,7 @@ mod depth_tests {
         }
     }
 
-    fn sig_mailbox() -> (Mailbox, mailcraft_model::AccountId, mailcraft_model::AccountId) {
+    fn sig_mailbox() -> (Mailbox, iridium_mail_model::AccountId, iridium_mail_model::AccountId) {
         let mut mb = Mailbox::new_local("Local");
         let work = mb.add_account(Account {
             kind: AccountKind::Imap,
@@ -6689,7 +6692,7 @@ mod depth_tests {
             address: "me@home.example".into(),
             ..Default::default()
         });
-        mb.add_signature("Work", mailcraft_html::html_to_doc("<p><b>Me</b><br>Work Inc.</p>")).unwrap();
+        mb.add_signature("Work", iridium_mail_html::html_to_doc("<p><b>Me</b><br>Work Inc.</p>")).unwrap();
         mb.add_signature("Short", Doc::from_plain_text("-- me")).unwrap();
         mb.set_signature_defaults(None, Some(Some("Work")), Some(Some("Short"))).unwrap();
         mb.set_signature_defaults(Some(home), Some(None), Some(None)).unwrap();

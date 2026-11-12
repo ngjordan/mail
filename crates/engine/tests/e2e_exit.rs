@@ -1,11 +1,11 @@
 //! End to end: Options › Advanced › "Perform an automatic send/receive when exiting" against the local test
-//! servers (`mailcraft-testmail`, 127.0.0.1 only, synthetic users). Every wait has a timeout.
+//! servers (`iridium-mail-testmail`, 127.0.0.1 only, synthetic users). Every wait has a timeout.
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, FolderRole, Mailbox};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, FolderRole, Mailbox};
+use iridium_mail_testmail::{Config, TestServers};
 use serde_json::{Value, json};
 
 const ALICE: &str = "alice@example.com";

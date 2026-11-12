@@ -179,7 +179,7 @@ fn work_time_and_weeks_come_from_the_options() {
     set(&mut s, "calendar.firstDayOfWeek", json!("mon"));
     assert_eq!(views::first_day_of_week(&s), 1);
     assert_eq!(views::first_week_rule(&s), "jan1");
-    let day = |y, m, d| mailcraft_model::dates::days_from_civil(y, m, d).unwrap();
+    let day = |y, m, d| iridium_mail_model::dates::days_from_civil(y, m, d).unwrap();
     // 2026-10-09 is a Friday.
     assert_eq!(views::week_start_on(day(2026, 10, 9), 1), day(2026, 10, 5));
     assert_eq!(views::week_start_on(day(2026, 10, 9), 0), day(2026, 10, 4));
@@ -427,7 +427,7 @@ fn calendar_views_saved_by_name() {
     assert_eq!((saved.mode, saved.date.as_str()), (CalendarMode::Week, ""));
     assert!(mv(&mut s, "view.applyViewTo", json!({"folders": ["Inbox"]})).is_err());
     assert!(mv(&mut s, "view.applyViewTo", json!({"folders": []})).is_err());
-    let inbox = role(&s, mailcraft_model::FolderRole::Inbox);
+    let inbox = role(&s, iridium_mail_model::FolderRole::Inbox);
     assert!(mv(&mut s, "view.applyViewTo", json!({"folders": [inbox.0]})).is_err());
 }
 
@@ -436,7 +436,7 @@ fn calendar_views_saved_by_name() {
 /// the automatic accept / decline pass.
 #[test]
 fn a_read_only_calendar_refuses_meeting_changes() {
-    use mailcraft_model::FolderRole;
+    use iridium_mail_model::FolderRole;
     let read_only = |s: &mut Session, on: bool| {
         let c = role(s, FolderRole::Calendar);
         s.run("calendar.setProperties", &json!({"folder": c.0, "readOnly": on})).unwrap();

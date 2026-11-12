@@ -2,7 +2,7 @@
 //! selectors (`tag`, `.class`, `#id`, `tag.class`, `*`, comma lists; anything with combinators or pseudo
 //! classes is ignored, as are at-rules such as `@media` and `@import`), colours and lengths.
 
-use mailcraft_geom::Color;
+use iridium_mail_geom::Color;
 use std::collections::HashMap;
 
 /// Caps for hostile stylesheets.

@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use mailcraft_model::{Body, ItemId, MailItem, Mailbox};
+use iridium_mail_model::{Body, ItemId, MailItem, Mailbox};
 use serde::Deserialize;
 
 use crate::Result;
@@ -84,10 +84,10 @@ pub fn mailbox_inline(json: &[u8]) -> Result<BTreeMap<ItemId, Inline>> {
     Ok(drop_empty(m.mail))
 }
 
-/// Inline content of a snapshot envelope (`{"mailcraft_snapshot":1,…,"mailbox":{…}}`, written before
+/// Inline content of a snapshot envelope (`{"iridium_mail_snapshot":1,…,"mailbox":{…}}`, written before
 /// storage stage S5), or of a bare mailbox.
 pub fn snapshot_inline(json: &[u8]) -> Result<BTreeMap<ItemId, Inline>> {
-    if json.starts_with(b"{\"mailcraft_snapshot\"") {
+    if json.starts_with(b"{\"iridium_mail_snapshot\"") || json.starts_with(b"{\"mailcraft_snapshot\"") {
         let e: Envelope =
             serde_json::from_slice(json).map_err(|e| crate::StoreError::Corrupt(format!("snapshot: {e}")))?;
         Ok(drop_empty(e.mailbox.mail))
@@ -139,7 +139,7 @@ pub fn journal_line_inline(line: &[u8]) -> Option<InlineOp> {
     }
 }
 
-/// [`mailcraft_model::DeletedItem`]'s shape (adjacently tagged).
+/// [`iridium_mail_model::DeletedItem`]'s shape (adjacently tagged).
 #[derive(Deserialize)]
 #[serde(tag = "kind", content = "item", rename_all = "camelCase")]
 enum DeletedShape {
@@ -248,7 +248,7 @@ pub const HEADER_SCAN: usize = 64 * 1024;
 
 /// The expiry date (`Expiry-Date` or `Expires`, RFC 4021) of the message whose source is (or starts with)
 /// `raw`. Only the header section is read.
-pub fn expiry_in(raw: &[u8]) -> Option<mailcraft_model::DateTime> {
+pub fn expiry_in(raw: &[u8]) -> Option<iridium_mail_model::DateTime> {
     let head = raw.get(..raw.len().min(HEADER_SCAN))?;
     let end = head
         .iter()
@@ -279,5 +279,5 @@ pub fn expiry_in(raw: &[u8]) -> Option<mailcraft_model::DateTime> {
             }
         }
     }
-    mailcraft_model::DateTime::parse_rfc5322(value?.trim()).ok()
+    iridium_mail_model::DateTime::parse_rfc5322(value?.trim()).ok()
 }

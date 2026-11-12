@@ -2,7 +2,7 @@
 //! inside an Office Open XML package (`.thmx`, ECMA-376 Part 2 / OPC: a ZIP archive holding the part at
 //! `theme/theme/theme1.xml`). Read: the theme name, the twelve colour-scheme slots, the major (heading) and
 //! minor (body) Latin fonts and the format scheme's name. Written: a package with those values and a plain
-//! format scheme, so a theme saved by MailCraft opens in other programs that read theme files.
+//! format scheme, so a theme saved by Mail opens in other programs that read theme files.
 //!
 //! Everything read is hostile: the archive, entry and XML sizes are capped, only stored and deflated entries
 //! are read, the XML is parsed without DTDs and with a node limit, and nothing panics.
@@ -19,13 +19,13 @@ const MAX_ENTRIES: usize = 10_000;
 const MAX_NODES: u32 = 200_000;
 
 /// The colour-scheme slots in file order (dark 1, light 1, dark 2, light 2, accents 1–6, hyperlink, followed
-/// hyperlink), which is also MailCraft's palette order.
+/// hyperlink), which is also Mail's palette order.
 pub const COLOR_SLOTS: [&str; 12] = [
     "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink",
     "folHlink",
 ];
 
-/// What MailCraft uses from a theme file.
+/// What Mail uses from a theme file.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OfficeTheme {
     pub name: String,

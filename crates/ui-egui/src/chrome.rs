@@ -13,8 +13,8 @@ use serde_json::{Map, Value, json};
 use crate::responsive::Frame;
 use crate::theme::{Theme, size};
 use crate::{App, Surface, widgets, with_shell};
-use mailcraft_engine::{Module, SearchScope};
-use mailcraft_model::{FolderPaneState, ReadingPanePos};
+use iridium_mail_engine::{Module, SearchScope};
+use iridium_mail_model::{FolderPaneState, ReadingPanePos};
 
 /// Fallback tab list for the main window while the ribbon reports none.
 const DEFAULT_TABS: [&str; 4] = ["Home", "Send / Receive", "View", "Help"];
@@ -81,7 +81,7 @@ fn is_mirror(key: &str) -> bool {
 /// Keys of the saved dialog settings that the engine writes itself (saved views, Quick Actions, status bar
 /// items: `cmd::view::mail`). The shell copies them in but never writes them back.
 fn is_engine(key: &str) -> bool {
-    key.starts_with(mailcraft_engine::cmd::view::mail::PREF_PREFIX)
+    key.starts_with(iridium_mail_engine::cmd::view::mail::PREF_PREFIX)
 }
 
 /// The engine-written part of the saved dialog settings.
@@ -140,7 +140,7 @@ pub(crate) fn sync_ui_prefs(ctx: &egui::Context, app: &mut App) {
     if sync.settings_rev != Some(app.s.settings.rev()) {
         p.values.retain(|k, _| !is_engine(k));
         p.values.extend(engine_prefs(app));
-        for d in mailcraft_engine::settings::DEFS {
+        for d in iridium_mail_engine::settings::DEFS {
             if d.page == "state" {
                 continue;
             }
@@ -229,7 +229,7 @@ pub struct Bands {
 }
 
 fn bands_id() -> egui::Id {
-    egui::Id::unique("mailcraft.chrome.bands")
+    egui::Id::unique("iridium-mail.chrome.bands")
 }
 
 /// The status bar and ribbon rectangles of the main window's last frame.
@@ -512,7 +512,7 @@ fn app_icon_texture(ctx: &egui::Context) -> Option<egui::TextureHandle> {
         return Some(t);
     }
     let image = crate::app_icon_image(40)?;
-    let tex = ctx.load_texture("mailcraft-app-icon", image, egui::TextureOptions::LINEAR);
+    let tex = ctx.load_texture("iridium-mail-app-icon", image, egui::TextureOptions::LINEAR);
     with_shell(ctx, |st| st.app_icon = Some(tex.clone()));
     Some(tex)
 }
@@ -546,7 +546,7 @@ fn account_button(ui: &mut Ui, app: &mut App, rect: Rect) {
         .default_account()
         .map(|a| (a.display_name.clone(), a.address.clone()))
         .unwrap_or_default();
-    let initials = mailcraft_engine::queries::initials(Some(name.as_str()), &addr);
+    let initials = iridium_mail_engine::queries::initials(Some(name.as_str()), &addr);
     let label = if addr.is_empty() { "Account".to_owned() } else { format!("Account: {addr}") };
     let resp = ui.interact(rect, ui.scope_id().with("mc_account"), Sense::click());
     let info = label.clone();
@@ -620,7 +620,7 @@ fn scope_shortcut(scope: SearchScope) -> &'static str {
 /// Recent Searches under the focused, empty search box: shown on focus, closed by a pick, typing, Escape or
 /// a click elsewhere. A pick runs `search.recent` (which also moves it to the top of the list).
 fn recent_searches_popup(ctx: &egui::Context, app: &mut App, edit: &egui::Response, rect: Rect) {
-    let id = egui::Id::unique("mailcraft_search_recent");
+    let id = egui::Id::unique("iridium_mail_search_recent");
     let mut open = ctx.data(|d| d.get_temp::<bool>(id)).unwrap_or(false);
     if edit.gained_focus() && app.ui.search_text.is_empty() && !app.s.search.recent.is_empty() {
         open = true;
@@ -709,7 +709,7 @@ fn search_box(ui: &mut Ui, app: &mut App, _frame: &Frame, bar: Rect, qat_end: f3
         return;
     }
     let rect = Rect::from_center_size(pos2(x + w / 2.0, bar.center().y), vec2(w, size::SEARCH_H));
-    let edit_id = egui::Id::unique("mailcraft_search_box");
+    let edit_id = egui::Id::unique("iridium_mail_search_box");
     let focused = ctx.memory(|m| m.has_focus(edit_id));
 
     // Pick up queries set by commands (refine, recent searches) while the box is not being edited.
@@ -1057,10 +1057,10 @@ pub fn module_rail(ui: &mut Ui, app: &mut App) {
 /// Title of the People peek.
 pub const PEOPLE_PEEK: &str = "People you mail most";
 
-/// The People peek's contents ([`mailcraft_engine::cmd::people::peek_people`]): a name per person, plus
+/// The People peek's contents ([`iridium_mail_engine::cmd::people::peek_people`]): a name per person, plus
 /// their job title and company or address unless People › "Show only names in the People peek" is on.
 pub(crate) fn people_peek(ui: &mut Ui, app: &mut App) {
-    let people = mailcraft_engine::cmd::people::peek_people(&app.s);
+    let people = iridium_mail_engine::cmd::people::peek_people(&app.s);
     ui.set_min_width(200.0);
     ui.label(egui::RichText::new(PEOPLE_PEEK).strong());
     if people.is_empty() {
@@ -1140,7 +1140,7 @@ pub fn status_bar(ui: &mut Ui, app: &mut App, frame: &Frame) {
 
     if app.mail_like_module() {
         let s = &app.s;
-        let (count, unread) = mailcraft_engine::queries::status_counts(s);
+        let (count, unread) = iridium_mail_engine::queries::status_counts(s);
         if items.shown("itemsInView") {
             ui.label(format!("Items: {}", crate::menus::thousands(count)));
         }
@@ -1148,7 +1148,7 @@ pub fn status_bar(ui: &mut Ui, app: &mut App, frame: &Frame) {
             ui.label(format!("Unread: {}", crate::menus::thousands(unread)));
         }
         if items.shown("headerItems") {
-            let headers = mailcraft_engine::queries::header_items_in_view(s);
+            let headers = iridium_mail_engine::queries::header_items_in_view(s);
             if headers > 0 {
                 ui.label(format!("Header Items: {}", crate::menus::thousands(headers)));
             }
@@ -1157,7 +1157,7 @@ pub fn status_bar(ui: &mut Ui, app: &mut App, frame: &Frame) {
             ui.label("Filter applied");
         }
         if items.shown("unseenItems") {
-            let unseen = mailcraft_engine::queries::unseen_in_view(&app.s);
+            let unseen = iridium_mail_engine::queries::unseen_in_view(&app.s);
             if unseen > 0 {
                 ui.label(format!("Unseen: {}", crate::menus::thousands(unseen)))
                     .on_hover_text("Items that arrived since you last opened this folder");
@@ -1165,17 +1165,17 @@ pub fn status_bar(ui: &mut Ui, app: &mut App, frame: &Frame) {
         }
     }
     if items.shown("quota")
-        && let Some((name, q)) = mailcraft_engine::sync::status_quota(&app.s)
+        && let Some((name, q)) = iridium_mail_engine::sync::status_quota(&app.s)
     {
         quota_meter(ui, app, &name, &q);
     }
     // Mail › Message arrival › "Show an envelope icon in the taskbar": the in-app envelope (the window icon
     // carries it too, `App::sync_envelope`); clicking it opens the folder of the newest new message.
-    let new = mailcraft_engine::new_mail::envelope(&app.s);
+    let new = iridium_mail_engine::new_mail::envelope(&app.s);
     if new > 0 {
         let label = if new == 1 { "1 new message".to_owned() } else { format!("{new} new messages") };
         if widgets::icon_button(ui, app, "new-mail", &label, true).clicked()
-            && let Some(f) = mailcraft_engine::new_mail::envelope_folder(&app.s)
+            && let Some(f) = iridium_mail_engine::new_mail::envelope_folder(&app.s)
         {
             app.run("nav.selectFolder", json!({ "folder": f.0 }));
         }
@@ -1252,7 +1252,7 @@ pub fn status_bar(ui: &mut Ui, app: &mut App, frame: &Frame) {
 }
 
 /// Quota Information: "Mailbox 42%" and a small meter (red from 90 %); the hover tells the sizes.
-fn quota_meter(ui: &mut Ui, app: &App, account: &str, q: &mailcraft_engine::MailboxQuota) {
+fn quota_meter(ui: &mut Ui, app: &App, account: &str, q: &iridium_mail_engine::MailboxQuota) {
     let Some(pct) = q.percent() else { return };
     let theme = &app.theme;
     let full = pct >= 90;
@@ -1279,11 +1279,11 @@ fn outbox_waiting(app: &App) -> (usize, Option<u32>) {
 /// Send/Receive Progress; the badge opens the Outbox.
 /// A PST import that runs in the background: how far it is; a click opens its window again (after Hide).
 fn pst_import_status(ui: &mut Ui, app: &mut App) {
-    if !mailcraft_engine::pst::running(&app.s) {
+    if !iridium_mail_engine::pst::running(&app.s) {
         return;
     }
     ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
-    let label = pst_import_label(mailcraft_engine::pst::status(&app.s).as_ref());
+    let label = pst_import_label(iridium_mail_engine::pst::status(&app.s).as_ref());
     if ui.add(egui::Button::new(label).frame(false)).on_hover_text("Show the import's progress").clicked() {
         app.run("file.importProgress", json!({"show": true}));
     }
@@ -1352,7 +1352,9 @@ fn sync_status(ui: &mut Ui, app: &mut App, frame: &Frame) {
             .on_hover_text("Messages waiting to be sent");
         if r.clicked()
             && let Some(folder) = outbox_account.and_then(|a| {
-                app.s.mailbox.role_folder(mailcraft_model::AccountId(a), mailcraft_model::FolderRole::Outbox)
+                app.s
+                    .mailbox
+                    .role_folder(iridium_mail_model::AccountId(a), iridium_mail_model::FolderRole::Outbox)
             })
         {
             app.run("nav.selectFolder", json!({"folder": folder.0}));
@@ -1363,15 +1365,15 @@ fn sync_status(ui: &mut Ui, app: &mut App, frame: &Frame) {
 /// Download progress for the status bar: the whole text ("Downloading Inbox: 1,240 of 5,000 messages (folder
 /// 3 of 12)") when it fits, else the counts alone ("Inbox: 1,240 of 5,000"), so a narrow window still shows
 /// how far the download has got.
-fn progress_status(d: &mailcraft_engine::sync::SyncProgress, full: &str, width: f32) -> String {
+fn progress_status(d: &iridium_mail_engine::sync::SyncProgress, full: &str, width: f32) -> String {
     let fits = truncate_status(full, width);
     if fits == full || d.total == 0 {
         return fits;
     }
     let counts = format!(
         "{} of {}",
-        mailcraft_engine::sync::grouped(d.done.min(d.total)),
-        mailcraft_engine::sync::grouped(d.total)
+        iridium_mail_engine::sync::grouped(d.done.min(d.total)),
+        iridium_mail_engine::sync::grouped(d.total)
     );
     if d.folder.is_empty() {
         return truncate_status(&counts, width);
@@ -1688,7 +1690,7 @@ mod tests {
     #[test]
     fn bands_and_keyboard_focus_on_tabs_and_status_bar() {
         use egui_kittest::kittest::Queryable;
-        let app = App::new(mailcraft_engine::sample::sample_session());
+        let app = App::new(iridium_mail_engine::sample::sample_session());
         let mut h = crate::test_harness()
             .with_size(egui::vec2(1400.0, 900.0))
             .build_ui_state(|ui, app: &mut App| app.ui_root(ui), app);
@@ -1743,7 +1745,7 @@ mod tests {
             }
         }
         for theme in [Theme::light(), Theme::dark()] {
-            let mut app = App::new(mailcraft_engine::sample::sample_session());
+            let mut app = App::new(iridium_mail_engine::sample::sample_session());
             app.theme = theme.clone();
             let (name, addr) = app
                 .s
@@ -1751,7 +1753,7 @@ mod tests {
                 .default_account()
                 .map(|a| (a.display_name.clone(), a.address.clone()))
                 .unwrap_or_default();
-            let initials = mailcraft_engine::queries::initials(Some(name.as_str()), &addr);
+            let initials = iridium_mail_engine::queries::initials(Some(name.as_str()), &addr);
             assert!(!initials.is_empty());
             let mut h = crate::test_harness().with_size(egui::vec2(200.0, 60.0)).build_ui_state(
                 |ui, app: &mut App| {
@@ -1788,7 +1790,7 @@ mod tests {
     #[test]
     fn dialog_settings_are_saved_and_options_mirrored() {
         let ctx = egui::Context::default();
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         sync_ui_prefs(&ctx, &mut app);
         // Engine options appear as read-only copies for older readers.
         assert_eq!(crate::dialogs::ui_pref(&ctx, "options.search.highlight"), Some(json!(true)));
@@ -1816,7 +1818,7 @@ mod tests {
     #[test]
     fn status_bar_items_follow_the_engine_and_keep_zoom_when_narrow() {
         use egui_kittest::kittest::Queryable;
-        let app = App::new(mailcraft_engine::sample::sample_session());
+        let app = App::new(iridium_mail_engine::sample::sample_session());
         let mut h = crate::test_harness().with_size(egui::vec2(400.0, 30.0)).build_ui_state(
             |ui, app: &mut App| {
                 let frame = Frame::compute(400.0, 400.0);
@@ -1850,13 +1852,13 @@ mod tests {
         let saved = h.state().s.settings.get("state.uiPrefs").unwrap();
         assert!(saved.get("view.statusBar.hidden").is_some());
         assert_eq!(saved["columns.7"], json!(["a"]));
-        assert!(!mailcraft_engine::cmd::view::mail::status_item_shown(&h.state().s, "zoomSlider"));
+        assert!(!iridium_mail_engine::cmd::view::mail::status_item_shown(&h.state().s, "zoomSlider"));
     }
 
     #[test]
     fn reading_view_hides_the_pinned_todo_bar_and_normal_view_brings_it_back() {
         use egui_kittest::kittest::Queryable;
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         app.run("view.todoBar", json!({"part": "tasks"}));
         let mut h = crate::test_harness().with_size(egui::vec2(1600.0, 900.0)).build_ui_state(
             |ui, app: &mut App| {
@@ -1877,7 +1879,7 @@ mod tests {
 
     #[test]
     fn quick_access_toolbar_options() {
-        let mut app = App::new(mailcraft_engine::sample::sample_session());
+        let mut app = App::new(iridium_mail_engine::sample::sample_session());
         assert!(!qat_below(&app));
         app.run("options.set", json!({"key": "qat.position", "value": "below"}));
         assert!(qat_below(&app));

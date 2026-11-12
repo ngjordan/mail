@@ -52,7 +52,7 @@ pub const MESSAGES_NS: &str = "http://schemas.microsoft.com/exchange/services/20
 /// The server version requested.
 const VERSION: &str = "Exchange2010_SP2";
 
-/// The distinguished folder ids MailCraft uses ([MS-OXWSCDATA] DistinguishedFolderIdNameType).
+/// The distinguished folder ids Mail uses ([MS-OXWSCDATA] DistinguishedFolderIdNameType).
 pub const DISTINGUISHED: [&str; 12] = [
     "msgfolderroot",
     "inbox",
@@ -74,9 +74,9 @@ pub const FLAG_STATUS: &str = r#"<t:ExtendedFieldURI PropertyTag="0x1090" Proper
 pub const LAST_VERB: &str = r#"<t:ExtendedFieldURI PropertyTag="0x1081" PropertyType="Integer"/>"#;
 /// PidTagMessageFlags: bit 1 read, bit 8 unsent (a draft).
 pub const MESSAGE_FLAGS: &str = r#"<t:ExtendedFieldURI PropertyTag="0x0E07" PropertyType="Integer"/>"#;
-/// MailCraft's own UID of a contact, task or event made here (a named string property), so its address
+/// Mail's own UID of a contact, task or event made here (a named string property), so its address
 /// stays the same across runs.
-pub const ITEM_UID: &str = r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#;
+pub const ITEM_UID: &str = r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#;
 
 /// XML-escapes text and attribute values.
 pub fn esc(s: &str) -> String {
@@ -1128,7 +1128,7 @@ impl EwsClient {
             .unwrap_or_else(|| (id.to_owned(), String::new())))
     }
 
-    /// Deletes one item for good (meeting cancellations are not sent; MailCraft mails them itself).
+    /// Deletes one item for good (meeting cancellations are not sent; Mail mails them itself).
     pub fn delete_item(&self, id: &str) -> Result<()> {
         self.delete_items(std::slice::from_ref(&id.to_owned()), true)?.into_iter().next().unwrap_or(Ok(()))
     }

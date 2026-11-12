@@ -1,4 +1,4 @@
-# MailCraft ribbon definitions: main window, Mail module (plus the Search contextual tab).
+# Mail ribbon definitions: main window, Mail module (plus the Search contextual tab).
 #
 # Behaviour, group/control order, feature names and keytips follow plan/reference/ribbon-mail.md, search.md and
 # responsive.md; icons and wording beyond feature names are our own. Grammar (see ribbon/defs.rs):
@@ -469,7 +469,7 @@ item | Open in New Window | folder-open | folder.openInNewWindow | | W
 item | Close All Items | close | app.closeAllItems | | E
 
 menu moreHelp
-item | About MailCraft | info | help.about | | A
+item | About Mail | info | help.about | | A
 
 menu searchCategorized
 dyn | searchCategories | search.refine | {"kind":"categorized","value":"$name"}

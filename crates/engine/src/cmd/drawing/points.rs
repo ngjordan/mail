@@ -11,7 +11,7 @@ use crate::cmd::insert::freeform::{self, Node};
 use crate::cmd::insert::shapes;
 use crate::cmd::util::opt_str;
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::rich::{Drawing, PointKind};
+use iridium_mail_model::rich::{Drawing, PointKind};
 
 /// Most points a shape's outline turns into.
 const MAX_EDIT_POINTS: usize = 128;

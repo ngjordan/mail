@@ -3,7 +3,7 @@
 mod common;
 
 use common::*;
-use mailcraft_testmail::Config;
+use iridium_mail_testmail::Config;
 
 fn smtp_login(port: u16, user: &str, pw: &str) -> Client {
     let mut c = Client::connect(port);

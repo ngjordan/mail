@@ -1,6 +1,6 @@
-# MailCraft supplement to the Moby word lists: everyday words that postdate the 1990s lists or that they
-# omit. Written for MailCraft; merged into en-US.txt / en-US-proper.txt by
-# `cargo run -p mailcraft-proof --example build_dictionary`. Lower-case lines are common words,
+# Mail supplement to the Moby word lists: everyday words that postdate the 1990s lists or that they
+# omit. Written for Mail; merged into en-US.txt / en-US-proper.txt by
+# `cargo run -p iridium-mail-proof --example build_dictionary`. Lower-case lines are common words,
 # Capitalised lines are proper nouns. One word per line; lines starting with '#' are comments.
 apps
 app

@@ -7,14 +7,14 @@
 
 use std::io::{BufRead, Read, Write};
 
-use mailcraft_model::DateTime;
+use iridium_mail_model::DateTime;
 
 use crate::time;
 
 /// Longest physical line read in one piece; longer lines are read as several fragments.
 pub const MAX_LINE_BYTES: u64 = 1 << 20;
 /// Messages larger than this are skipped (the MIME parser's own cap).
-pub const MAX_MESSAGE_BYTES: usize = mailcraft_mime::MAX_MESSAGE_BYTES;
+pub const MAX_MESSAGE_BYTES: usize = iridium_mail_mime::MAX_MESSAGE_BYTES;
 /// Most messages imported from one file.
 pub const MAX_MESSAGES: usize = 1_000_000;
 

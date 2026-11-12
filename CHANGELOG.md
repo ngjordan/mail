@@ -1,6 +1,6 @@
 # Changelog
 
-What changed in each MailCraft release. Help › What's New shows the newest entries from this file.
+What changed in each Mail release. Help › What's New shows the newest entries from this file.
 
 ## Unreleased
 
@@ -11,7 +11,7 @@ What changed in each MailCraft release. Help › What's New shows the newest ent
   creating and showing the window), how long a message body takes to read, and any frame that held up the
   main window for 100 ms or more, part by part.
 - Troubleshooting logging also records start-up times (profile opened, window and renderer ready, first
-  frame). `MAILCRAFT_RENDERER=wgpu` draws with wgpu (Direct3D 12 on Windows, Vulkan or Metal elsewhere)
+  frame). `IRIDIUM_MAIL_RENDERER=wgpu` draws with wgpu (Direct3D 12 on Windows, Vulkan or Metal elsewhere)
   instead of OpenGL, to compare on machines where windows open slowly.
 - With a message open in its own window, the main window and the message window no longer lay out all of
   their text again on every frame (each window threw away the other's text layouts), so both stay
@@ -61,7 +61,7 @@ What changed in each MailCraft release. Help › What's New shows the newest ent
   notes into an account or a folder, and Open Data File opens a PST file as a data file. The import runs in
   the background with a progress window you can hide and reopen, Stop keeps what came in, running it again
   adds nothing twice, and a report lists what was left out. Damaged files are read in a separate process so
-  they cannot take the app down. MailCraft reads PST files but does not write them.
+  they cannot take the app down. Mail reads PST files but does not write them.
 - Microsoft 365 and Exchange accounts work side by side in one profile.
 - Folder names in Calendar, People, Tasks and Notes stay on one line and end in "…" when they are too long,
   instead of being cut off at the top and bottom.

@@ -10,9 +10,9 @@ use crate::{CmdError, CmdResult, CommandSpec, Session, always};
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The project's issue tracker (Feedback, Contact Support).
-pub const ISSUES_URL: &str = "https://github.com/MonkeySaint/mailcraft/issues";
+pub const ISSUES_URL: &str = "https://github.com/MonkeySaint/iridium-mail/issues";
 /// Page that starts a new issue (Feedback › Open a New Issue adds `title` and `body`).
-pub const NEW_ISSUE_URL: &str = "https://github.com/MonkeySaint/mailcraft/issues/new";
+pub const NEW_ISSUE_URL: &str = "https://github.com/MonkeySaint/iridium-mail/issues/new";
 
 /// The release notes bundled with the build (`CHANGELOG.md`).
 pub const CHANGELOG: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../CHANGELOG.md"));
@@ -113,7 +113,7 @@ fn spec(
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         spec("help.help", "Help", "F1", r#"{"topic"?: string}"#, help),
-        spec("help.about", "About MailCraft", "", "", about),
+        spec("help.about", "About Mail", "", "", about),
         spec("help.feedback", "Feedback", "", r#"{"kind"?: "feedback"|"suggestion"}"#, feedback),
         spec("help.showTraining", "Show Training", "", "", training),
         spec("help.whatsNew", "What's New", "", "", whats_new),
@@ -123,7 +123,7 @@ pub fn specs() -> Vec<CommandSpec> {
 
 fn about_json() -> Value {
     json!({
-        "name": "MailCraft",
+        "name": "Mail",
         "version": VERSION,
         "license": env!("CARGO_PKG_LICENSE"),
         "os": std::env::consts::OS,
@@ -209,7 +209,7 @@ mod tests {
         let (mut s, _, _) = session();
         let r = s.run("help.about", &json!({})).unwrap();
         assert_eq!(r["version"], VERSION);
-        assert_eq!(r["name"], "MailCraft");
+        assert_eq!(r["name"], "Mail");
     }
 
     #[test]

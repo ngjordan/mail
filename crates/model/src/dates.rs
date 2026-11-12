@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::DateTime;
-use mailcraft_mime::Weekday;
+use iridium_mail_mime::Weekday;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum DateGroup {
@@ -72,7 +72,7 @@ const MONTH_NAMES: [&str; 12] = [
 
 /// A broken-down local date and time computed without overflow for any `i64` instant.
 ///
-/// `mailcraft_mime::Civil` uses an `i32` year; this keeps an `i64` year so hostile timestamps
+/// `iridium_mail_mime::Civil` uses an `i32` year; this keeps an `i64` year so hostile timestamps
 /// (far past/future) never overflow while formatting.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct LocalTime {
@@ -192,7 +192,7 @@ pub fn days_in_month(year: i64, month: u8) -> u8 {
 }
 
 /// Builds an instant from a local civil date/time in `offset_min`; `None` for invalid fields.
-/// (Independent of `mailcraft_mime::DateTime::from_civil`; handy for tests and the date pickers.)
+/// (Independent of `iridium_mail_mime::DateTime::from_civil`; handy for tests and the date pickers.)
 pub fn local_datetime(
     year: i64,
     month: u8,

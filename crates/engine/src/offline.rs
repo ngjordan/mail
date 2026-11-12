@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::{AccountId, AccountKind, ItemId, MailItem};
+use iridium_mail_model::{AccountId, AccountKind, ItemId, MailItem};
 
 /// Most messages one pass takes off this computer.
 pub const MAX_EVICT_PER_PASS: usize = 5_000;
@@ -224,7 +224,7 @@ pub fn pass(s: &mut Session, id: AccountId) -> PassReport {
     s.sync.offline.last.insert(id, s.now().unix);
     s.sync.offline.due.remove(&id);
     let keep = pinned(s);
-    let folders: Vec<mailcraft_model::FolderId> = s
+    let folders: Vec<iridium_mail_model::FolderId> = s
         .mailbox
         .folders
         .values()
@@ -338,7 +338,7 @@ pub fn is_evicted(s: &Session, id: ItemId) -> bool {
 }
 
 /// Message `id` was opened (reading pane or read window; called every frame it shows): a body the offline
-/// window took off is downloaded again (asked once until it arrives) unless MailCraft works offline (a
+/// window took off is downloaded again (asked once until it arrives) unless Mail works offline (a
 /// download that failed is retried from the reading pane's bar). Returns true when a download started.
 pub fn opened(s: &mut Session, id: ItemId) -> bool {
     if !is_evicted(s, id) || s.view.work_offline || s.sync.offline.fetching.contains(&id) {
@@ -367,7 +367,7 @@ pub fn placeholder(s: &Session, id: ItemId) -> Option<String> {
         "This account keeps no mail on this computer, so only the header of this message is here.".to_owned()
     };
     let next = if s.view.work_offline {
-        "MailCraft is working offline: the message is downloaded when you open it again online.".to_owned()
+        "Mail is working offline: the message is downloaded when you open it again online.".to_owned()
     } else if s.sync.offline.fetching.contains(&id) {
         match s.last_run_error(account) {
             Some(e) => format!("It could not be downloaded ({e}). Download it now to try again."),

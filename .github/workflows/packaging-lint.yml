@@ -40,13 +40,13 @@ jobs:
       - name: Cache linters
         uses: actions/cache@v4
         with:
-          path: ~/.cache/mailcraft-lint
+          path: ~/.cache/iridium-mail-lint
           key: lint-shellcheck-${{ env.SHELLCHECK_VERSION }}-actionlint-${{ env.ACTIONLINT_VERSION }}
       - name: Install ShellCheck and actionlint
         run: |
-          bin="$HOME/.cache/mailcraft-lint/bin"
+          bin="$HOME/.cache/iridium-mail-lint/bin"
           mkdir -p "$bin"
-          cd "$HOME/.cache/mailcraft-lint"
+          cd "$HOME/.cache/iridium-mail-lint"
           if [ ! -x "$bin/shellcheck" ]; then
             f="shellcheck-v$SHELLCHECK_VERSION.linux.x86_64.tar.xz"
             curl -fsSLO --retry 3 "https://github.com/koalaman/shellcheck/releases/download/v$SHELLCHECK_VERSION/$f"

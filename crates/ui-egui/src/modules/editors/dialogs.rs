@@ -12,8 +12,8 @@ use std::collections::BTreeSet;
 use egui::{ComboBox, Id, RichText, ScrollArea, TextEdit, Ui, vec2};
 use serde_json::{Value, json};
 
-use mailcraft_model::FolderKind;
-use mailcraft_model::view::{ItemFilter, ItemRule};
+use iridium_mail_model::FolderKind;
+use iridium_mail_model::view::{ItemFilter, ItemRule};
 
 use super::super::common::{ModState, day_string, day_time_string, parse_day, run_checked, today};
 use super::{STATUSES, date_field, error_line, recurrence_choices, time_combo};
@@ -464,7 +464,7 @@ pub(crate) fn open(app: &App, st: &mut ModState, name: &str, p: &Value) {
             };
             let address_block = Some(str_of(p, "addressBlock"))
                 .filter(|b| !b.trim().is_empty())
-                .unwrap_or_else(|| mailcraft_engine::cmd::people::ADDRESS_BLOCK.to_owned());
+                .unwrap_or_else(|| iridium_mail_engine::cmd::people::ADDRESS_BLOCK.to_owned());
             let body = start_text(&doc, &address_block);
             MergeForm {
                 contacts: if str_of(p, "contacts") == "selected" { "selected".into() } else { "all".into() },
@@ -472,7 +472,7 @@ pub(crate) fn open(app: &App, st: &mut ModState, name: &str, p: &Value) {
                 doc,
                 to: if str_of(p, "output") == "email" { "email".into() } else { "document".into() },
                 path: format!("{}/Mail Merge.pdf", crate::backstage::home()),
-                printer: mailcraft_engine::cmd::print::DEFAULT_PRINTER.to_owned(),
+                printer: iridium_mail_engine::cmd::print::DEFAULT_PRINTER.to_owned(),
                 labels: "30".into(),
                 envelope: "10".into(),
                 label_sheets: pairs_of(p, "labels"),
@@ -691,7 +691,7 @@ fn move_ui(
         // New Folder: a folder of this kind under the one picked (or the current one).
         if ui.button("New...").clicked() {
             let parent = folder.or(Some(app.s.selection.folder.0));
-            let contains = mailcraft_engine::cmd::folder::contents_key(kind);
+            let contains = iridium_mail_engine::cmd::folder::contents_key(kind);
             crate::dialogs::open(app, "createFolder", json!({ "parent": parent, "contains": contains }));
         }
         let b = ok_cancel(ui, "OK", folder.is_some());
@@ -798,10 +798,10 @@ fn view_ui(ui: &mut Ui, app: &mut App, f: &mut ViewForm, nonce: u64) -> Btn {
     // The table parts describe the view as it is now (they apply at once in their own dialogs).
     if let Some(t) = &f.table {
         let folder = app.s.selection.folder;
-        let live = mailcraft_engine::cmd::view::modules::current(&app.s, folder)
-            .map(|(kind, st)| mailcraft_engine::cmd::view::table::summary(folder, kind, &st));
+        let live = iridium_mail_engine::cmd::view::modules::current(&app.s, folder)
+            .map(|(kind, st)| iridium_mail_engine::cmd::view::table::summary(folder, kind, &st));
         let t = live.as_ref().and_then(TableSummary::of).unwrap_or_else(|| t.clone());
-        let card = mailcraft_engine::cmd::view::modules::current(&app.s, folder)
+        let card = iridium_mail_engine::cmd::view::modules::current(&app.s, folder)
             .is_some_and(|(_, st)| st.view == "Card");
         table_parts(ui, app, &t, nonce, card);
     }
@@ -1434,7 +1434,7 @@ fn merge_ui(ui: &mut Ui, app: &mut App, f: &mut MergeForm, nonce: u64) -> Btn {
 /// Printers a merge can go to: the system's default printer, then the others (not Save as PDF: that is New
 /// Document).
 fn printer_names(app: &mut App) -> Vec<String> {
-    use mailcraft_engine::cmd::print::{DEFAULT_PRINTER, SAVE_AS_PDF};
+    use iridium_mail_engine::cmd::print::{DEFAULT_PRINTER, SAVE_AS_PDF};
     let mut out = vec![DEFAULT_PRINTER.to_owned()];
     let listed = app
         .s
@@ -1733,7 +1733,7 @@ fn apply(app: &mut App, kind: &mut Kind) -> Result<bool, String> {
                     // Several keys: the sort column first (in the direction Reverse Sort now gives it).
                     let first = if f.sort.is_empty() { "created" } else { f.sort.as_str() };
                     let desc =
-                        mailcraft_engine::cmd::view::modules::note_sort_descending(&f.sort) != f.reverse;
+                        iridium_mail_engine::cmd::view::modules::note_sort_descending(&f.sort) != f.reverse;
                     let mut keys = vec![(first.to_owned(), desc)];
                     keys.extend(f.then_sort.iter().cloned());
                     o.remove("sort");
@@ -1852,7 +1852,7 @@ mod tests {
     use super::*;
 
     fn app() -> App {
-        App::new(mailcraft_engine::sample::sample_session())
+        App::new(iridium_mail_engine::sample::sample_session())
     }
 
     #[test]
@@ -1890,7 +1890,7 @@ mod tests {
         let t = app.s.mailbox.tasks.keys().next().copied().unwrap();
         let m = app.s.mailbox.mail.ids().next().unwrap();
         if let Some(mail) = app.s.mailbox.mail.get_mut(m) {
-            mail.flag = mailcraft_model::FlagState::Flagged {
+            mail.flag = iridium_mail_model::FlagState::Flagged {
                 label: "Follow up".into(),
                 start: None,
                 due: None,
@@ -1919,7 +1919,7 @@ mod tests {
 
     fn custom_dialog(app: &mut App, ids: &[u64]) -> ModState {
         app.s.run("tasks.flag", &json!({"ids": ids, "kind": "custom"})).unwrap();
-        let Some(mailcraft_engine::Notice::OpenDialog(name, p)) = app.s.notices.last().cloned() else {
+        let Some(iridium_mail_engine::Notice::OpenDialog(name, p)) = app.s.notices.last().cloned() else {
             panic!("no dialog")
         };
         let mut st = ModState::default();
@@ -1928,7 +1928,7 @@ mod tests {
     }
 
     fn dates(app: &App, id: u64) -> (Option<i64>, Option<i64>, Option<i64>) {
-        let t = &app.s.mailbox.tasks[&mailcraft_model::ItemId(id)];
+        let t = &app.s.mailbox.tasks[&iridium_mail_model::ItemId(id)];
         (t.start.map(|d| d.unix), t.due.map(|d| d.unix), t.reminder.map(|d| d.unix))
     }
 
@@ -2005,7 +2005,7 @@ mod tests {
         let id = app.s.mailbox.tasks.values().find(|t| !t.is_complete()).map(|t| t.id).unwrap();
         if let Some(t) = app.s.mailbox.tasks.get_mut(&id) {
             t.requested_by = Some("Boss <boss@example.com>".into());
-            t.request_state = mailcraft_model::task::TaskRequestState::Accepted;
+            t.request_state = iridium_mail_model::task::TaskRequestState::Accepted;
         }
         let folder = app.s.mailbox.tasks[&id].folder;
         super::super::open_task(&app, &mut st, id);
@@ -2022,7 +2022,7 @@ mod tests {
             .notices
             .iter()
             .find_map(|n| match n {
-                mailcraft_engine::Notice::OpenDialog(name, p) if name == "deleteTaskRequest" => {
+                iridium_mail_engine::Notice::OpenDialog(name, p) if name == "deleteTaskRequest" => {
                     Some(p.clone())
                 }
                 _ => None,
@@ -2059,7 +2059,7 @@ mod tests {
 
     #[test]
     fn notes_view_settings_apply_advanced_parts_and_keep_them_in_a_saved_view() {
-        use mailcraft_engine::cmd::view::modules::{self, ModuleKind};
+        use iridium_mail_engine::cmd::view::modules::{self, ModuleKind};
         let mut app = app();
         let notes =
             app.s.mailbox.folders.values().find(|f| f.kind == FolderKind::Notes).map(|f| f.id).unwrap();
@@ -2068,7 +2068,7 @@ mod tests {
         app.run("view.saveViewAs", json!({"name": "Mine", "confirm": true}));
         app.run("view.viewSettings", json!({}));
         let mut st = ModState::default();
-        let Some(mailcraft_engine::Notice::OpenDialog(name, p)) = app.s.notices.last().cloned() else {
+        let Some(iridium_mail_engine::Notice::OpenDialog(name, p)) = app.s.notices.last().cloned() else {
             panic!("no dialog")
         };
         open(&app, &mut st, &name, &p);
@@ -2129,12 +2129,12 @@ mod tests {
         f.reverse = true;
         f.initial = Box::new(Some(init));
         assert_eq!(apply(&mut app, &mut Kind::ViewSettings(Box::new(f))), Ok(true));
-        let st = mailcraft_engine::cmd::view::modules::state(
+        let st = iridium_mail_engine::cmd::view::modules::state(
             &app.s,
             tasks,
-            mailcraft_engine::cmd::view::modules::ModuleKind::Tasks,
+            iridium_mail_engine::cmd::view::modules::ModuleKind::Tasks,
         );
         assert_eq!((st.view.as_str(), st.arrange.as_deref()), ("Detailed", Some("importance")));
-        assert!(mailcraft_engine::cmd::view::modules::reversed(&app.s, tasks));
+        assert!(iridium_mail_engine::cmd::view::modules::reversed(&app.s, tasks));
     }
 }

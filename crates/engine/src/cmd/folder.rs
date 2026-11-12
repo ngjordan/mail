@@ -11,7 +11,9 @@ use serde_json::{Value, json};
 
 use super::util::{opt_bool, opt_str};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Selection, Session, always};
-use mailcraft_model::{AccountId, Folder, FolderId, FolderKind, FolderRole, ItemId, MailItem, Mailbox, Rule};
+use iridium_mail_model::{
+    AccountId, Folder, FolderId, FolderKind, FolderRole, ItemId, MailItem, Mailbox, Rule,
+};
 
 #[allow(clippy::too_many_arguments)]
 fn spec(
@@ -395,7 +397,7 @@ fn unique_child_name(mb: &Mailbox, parent: FolderId, base: &str) -> String {
     if !taken(base) {
         return base.to_owned();
     }
-    let max = mailcraft_model::mailbox::MAX_FOLDER_NAME_CHARS;
+    let max = iridium_mail_model::mailbox::MAX_FOLDER_NAME_CHARS;
     let mut n: u32 = 2;
     loop {
         let suffix = format!(" ({n})");
@@ -643,9 +645,9 @@ pub fn copy_folder_tree(
             // calendar's time zones.
             super::calendar::props::update(mb, id, |x| {
                 if x.subscription.take().is_some()
-                    || x.source == mailcraft_model::calendar::CalendarSource::Internet
+                    || x.source == iridium_mail_model::calendar::CalendarSource::Internet
                 {
-                    x.source = mailcraft_model::calendar::CalendarSource::Local;
+                    x.source = iridium_mail_model::calendar::CalendarSource::Local;
                     x.read_only = false;
                 }
                 x.time_zones = None;
@@ -874,7 +876,7 @@ fn recover_deleted(s: &mut Session, p: &Value) -> CmdResult {
     };
     let fallback = deleted_items_folder(s);
     let wanted: BTreeSet<ItemId> = ids.into_iter().collect();
-    let items: Vec<mailcraft_model::DeletedItem> = crate::recover::listed(s)
+    let items: Vec<iridium_mail_model::DeletedItem> = crate::recover::listed(s)
         .into_iter()
         .filter(|e| wanted.contains(&e.item.id()))
         .map(|e| e.item.clone())
@@ -912,7 +914,7 @@ fn add_favorite(s: &mut Session, p: &Value) -> CmdResult {
     {
         let account = u32::try_from(account)
             .ok()
-            .map(mailcraft_model::AccountId)
+            .map(iridium_mail_model::AccountId)
             .filter(|a| s.mailbox.account(*a).is_some())
             .ok_or_else(|| CmdError::Params(format!("no such account {account}")))?;
         let inbox = s
@@ -1000,7 +1002,7 @@ fn move_down(s: &mut Session, p: &Value) -> CmdResult {
 fn sort_az(s: &mut Session, p: &Value) -> CmdResult {
     // `{"account": n}` sorts the account's top-level folders (account root context menu).
     let (account, parent) = match super::util::opt_u64(p, "account").and_then(|a| u32::try_from(a).ok()) {
-        Some(a) if p.get("folder").is_none() => (mailcraft_model::AccountId(a), None),
+        Some(a) if p.get("folder").is_none() => (iridium_mail_model::AccountId(a), None),
         _ => {
             let id = current_folder(s, p)?;
             let account =
@@ -1046,7 +1048,7 @@ pub fn show_all_az_on(s: &Session) -> bool {
 /// (default folders mixed in) when Show All Folders A to Z is on.
 pub fn pane_children(
     s: &Session,
-    account: mailcraft_model::AccountId,
+    account: iridium_mail_model::AccountId,
     parent: Option<FolderId>,
 ) -> Vec<FolderId> {
     let mut kids = s.mailbox.children(account, parent);
@@ -1209,10 +1211,10 @@ fn set_properties(s: &mut Session, p: &Value) -> CmdResult {
     let description = match p.get("description") {
         None | Some(Value::Null) => None,
         Some(Value::String(d)) => {
-            if d.chars().count() > mailcraft_model::folder::MAX_FOLDER_DESCRIPTION {
+            if d.chars().count() > iridium_mail_model::folder::MAX_FOLDER_DESCRIPTION {
                 return Err(CmdError::Params(format!(
                     "the description is longer than {} characters",
-                    mailcraft_model::folder::MAX_FOLDER_DESCRIPTION
+                    iridium_mail_model::folder::MAX_FOLDER_DESCRIPTION
                 )));
             }
             Some(d.trim_end().to_owned())
@@ -1333,7 +1335,7 @@ fn run_rules_now(s: &mut Session, p: &Value) -> CmdResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Address, Importance, RuleAction, RuleCondition};
+    use iridium_mail_model::{Address, Importance, RuleAction, RuleCondition};
 
     fn session() -> Session {
         let mb = Mailbox::new_local("Test");
@@ -1392,7 +1394,7 @@ mod tests {
         run(&mut s, "app.undo", json!({}));
         assert!(!s.mailbox.folder(drafts).unwrap().counts_total());
         assert!(s.run("folder.setProperties", &json!({"folder": inbox.0, "showTotal": "yes"})).is_err());
-        let long = "x".repeat(mailcraft_model::folder::MAX_FOLDER_DESCRIPTION + 1);
+        let long = "x".repeat(iridium_mail_model::folder::MAX_FOLDER_DESCRIPTION + 1);
         assert!(s.run("folder.setProperties", &json!({"folder": inbox.0, "description": long})).is_err());
         // The folder pane row follows the folder's choice.
         let rows = crate::queries::folder_rows(&s);
@@ -1560,7 +1562,7 @@ mod tests {
         let p = crate::cmd::calendar::props::read(&s.mailbox, copy);
         assert_eq!(p.color.as_deref(), Some("Teal"), "the colour comes along");
         assert!(p.subscription.is_none() && !p.read_only, "the copy is an ordinary, editable calendar");
-        assert_eq!(p.source, mailcraft_model::calendar::CalendarSource::Local);
+        assert_eq!(p.source, iridium_mail_model::calendar::CalendarSource::Local);
         assert_eq!(s.mailbox.appointments.values().filter(|a| a.folder == copy).count(), 1);
         // The original is still the subscription.
         assert!(crate::cmd::calendar::props::read(&s.mailbox, feed).subscription.is_some());
@@ -1914,7 +1916,7 @@ mod tests {
         assert_eq!(f.parent, Some(role(&s, FolderRole::SearchFolders)));
         assert_eq!(f.search_query.as_deref(), Some("isread:no"));
         // Search mail in another mailbox: the folder goes under that mailbox's Search Folders.
-        let other = s.mailbox.add_account(mailcraft_model::Account {
+        let other = s.mailbox.add_account(iridium_mail_model::Account {
             display_name: "Archive file".into(),
             address: "archive@example.org".into(),
             ..Default::default()

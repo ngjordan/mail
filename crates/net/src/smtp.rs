@@ -3,9 +3,9 @@
 //! enhanced status codes (RFC 3463), delivery status notifications (DSN, RFC 3461), dot-stuffing, and
 //! per-recipient error reporting.
 //!
-//! Submission-only header fields: the engine asks for envelope options by writing `X-MailCraft-Submit-*`
+//! Submission-only header fields: the engine asks for envelope options by writing `X-Mail-Submit-*`
 //! header fields into the message it queues (see [`SUBMIT_HEADER_PREFIX`]). [`SmtpClient::send`] reads them,
-//! turns them into envelope parameters (`X-MailCraft-Submit-DSN` → `NOTIFY`/`ORCPT`/`RET`/`ENVID` when the
+//! turns them into envelope parameters (`X-Mail-Submit-DSN` → `NOTIFY`/`ORCPT`/`RET`/`ENVID` when the
 //! server advertises DSN) and removes every such field before DATA, so recipients never see them. Without
 //! server DSN support the request is dropped: no legacy `Return-Receipt-To` fallback.
 
@@ -13,7 +13,7 @@ use std::fmt;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use mailcraft_model::Security;
+use iridium_mail_model::Security;
 
 use crate::error::{NetError, Result};
 use crate::sasl::{self, Credentials, Mechanism};
@@ -137,10 +137,10 @@ impl Extensions {
 }
 
 /// Prefix of submission-only header fields (removed by [`SmtpClient::send`] before DATA).
-pub const SUBMIT_HEADER_PREFIX: &str = "X-MailCraft-Submit-";
+pub const SUBMIT_HEADER_PREFIX: &str = "X-Mail-Submit-";
 /// Submission-only field asking for a delivery status notification, e.g.
-/// `X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS`.
-pub const DSN_HEADER: &str = "X-MailCraft-Submit-DSN";
+/// `X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS`.
+pub const DSN_HEADER: &str = "X-Mail-Submit-DSN";
 /// Longest ENVID (RFC 3461 section 4.4: 100 characters).
 const MAX_ENVID: usize = 100;
 
@@ -224,7 +224,7 @@ pub fn xtext(s: &str) -> String {
 }
 
 /// Splits `raw` into the submission options it asks for and the message to transmit: every
-/// `X-MailCraft-Submit-*` field (with its folded continuation lines) is removed from the header section;
+/// `X-Mail-Submit-*` field (with its folded continuation lines) is removed from the header section;
 /// the body is untouched. The ENVID comes from the Message-ID.
 pub fn take_submit_options(raw: &[u8]) -> (Option<DsnRequest>, Vec<u8>) {
     let head_len = header_section(raw).len();
@@ -688,7 +688,7 @@ impl SmtpClient {
     /// was accepted and the server took the message; otherwise the error lists refused recipients and
     /// whether the message went out to the others.
     ///
-    /// Submission-only `X-MailCraft-Submit-*` header fields are removed first; a DSN request among them
+    /// Submission-only `X-Mail-Submit-*` header fields are removed first; a DSN request among them
     /// becomes the RFC 3461 envelope parameters when the server advertises DSN.
     pub fn send(&mut self, from: &str, rcpts: &[&str], raw: &[u8]) -> std::result::Result<(), SendError> {
         let (dsn, clean) = take_submit_options(raw);
@@ -953,21 +953,21 @@ mod tests {
 
     #[test]
     fn submit_headers_are_removed_with_their_folds() {
-        let raw = b"From: a@example.com\r\nX-MailCraft-Submit-DSN: NOTIFY=SUCCESS,\r\n FAILURE; RET=HDRS\r\n\
-Message-ID: <id.1@example.com>\r\nx-mailcraft-submit-save-sent: none\r\nSubject: Hi\r\n\r\nX-MailCraft-Submit-DSN: body\r\n";
+        let raw = b"From: a@example.com\r\nX-Mail-Submit-DSN: NOTIFY=SUCCESS,\r\n FAILURE; RET=HDRS\r\n\
+Message-ID: <id.1@example.com>\r\nx-mail-submit-save-sent: none\r\nSubject: Hi\r\n\r\nX-Mail-Submit-DSN: body\r\n";
         let (dsn, clean) = take_submit_options(raw);
         let d = dsn.unwrap();
         assert!(d.success && d.failure);
         assert_eq!(d.envid.as_deref(), Some("id.1@example.com"));
         assert_eq!(
             clean,
-            b"From: a@example.com\r\nMessage-ID: <id.1@example.com>\r\nSubject: Hi\r\n\r\nX-MailCraft-Submit-DSN: body\r\n"
+            b"From: a@example.com\r\nMessage-ID: <id.1@example.com>\r\nSubject: Hi\r\n\r\nX-Mail-Submit-DSN: body\r\n"
         );
         // Nothing to remove: unchanged.
         let plain = b"Subject: x\n\nbody";
         assert_eq!(take_submit_options(plain), (None, plain.to_vec()));
         // Hostile input never panics.
-        let _ = take_submit_options(b"X-MailCraft-Submit-DSN\r\n \r\n\r\n");
+        let _ = take_submit_options(b"X-Mail-Submit-DSN\r\n \r\n\r\n");
         let _ = take_submit_options(b"\xff\xfe: \x00\n\tfold");
     }
 
@@ -1024,7 +1024,7 @@ Message-ID: <id.1@example.com>\r\nx-mailcraft-submit-save-sent: none\r\nSubject:
         set.options.io_timeout = Duration::from_secs(10);
         let mut c = SmtpClient::connect(&set).unwrap();
         let raw = b"From: a@example.com\r\nTo: b@example.org\r\nMessage-ID: <m1@example.com>\r\n\
-X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nSubject: s\r\n\r\nbody\r\n";
+X-Mail-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nSubject: s\r\n\r\nbody\r\n";
         c.send("a@example.com", &["b@example.org"], raw).unwrap();
         c.quit().unwrap();
         t.join().unwrap()
@@ -1043,7 +1043,7 @@ X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nSubject: s\r\n\r\nbo
             ),
             "{seen:?}"
         );
-        assert!(!seen.iter().any(|l| l.contains("X-MailCraft-Submit")), "{seen:?}");
+        assert!(!seen.iter().any(|l| l.contains("X-Mail-Submit")), "{seen:?}");
         assert!(!seen.iter().any(|l| l.starts_with("Return-Receipt-To")));
     }
 
@@ -1052,7 +1052,7 @@ X-MailCraft-Submit-DSN: NOTIFY=SUCCESS,FAILURE; RET=HDRS\r\nSubject: s\r\n\r\nbo
         let seen = deliver("");
         assert!(seen.contains(&"MAIL FROM:<a@example.com>".to_owned()), "{seen:?}");
         assert!(seen.contains(&"RCPT TO:<b@example.org>".to_owned()), "{seen:?}");
-        assert!(!seen.iter().any(|l| l.contains("X-MailCraft-Submit") || l.contains("Return-Receipt-To")));
+        assert!(!seen.iter().any(|l| l.contains("X-Mail-Submit") || l.contains("Return-Receipt-To")));
     }
 
     proptest! {

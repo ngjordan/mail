@@ -4,7 +4,7 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::Path;
 
-use mailcraft_model::{Folder, FolderId, FolderRole, ItemId, MailItem, Mailbox, ResponseState};
+use iridium_mail_model::{Folder, FolderId, FolderRole, ItemId, MailItem, Mailbox, ResponseState};
 
 use crate::journal::{JOURNAL_FILE, SNAPSHOT_FILE};
 use crate::lock::LOCK_FILE;
@@ -94,7 +94,7 @@ fn journal_round_trip_keeps_content_keys() {
 /// from the journal; an account the mailbox lacks is appended.
 #[test]
 fn put_account_replaces_one_account_in_place() {
-    use mailcraft_model::{Account, AccountId};
+    use iridium_mail_model::{Account, AccountId};
     let d = tmp();
     let mut mb = base_mailbox();
     for (id, name) in [(1, "First"), (2, "Second")] {
@@ -123,7 +123,7 @@ fn put_account_replaces_one_account_in_place() {
 /// for `PutSync` is skipped. Both replay from the journal.
 #[test]
 fn put_sync_and_put_config_replay_from_the_journal() {
-    use mailcraft_model::{Account, AccountId, Category};
+    use iridium_mail_model::{Account, AccountId, Category};
     let d = tmp();
     let mut mb = base_mailbox();
     for (id, name) in [(1, "First"), (2, "Second")] {
@@ -199,7 +199,7 @@ fn checkpoint_snapshot_excludes_raw_and_resets_journal() {
     store.checkpoint(&mb).unwrap();
     assert_eq!(store.generation(), 1);
     let snap = fs::read_to_string(d.path().join(SNAPSHOT_FILE)).unwrap();
-    assert!(snap.starts_with("{\"mailcraft_snapshot\":2,\"generation\":1,\"bodies\":2,\"mailbox\":"));
+    assert!(snap.starts_with("{\"iridium_mail_snapshot\":2,\"generation\":1,\"bodies\":2,\"mailbox\":"));
     assert!(!snap.contains("\"raw\"") && !snap.contains("\"body\""), "content stays out of the snapshot");
     let journal = fs::read_to_string(d.path().join(JOURNAL_FILE)).unwrap();
     assert_eq!(journal.lines().count(), 1);
@@ -235,7 +235,7 @@ fn legacy_inline_content_moves_to_the_body_store_on_load() {
              \"ignored\":false,\"remote_id\":null,\"blob\":null,\"raw\":{raw}}}"
         )
     };
-    let parsed = mailcraft_model::Body::from_source(raw1.as_bytes()).unwrap();
+    let parsed = iridium_mail_model::Body::from_source(raw1.as_bytes()).unwrap();
     let first_body = serde_json::to_string(parsed.text.as_deref().unwrap()).unwrap();
     let items = [
         item(5, Some(raw1), &first_body),
@@ -251,14 +251,14 @@ fn legacy_inline_content_moves_to_the_body_store_on_load() {
         serde_json::to_string(&mb_json).unwrap().replace("\"mail\":{}", &format!("\"mail\":{{{items}}}"));
     fs::write(
         d.path().join(SNAPSHOT_FILE),
-        format!("{{\"mailcraft_snapshot\":1,\"generation\":3,\"mailbox\":{mb_text}}}"),
+        format!("{{\"iridium_mail_snapshot\":1,\"generation\":3,\"mailbox\":{mb_text}}}"),
     )
     .unwrap();
     let put8 = item(8, None, "\"New\"").replacen("\"8\":", "", 1);
     fs::write(
         d.path().join(JOURNAL_FILE),
         format!(
-            "{{\"mailcraft_journal\":1,\"generation\":3}}\n{{\"PutMail\":{put8}}}\n{{\"RemoveMail\":9}}\n"
+            "{{\"iridium_mail_journal\":1,\"generation\":3}}\n{{\"PutMail\":{put8}}}\n{{\"RemoveMail\":9}}\n"
         ),
     )
     .unwrap();
@@ -299,8 +299,8 @@ fn legacy_inline_content_moves_to_the_body_store_on_load() {
 fn legacy_recoverable_bodies_move_to_the_body_store() {
     let d = tmp();
     let mut store = Store::open(d.path()).unwrap();
-    let mut bin = mailcraft_model::RecoverBin::default();
-    bin.add(mailcraft_model::DeletedItem::Mail(Box::new(mail(7, "Gone", None))), "Inbox", 100);
+    let mut bin = iridium_mail_model::RecoverBin::default();
+    bin.add(iridium_mail_model::DeletedItem::Mail(Box::new(mail(7, "Gone", None))), "Inbox", 100);
     let mut v = serde_json::to_value(&bin).unwrap();
     v["items"][0]["item"]["item"]["body"] =
         serde_json::json!({"format": "PlainText", "text": "Deleted draft", "html": null});
@@ -308,7 +308,7 @@ fn legacy_recoverable_bodies_move_to_the_body_store() {
     fs::write(d.path().join(crate::RECOVERABLE_FILE), serde_json::to_vec(&v).unwrap()).unwrap();
     let mut back = store.load_recoverable().unwrap();
     let m = match back.items.first().map(|e| &e.item) {
-        Some(mailcraft_model::DeletedItem::Mail(m)) => m.clone(),
+        Some(iridium_mail_model::DeletedItem::Mail(m)) => m.clone(),
         other => panic!("mail entry expected, got {other:?}"),
     };
     let body = BodyStore::on_disk(d.path()).body_of(&m).unwrap().unwrap();
@@ -428,13 +428,13 @@ fn snapshot_format_two_is_written_and_one_still_read() {
     store.checkpoint(&base_mailbox()).unwrap();
     drop(store);
     let snap = fs::read(d.path().join(SNAPSHOT_FILE)).unwrap();
-    assert!(snap.starts_with(b"{\"mailcraft_snapshot\":2,"));
+    assert!(snap.starts_with(b"{\"iridium_mail_snapshot\":2,"));
     assert_eq!(crate::journal::parse_generation_prefix(&snap), Some(1));
     let mb_text = serde_json::to_string(&base_mailbox()).unwrap();
     for (format, ok) in [(1, true), (2, true), (4, false), (0, false)] {
         fs::write(
             d.path().join(SNAPSHOT_FILE),
-            format!("{{\"mailcraft_snapshot\":{format},\"generation\":6,\"mailbox\":{mb_text}}}"),
+            format!("{{\"iridium_mail_snapshot\":{format},\"generation\":6,\"mailbox\":{mb_text}}}"),
         )
         .unwrap();
         let _ = fs::remove_file(d.path().join(JOURNAL_FILE));
@@ -448,7 +448,9 @@ fn snapshot_format_two_is_written_and_one_still_read() {
     // taken for an empty legacy profile).
     fs::write(
         d.path().join(SNAPSHOT_FILE),
-        format!("{{\"mailcraft_snapshot\":3,\"generation\":0,\"store\":\"sqlite\",\"mailbox\":{mb_text}}}"),
+        format!(
+            "{{\"iridium_mail_snapshot\":3,\"generation\":0,\"store\":\"sqlite\",\"mailbox\":{mb_text}}}"
+        ),
     )
     .unwrap();
     let err = Store::open(d.path()).unwrap_err();
@@ -458,8 +460,11 @@ fn snapshot_format_two_is_written_and_one_still_read() {
 #[test]
 fn garbled_snapshot_is_corrupt_not_panic() {
     let d = tmp();
-    fs::write(d.path().join(SNAPSHOT_FILE), b"{\"mailcraft_snapshot\":1,\"generation\":4,\"mailbox\":{tru")
-        .unwrap();
+    fs::write(
+        d.path().join(SNAPSHOT_FILE),
+        b"{\"iridium_mail_snapshot\":1,\"generation\":4,\"mailbox\":{tru",
+    )
+    .unwrap();
     let store = Store::open(d.path()).unwrap();
     assert_eq!(store.generation(), 4);
     assert!(matches!(store.load(), Err(StoreError::Corrupt(_))));
@@ -481,14 +486,14 @@ fn stale_lock_takeover() {
     let lock = d.path().join(LOCK_FILE);
     let now = crate::time::now_secs();
     // Old timestamp, no pid: stale on every platform.
-    fs::write(&lock, format!("mailcraft-lock 1\ntime {}\n", now - 7200)).unwrap();
+    fs::write(&lock, format!("iridium-mail-lock 1\ntime {}\n", now - 7200)).unwrap();
     drop(Store::open(d.path()).unwrap());
     // Fresh timestamp, no pid: respected.
-    fs::write(&lock, format!("mailcraft-lock 1\ntime {now}\n")).unwrap();
+    fs::write(&lock, format!("iridium-mail-lock 1\ntime {now}\n")).unwrap();
     assert!(matches!(Store::open(d.path()), Err(StoreError::Locked)));
     // Dead pid (where liveness can be checked).
     if crate::lock::pid_alive(u32::MAX - 1) == Some(false) {
-        fs::write(&lock, format!("mailcraft-lock 1\npid {}\ntime {now}\n", u32::MAX - 1)).unwrap();
+        fs::write(&lock, format!("iridium-mail-lock 1\npid {}\ntime {now}\n", u32::MAX - 1)).unwrap();
         let s = Store::open(d.path()).unwrap();
         let text = fs::read_to_string(&lock).unwrap();
         assert!(text.contains(&format!("pid {}", std::process::id())));
@@ -542,12 +547,15 @@ fn gc_removes_unreferenced_blobs() {
     let drop_key = store.put_blob(RAW2).unwrap();
     let mut mb = base_mailbox();
     let mut bodies = BodyStore::on_disk(d.path());
-    let record =
-        bodies.put_body(&mailcraft_model::Body { text: Some("kept".into()), ..Default::default() }).unwrap();
-    let pinned =
-        bodies.put_body(&mailcraft_model::Body { text: Some("undo".into()), ..Default::default() }).unwrap();
-    let stray =
-        bodies.put_body(&mailcraft_model::Body { text: Some("stray".into()), ..Default::default() }).unwrap();
+    let record = bodies
+        .put_body(&iridium_mail_model::Body { text: Some("kept".into()), ..Default::default() })
+        .unwrap();
+    let pinned = bodies
+        .put_body(&iridium_mail_model::Body { text: Some("undo".into()), ..Default::default() })
+        .unwrap();
+    let stray = bodies
+        .put_body(&iridium_mail_model::Body { text: Some("stray".into()), ..Default::default() })
+        .unwrap();
     mb.mail.insert(
         ItemId(2),
         MailItem {
@@ -666,8 +674,8 @@ fn mbox_export_import_round_trip() {
         .map(|(i, r)| {
             bodies.put_source(r).unwrap();
             MailItem {
-                from: Some(mailcraft_mime::Mailbox::new(Some("A Person"), "a@example.com")),
-                received: mailcraft_model::DateTime { unix: 1_791_433_800 + i as i64, offset_min: 0 },
+                from: Some(iridium_mail_mime::Mailbox::new(Some("A Person"), "a@example.com")),
+                received: iridium_mail_model::DateTime { unix: 1_791_433_800 + i as i64, offset_min: 0 },
                 ..mail(i as u64 + 1, "s", Some(r))
             }
         })
@@ -696,12 +704,13 @@ fn export_rebuilds_items_without_source() {
     let file = d.path().join("rebuilt.mbox");
     let mut item = MailItem {
         subject: "Hello there".into(),
-        from: Some(mailcraft_mime::Mailbox::new(None, "me@example.com")),
-        to: vec![mailcraft_mime::Mailbox::new(Some("You"), "you@example.com")],
+        from: Some(iridium_mail_mime::Mailbox::new(None, "me@example.com")),
+        to: vec![iridium_mail_mime::Mailbox::new(Some("You"), "you@example.com")],
         ..Default::default()
     };
     let mut bodies = BodyStore::in_memory();
-    let body = mailcraft_model::Body { text: Some("Line one\nFrom line two".into()), ..Default::default() };
+    let body =
+        iridium_mail_model::Body { text: Some("Line one\nFrom line two".into()), ..Default::default() };
     bodies.store_body(&mut item, &body).unwrap();
     export_mbox(&[&item], &bodies, &file).unwrap();
     let text = fs::read_to_string(&file).unwrap();
@@ -797,8 +806,8 @@ fn hostile_journal_bytes_never_panic() {
         let mut v: Vec<Vec<u8>> = vec![
             b"".to_vec(),
             b"\n\n\n".to_vec(),
-            b"{\"mailcraft_journal\":1,\"generation\":18446744073709551615}\n".to_vec(),
-            b"{\"mailcraft_journal\":1,\"generation\":-1}\n{\"RemoveMail\":3}\n".to_vec(),
+            b"{\"iridium_mail_journal\":1,\"generation\":18446744073709551615}\n".to_vec(),
+            b"{\"iridium_mail_journal\":1,\"generation\":-1}\n{\"RemoveMail\":3}\n".to_vec(),
             b"{\"RemoveMail\":3}".to_vec(),
             b"{\"PutMail\":null}\n{\"Replace\":{}}\n".to_vec(),
             vec![0xff; 300],
@@ -962,7 +971,7 @@ fn lock_from_earlier_process_with_our_pid_is_taken_over() {
     let now = crate::time::now_secs();
     fs::write(
         d.path().join(LOCK_FILE),
-        format!("mailcraft-lock 1\npid {}\ntime {now}\ntoken earlier-run\n{boot}", std::process::id()),
+        format!("iridium-mail-lock 1\npid {}\ntime {now}\ntoken earlier-run\n{boot}", std::process::id()),
     )
     .unwrap();
     let store = Store::open(d.path()).unwrap();
@@ -1127,9 +1136,9 @@ fn recoverable_bin_round_trips_with_content_by_key() {
     assert!(store.load_recoverable().unwrap().items.is_empty(), "no file yet");
     let key1 = store.put_blob(RAW1).unwrap();
     let key2 = store.put_blob(RAW2).unwrap();
-    let mut bin = mailcraft_model::RecoverBin::default();
-    bin.add(mailcraft_model::DeletedItem::Mail(Box::new(mail(7, "Gone", Some(RAW1)))), "Inbox", 100);
-    bin.add(mailcraft_model::DeletedItem::Mail(Box::new(mail(8, "Also gone", Some(RAW2)))), "Inbox", 101);
+    let mut bin = iridium_mail_model::RecoverBin::default();
+    bin.add(iridium_mail_model::DeletedItem::Mail(Box::new(mail(7, "Gone", Some(RAW1)))), "Inbox", 100);
+    bin.add(iridium_mail_model::DeletedItem::Mail(Box::new(mail(8, "Also gone", Some(RAW2)))), "Inbox", 101);
     store.save_recoverable(&mut bin).unwrap();
     let text = fs::read_to_string(d.path().join(crate::RECOVERABLE_FILE)).unwrap();
     assert!(!text.contains("First body") && text.contains(&key1), "the file holds keys, not sources");
@@ -1139,7 +1148,7 @@ fn recoverable_bin_round_trips_with_content_by_key() {
     let mut store = Store::open(d.path()).unwrap();
     let back = store.load_recoverable().unwrap();
     let m = match back.items.first().map(|e| &e.item) {
-        Some(mailcraft_model::DeletedItem::Mail(m)) => m.clone(),
+        Some(iridium_mail_model::DeletedItem::Mail(m)) => m.clone(),
         other => panic!("mail entry expected, got {other:?}"),
     };
     assert_eq!(m.subject, "Gone");
@@ -1240,7 +1249,7 @@ fn autosave_keeps_the_batch_when_journal_and_snapshot_are_refused() {
 /// and mail (the shape `accounts.remove` journals); every cut of the line reopens to one of the two states.
 #[test]
 fn a_batch_cut_anywhere_replays_whole_or_not_at_all() {
-    use mailcraft_model::{Account, AccountId};
+    use iridium_mail_model::{Account, AccountId};
     let d = tmp();
     let mut mb = base_mailbox();
     mb.accounts.push(Account { id: AccountId(1), display_name: "Local".into(), ..Default::default() });
@@ -1331,14 +1340,17 @@ fn a_batch_supersedes_inline_content_from_before_s5() {
         serde_json::to_string(&mb_json).unwrap().replace("\"mail\":{}", &format!("\"mail\":{{{items}}}"));
     fs::write(
         d.path().join(SNAPSHOT_FILE),
-        format!("{{\"mailcraft_snapshot\":1,\"generation\":3,\"mailbox\":{mb_text}}}"),
+        format!("{{\"iridium_mail_snapshot\":1,\"generation\":3,\"mailbox\":{mb_text}}}"),
     )
     .unwrap();
     let new8 = mail(8, "rewritten", None);
     let batch = Op::Batch(vec![Op::PutMail(Box::new(new8.clone())), Op::RemoveMail(ItemId(9))]);
     fs::write(
         d.path().join(JOURNAL_FILE),
-        format!("{{\"mailcraft_journal\":2,\"generation\":3}}\n{}\n", serde_json::to_string(&batch).unwrap()),
+        format!(
+            "{{\"iridium_mail_journal\":2,\"generation\":3}}\n{}\n",
+            serde_json::to_string(&batch).unwrap()
+        ),
     )
     .unwrap();
     let store = Store::open(d.path()).unwrap();
@@ -1366,10 +1378,10 @@ fn journal_format_versions() {
     let path = d.path().join(JOURNAL_FILE);
     let written = fs::read(&path).unwrap();
     let header = written.split(|&b| b == b'\n').next().unwrap();
-    assert_eq!(JournalHeader::parse(header).unwrap().mailcraft_journal, JOURNAL_VERSION);
+    assert_eq!(JournalHeader::parse(header).unwrap().iridium_mail_journal, JOURNAL_VERSION);
     let body = written.get(header.len()..).unwrap().to_vec();
     let with_header = |version: u32| {
-        let mut v = format!("{{\"mailcraft_journal\":{version},\"generation\":0}}").into_bytes();
+        let mut v = format!("{{\"iridium_mail_journal\":{version},\"generation\":0}}").into_bytes();
         v.extend_from_slice(&body);
         v
     };
@@ -1377,7 +1389,7 @@ fn journal_format_versions() {
     fs::write(&path, with_header(JOURNAL_VERSION + 1)).unwrap();
     let err = Store::open(d.path()).unwrap_err();
     assert!(matches!(err, StoreError::TooNew(_)), "{err}");
-    assert!(err.to_string().contains("newer version of MailCraft"), "{err}");
+    assert!(err.to_string().contains("newer version of Mail"), "{err}");
     assert_eq!(fs::read(&path).unwrap(), with_header(JOURNAL_VERSION + 1), "left as it was");
     // Older: replayed, and the header upgraded.
     fs::write(&path, with_header(1)).unwrap();
@@ -1399,4 +1411,26 @@ fn journal_format_versions() {
     let store = Store::open(d.path()).unwrap();
     assert_eq!(store.open_repair().upgraded_from, None);
     assert_eq!(store.load().unwrap().mail.len(), 2);
+}
+
+#[test]
+fn a_profile_written_before_the_rename_still_opens() {
+    // The snapshot key and the journal key changed with the rename. A profile is a
+    // mailbox: refusing one because its key is the old spelling would lose the mail in
+    // it, so the old keys are read as well as the new ones.
+    let d = tmp();
+    let dir = d.path().join("profile");
+    fs::create_dir_all(&dir).unwrap();
+    let mb = base_mailbox();
+    let mb_text = serde_json::to_string(&mb).unwrap();
+    fs::write(
+        dir.join(SNAPSHOT_FILE),
+        format!("{{\"mailcraft_snapshot\":2,\"generation\":1,\"bodies\":2,\"mailbox\":{mb_text}}}"),
+    )
+    .unwrap();
+    fs::write(dir.join(JOURNAL_FILE), b"{\"mailcraft_journal\":2,\"generation\":1}\n").unwrap();
+
+    let store = Store::open(&dir).unwrap();
+    let loaded = store.load().unwrap();
+    assert_eq!(loaded.folders.len(), 1, "the mailbox in the old snapshot is read");
 }

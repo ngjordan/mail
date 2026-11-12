@@ -1,6 +1,6 @@
 //! Writing refinements (the Editor pane's suggestions beyond corrections): wordy phrases (conciseness),
 //! passive voice (clarity), clichés, informal words (formality) and wording that leaves people out
-//! (inclusiveness). The phrase lists are MailCraft's own. A refinement is advice, not an error: most carry a
+//! (inclusiveness). The phrase lists are Mail's own. A refinement is advice, not an error: most carry a
 //! suggested rewording, some only a note (passive voice, clichés without an obvious plain form).
 
 use std::collections::HashMap;

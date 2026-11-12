@@ -8,14 +8,14 @@
 //! Completed ⇔ a completion date.
 //!
 //! **Recurrence.** A recurring task (`Task.recurrence`) follows an RFC 5545 RRULE anchored at its first due
-//! date, expanded with `mailcraft-formats` (`ics::expand_appointment`), or regenerates N days after each
+//! date, expanded with `iridium-mail-formats` (`ics::expand_appointment`), or regenerates N days after each
 //! completion. Completing it keeps a completed copy (without recurrence) and moves the task to its next
 //! occurrence; when the pattern has ended the task simply completes.
 //!
 //! **Respond.** Reply / Reply All answer a task request (to the person who assigned the task, and the other
 //! assignees); Forward sends the task details with the task as an iCalendar VTODO attachment; Meeting
 //! starts a meeting about the task. **Task requests** (`tasks.assign`, People › Assign Task) send a
-//! message with a VTODO (`METHOD:REQUEST`, written by `mailcraft-formats`) to the assignees and keep an
+//! message with a VTODO (`METHOD:REQUEST`, written by `iridium-mail-formats`) to the assignees and keep an
 //! assigned copy (the Assigned view) whose UID ties later answers to it.
 //!
 //! **Received task requests** (RFC 5546 iTIP with a VTODO: our own `tasks.assign` messages and other
@@ -42,8 +42,8 @@ use crate::cmd::view::modules::{self, ModuleKind, ViewRow};
 use crate::cmd::view::table;
 use crate::compose::{ComposeAttachment, ComposeState};
 use crate::{CmdError, CmdResult, CommandSpec, Session, always};
-use mailcraft_model::task::{TaskRecurrence, TaskRequestState};
-use mailcraft_model::{
+use iridium_mail_model::task::{TaskRecurrence, TaskRequestState};
+use iridium_mail_model::{
     Appointment, DateTime, Doc, FlagState, FolderId, FolderRole, ItemId, Recurrence, Task, TaskPriority,
     TaskStatus,
 };
@@ -233,7 +233,7 @@ fn parse_recurrence(v: &Value, t: &Task, p: &Value) -> Result<Option<TaskRecurre
         if rrule.len() > MAX_RRULE {
             return Err(CmdError::Params("the recurrence rule is too long".into()));
         }
-        mailcraft_formats::ics::Rrule::parse(&rrule)
+        iridium_mail_formats::ics::Rrule::parse(&rrule)
             .map_err(|e| CmdError::Params(format!("invalid recurrence rule: {e}")))?;
     }
     // Keep the anchor and the count of completed occurrences while the rule stays the same.
@@ -274,7 +274,7 @@ pub fn next_occurrence(t: &Task, done_at: DateTime, tz: i32) -> Option<DateTime>
         from.unix.saturating_add(NEXT_OCCURRENCE_HORIZON_DAYS.saturating_mul(pim::DAY_SECS)),
         tz,
     );
-    mailcraft_formats::ics::expand_appointment(&a, from, to, 1).first().map(|(s, _)| *s)
+    iridium_mail_formats::ics::expand_appointment(&a, from, to, 1).first().map(|(s, _)| *s)
 }
 
 /// Local midnight of day number `day`.
@@ -549,15 +549,15 @@ fn move_rows(s: &mut Session, p: &Value, copy: bool) -> CmdResult {
         .map(|f| f.kind)
         .ok_or_else(|| CmdError::Params(format!("no such folder {}", folder.0)))?;
     let (fits, cmd, skipped): (&[ItemId], &str, Vec<ItemId>) = match kind {
-        mailcraft_model::FolderKind::Tasks => {
+        iridium_mail_model::FolderKind::Tasks => {
             (&r.tasks, "", r.mail.iter().chain(&r.contacts).copied().collect())
         }
-        mailcraft_model::FolderKind::Mail => (
+        iridium_mail_model::FolderKind::Mail => (
             &r.mail,
             if copy { "mail.copy" } else { "mail.move" },
             r.tasks.iter().chain(&r.contacts).copied().collect(),
         ),
-        mailcraft_model::FolderKind::Contacts => (
+        iridium_mail_model::FolderKind::Contacts => (
             &r.contacts,
             if copy { "people.copy" } else { "people.move" },
             r.tasks.iter().chain(&r.mail).copied().collect(),
@@ -966,9 +966,9 @@ fn todo_entries(s: &Session) -> Vec<Entry> {
             continue;
         }
         let priority = match m.importance {
-            mailcraft_model::Importance::High => TaskPriority::High,
-            mailcraft_model::Importance::Low => TaskPriority::Low,
-            mailcraft_model::Importance::Normal => TaskPriority::Normal,
+            iridium_mail_model::Importance::High => TaskPriority::High,
+            iridium_mail_model::Importance::Low => TaskPriority::Low,
+            iridium_mail_model::Importance::Normal => TaskPriority::Normal,
         };
         out.push(Entry {
             id: m.id,
@@ -1301,7 +1301,7 @@ fn row_private(s: &Session, id: ItemId) -> bool {
         s.mailbox
             .mail
             .get(id)
-            .map(|m| m.sensitivity == mailcraft_model::Sensitivity::Private)
+            .map(|m| m.sensitivity == iridium_mail_model::Sensitivity::Private)
             .or_else(|| s.mailbox.contacts.get(&id).map(|c| c.private))
             .unwrap_or(false)
     })
@@ -1317,8 +1317,11 @@ fn run_private(s: &mut Session, p: &Value) -> CmdResult {
             t.private = on;
             t.modified = Some(now);
         } else if let Some(m) = s.mailbox.mail.get_mut(*id) {
-            m.sensitivity =
-                if on { mailcraft_model::Sensitivity::Private } else { mailcraft_model::Sensitivity::Normal };
+            m.sensitivity = if on {
+                iridium_mail_model::Sensitivity::Private
+            } else {
+                iridium_mail_model::Sensitivity::Normal
+            };
         } else if let Some(c) = s.mailbox.contacts.get_mut(id) {
             c.private = on;
         }
@@ -1332,8 +1335,8 @@ fn row_priority(s: &Session, id: ItemId) -> TaskPriority {
         return t.priority;
     }
     match s.mailbox.mail.get(id).map(|m| m.importance) {
-        Some(mailcraft_model::Importance::High) => TaskPriority::High,
-        Some(mailcraft_model::Importance::Low) => TaskPriority::Low,
+        Some(iridium_mail_model::Importance::High) => TaskPriority::High,
+        Some(iridium_mail_model::Importance::Low) => TaskPriority::Low,
         _ => TaskPriority::Normal,
     }
 }
@@ -1361,9 +1364,9 @@ fn run_importance(s: &mut Session, p: &Value) -> CmdResult {
             t.modified = Some(now);
         } else if let Some(m) = s.mailbox.mail.get_mut(*id) {
             m.importance = match set {
-                TaskPriority::High => mailcraft_model::Importance::High,
-                TaskPriority::Low => mailcraft_model::Importance::Low,
-                TaskPriority::Normal => mailcraft_model::Importance::Normal,
+                TaskPriority::High => iridium_mail_model::Importance::High,
+                TaskPriority::Low => iridium_mail_model::Importance::Low,
+                TaskPriority::Normal => iridium_mail_model::Importance::Normal,
             };
         }
     }
@@ -1393,7 +1396,7 @@ fn task_request_selected(s: &Session) -> Option<&'static str> {
 /// Task details as message text ("Subject:", "Due date:", "Status:", …, then the notes).
 pub fn task_text(t: &Task, tz: i32) -> String {
     let date = |d: Option<DateTime>| {
-        d.map_or_else(|| "None".to_owned(), |d| mailcraft_model::ListTime::long_date(d, tz))
+        d.map_or_else(|| "None".to_owned(), |d| iridium_mail_model::ListTime::long_date(d, tz))
     };
     let status = match t.status {
         TaskStatus::NotStarted => "Not Started",
@@ -1449,7 +1452,7 @@ fn is_me(s: &Session, addr: &str) -> bool {
     pim::parse_addresses(&[addr.to_owned()]).iter().all(|a| s.me.contains(&a.addr.to_ascii_lowercase()))
 }
 
-/// The task as an iCalendar object (VTODO, `mailcraft-formats`) with `method`, the organizer and the
+/// The task as an iCalendar object (VTODO, `iridium-mail-formats`) with `method`, the organizer and the
 /// attendees, and the recurrence rule.
 pub fn task_ics(
     t: &Task,
@@ -1458,14 +1461,14 @@ pub fn task_ics(
     attendees: &[String],
     now: DateTime,
 ) -> String {
-    use mailcraft_formats::ics::{Method, parse::parse};
+    use iridium_mail_formats::ics::{Method, parse::parse};
     let m = method.map(Method::parse);
-    let text = mailcraft_formats::ics::write(&[], &[t], m.as_ref(), now);
+    let text = iridium_mail_formats::ics::write(&[], &[t], m.as_ref(), now);
     let mut comps = parse(&text);
     let Some(cal) = comps.first_mut() else { return text };
     if let Some(todo) = cal.children.iter_mut().find(|c| c.name == "VTODO") {
-        let mailto = |a: &mailcraft_model::Address| format!("mailto:{}", a.addr);
-        let cn = |a: &mailcraft_model::Address| {
+        let mailto = |a: &iridium_mail_model::Address| format!("mailto:{}", a.addr);
+        let cn = |a: &iridium_mail_model::Address| {
             a.name.as_deref().map(|n| {
                 n.chars()
                     .filter(|c| !matches!(c, '"' | ';' | ':' | ',') && !c.is_control())
@@ -1601,7 +1604,7 @@ fn respond(s: &mut Session, p: &Value, all: bool) -> CmdResult {
     if to.is_empty() {
         return Err(CmdError::Disabled("only assigned tasks and task requests can be answered".into()));
     }
-    let subject = mailcraft_model::subject::reply_subject(&t.subject);
+    let subject = iridium_mail_model::subject::reply_subject(&t.subject);
     let cid = task_compose(s, &t, to.join("; "), subject, None, false, true);
     Ok(json!({ "compose": cid, "task": t.id.0, "to": to }))
 }
@@ -1624,7 +1627,7 @@ fn run_forward(s: &mut Session, p: &Value) -> CmdResult {
         None => {}
     }
     let t = first_task(s, p)?;
-    let subject = mailcraft_model::subject::forward_subject(&t.subject);
+    let subject = iridium_mail_model::subject::forward_subject(&t.subject);
     let cid = task_compose(s, &t, String::new(), subject, Some("PUBLISH"), true, text);
     Ok(json!({ "compose": cid, "task": t.id.0 }))
 }
@@ -1803,7 +1806,7 @@ fn clean_uid(s: &str) -> String {
 /// Parses a task message from iCalendar data (`tz` places floating and all-day times). `None` when the
 /// data has no VCALENDAR with a VTODO.
 pub fn parse_task_message(data: &[u8], tz: i32) -> Option<TaskMessage> {
-    use mailcraft_formats::ics::{ImportOptions, parse::parse};
+    use iridium_mail_formats::ics::{ImportOptions, parse::parse};
     let text = String::from_utf8_lossy(data);
     let comps = parse(&text);
     let cal = comps.iter().find(|c| c.name == "VCALENDAR")?;
@@ -1814,7 +1817,7 @@ pub fn parse_task_message(data: &[u8], tz: i32) -> Option<TaskMessage> {
         .filter(|m| !m.is_empty())
         .unwrap_or_else(|| "PUBLISH".to_owned());
     let uid = todo.text("UID").map(|u| clean_uid(&u)).unwrap_or_default();
-    let read = mailcraft_formats::ics::read_str(&text, ImportOptions { local_offset_min: tz }).ok()?;
+    let read = iridium_mail_formats::ics::read_str(&text, ImportOptions { local_offset_min: tz }).ok()?;
     let mut task = read.tasks.into_iter().next()?;
     task.subject = clip_chars(&task.subject, MAX_SUBJECT_CHARS);
     if task.body.len() > pim::MAX_TEXT {
@@ -1836,7 +1839,7 @@ pub fn parse_task_message(data: &[u8], tz: i32) -> Option<TaskMessage> {
         let name = cn
             .map(|n| n.trim().chars().filter(|c| !c.is_control() && *c != '"').take(256).collect::<String>());
         Some(match name.filter(|n| !n.is_empty()) {
-            Some(n) => mailcraft_model::Address::new(Some(&n), &found.addr).to_display_string(),
+            Some(n) => iridium_mail_model::Address::new(Some(&n), &found.addr).to_display_string(),
             None => found.addr,
         })
     };
@@ -2081,7 +2084,7 @@ pub fn reply_ics(
     partstat: &str,
     now: DateTime,
 ) -> String {
-    use mailcraft_formats::ics::parse::parse;
+    use iridium_mail_formats::ics::parse::parse;
     let base = task_ics(t, Some("REPLY"), organizer, &[], now);
     let mut comps = parse(&base);
     let Some(cal) = comps.first_mut() else { return base };
@@ -2215,7 +2218,7 @@ fn respond_request(s: &mut Session, p: &Value, accept: bool) -> CmdResult {
         answered.last_report = Some(now);
         answered.recurrence = None;
     }
-    // The pattern is checked like a typed one; a pattern MailCraft cannot follow is dropped.
+    // The pattern is checked like a typed one; a pattern Mail cannot follow is dropped.
     if let Some(rule) = msg.task.recurrence.as_ref().map(|r| r.rrule.clone()) {
         let mut tmp = answered.clone();
         if apply_task_fields(s, &mut tmp, &json!({ "recurrence": rule })).is_ok() {
@@ -2652,7 +2655,7 @@ mod tests {
     use super::*;
     use crate::Selection;
     use crate::cmd::calendar::tests::{role, session};
-    use mailcraft_model::MailItem;
+    use iridium_mail_model::MailItem;
 
     fn add_mail(s: &mut Session, subject: &str, flag: FlagState) -> ItemId {
         let folder = role(s, FolderRole::Inbox);
@@ -2782,12 +2785,12 @@ mod tests {
             assert!(s.enabled(cmd).is_some(), "{cmd}");
         }
         s.run("tasks.copy", &json!({"id": id, "folder": sub.0})).unwrap();
-        assert!(crate::recent_move_folders(&s, mailcraft_model::FolderKind::Tasks).is_empty());
+        assert!(crate::recent_move_folders(&s, iridium_mail_model::FolderKind::Tasks).is_empty());
         s.run("tasks.move", &json!({"id": id, "folder": sub.0})).unwrap();
         assert_eq!(s.mailbox.tasks[&ItemId(id)].folder, sub);
         // The Move menu now offers that folder (a copy does not count).
         s.selection.folder = root;
-        assert_eq!(crate::recent_move_folders(&s, mailcraft_model::FolderKind::Tasks), vec![sub]);
+        assert_eq!(crate::recent_move_folders(&s, iridium_mail_model::FolderKind::Tasks), vec![sub]);
         s.run("tasks.categorize", &json!({"id": id, "name": "Green category"})).unwrap();
         assert_eq!(s.mailbox.tasks[&ItemId(id)].categories.len(), 1);
         s.run("tasks.delete", &json!({"id": id})).unwrap();
@@ -2915,7 +2918,7 @@ mod tests {
             ics.contains("BEGIN:VTODO") && ics.contains("SUMMARY:Plain") && ics.contains("METHOD:PUBLISH"),
             "{ics}"
         );
-        let back = mailcraft_formats::ics::read_str(&ics, Default::default()).unwrap();
+        let back = iridium_mail_formats::ics::read_str(&ics, Default::default()).unwrap();
         assert_eq!(back.tasks[0].subject, "Plain");
         let r = s.run("tasks.forward", &json!({"as": "attachment"})).unwrap();
         assert!(s.composes[&r["compose"].as_u64().unwrap()].body.to_plain_text().trim().is_empty());
@@ -2977,7 +2980,7 @@ mod tests {
         assert_eq!(view_rows(&s, folder).len(), 1);
         // With a sending account the request goes to the Outbox.
         if let Some(a) = s.mailbox.accounts.first_mut() {
-            a.kind = mailcraft_model::AccountKind::Jmap;
+            a.kind = iridium_mail_model::AccountKind::Jmap;
         }
         let outbox = role(&s, FolderRole::Outbox);
         let r = s
@@ -3104,14 +3107,14 @@ mod tests {
         text: &str,
         attachments: Vec<(String, String, Vec<u8>)>,
     ) -> ItemId {
-        let mut b = mailcraft_mime::MessageBuilder::new();
-        b.from = Some(mailcraft_model::Address::new(Some(from.0), from.1));
-        b.to = mailcraft_mime::parse_address_list(rcpt);
+        let mut b = iridium_mail_mime::MessageBuilder::new();
+        b.from = Some(iridium_mail_model::Address::new(Some(from.0), from.1));
+        b.to = iridium_mail_mime::parse_address_list(rcpt);
         b.subject = subject.into();
         b.text = Some(text.into());
         b.attachments = attachments
             .into_iter()
-            .map(|(filename, mime_type, data)| mailcraft_mime::AttachmentSpec {
+            .map(|(filename, mime_type, data)| iridium_mail_mime::AttachmentSpec {
                 filename,
                 mime_type,
                 data,
@@ -3119,10 +3122,10 @@ mod tests {
             })
             .collect();
         let raw = b.build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, to.now());
         item.folder = role(to, FolderRole::Inbox);
-        to.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap()
+        to.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap()
     }
 
     fn assign_to_ann(org: &mut Session, subject: &str) -> (ItemId, u64) {
@@ -3421,9 +3424,9 @@ ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:ann@example.com\r\nEND:VTODO\r\n
         assert!(s.mailbox.mail.get(m).unwrap().categories.is_empty());
         // Private and High Importance.
         s.run("tasks.private", &json!({"ids": [m.0]})).unwrap();
-        assert_eq!(s.mailbox.mail.get(m).unwrap().sensitivity, mailcraft_model::Sensitivity::Private);
+        assert_eq!(s.mailbox.mail.get(m).unwrap().sensitivity, iridium_mail_model::Sensitivity::Private);
         s.run("tasks.importance", &json!({"ids": [m.0], "level": "high"})).unwrap();
-        assert_eq!(s.mailbox.mail.get(m).unwrap().importance, mailcraft_model::Importance::High);
+        assert_eq!(s.mailbox.mail.get(m).unwrap().importance, iridium_mail_model::Importance::High);
         // Follow Up › Complete (the Quick Click when set to it) completes the message's flag.
         s.run("tasks.flag", &json!({"ids": [m.0], "kind": "complete"})).unwrap();
         assert!(matches!(flag_of(&s, m), FlagState::Complete { .. }));
@@ -3438,7 +3441,7 @@ ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:ann@example.com\r\nEND:VTODO\r\n
         let mut s = session();
         let m = add_mail(&mut s, "Budget", flagged());
         if let Some(x) = s.mailbox.mail.get_mut(m) {
-            x.from = Some(mailcraft_model::Address::new(Some("Ann Lee"), "ann@example.com"));
+            x.from = Some(iridium_mail_model::Address::new(Some("Ann Lee"), "ann@example.com"));
         }
         select(&mut s, m);
         assert_eq!(s.enabled("tasks.reply"), None);
@@ -3498,7 +3501,7 @@ ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:ann@example.com\r\nEND:VTODO\r\n
         let tasks = role(&s, FolderRole::Tasks);
         let other = s.mailbox.create_folder(tasks, "Later").unwrap();
         if let Some(f) = s.mailbox.folders.get_mut(&other) {
-            f.kind = mailcraft_model::FolderKind::Tasks;
+            f.kind = iridium_mail_model::FolderKind::Tasks;
         }
         let r = s.run("tasks.move", &json!({"ids": [t.0, m.0], "folder": other.0})).unwrap();
         assert_eq!(r["moved"], json!([t.0]));

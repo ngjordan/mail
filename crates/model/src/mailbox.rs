@@ -1,5 +1,5 @@
 //! In-memory mailbox: every account, folder and item the session knows. The engine mutates it through
-//! commands; `mailcraft-store` persists it.
+//! commands; `iridium-mail-store` persists it.
 
 use std::collections::BTreeMap;
 
@@ -68,7 +68,7 @@ pub const MAX_FOLDER_NAME_CHARS: usize = 255;
 /// Name given to a local account created with an empty display name.
 pub const LOCAL_ACCOUNT_FALLBACK_NAME: &str = "Local Folders";
 
-/// The local account name MailCraft 0.1.x gave new profiles; [`Mailbox::rename_legacy_local_account`] renames it.
+/// The local account name Mail 0.1.x gave new profiles; [`Mailbox::rename_legacy_local_account`] renames it.
 pub const LEGACY_LOCAL_ACCOUNT_NAME: &str = "Outlook Data File";
 
 /// Default Favorites, in order (`plan/reference/folders.md`).
@@ -78,7 +78,7 @@ pub const DEFAULT_FAVORITES: [FolderRole; 4] =
 impl Mailbox {
     /// Empty mailbox with one local account (a data file named `display_name`), all default
     /// folders, default categories and quick steps.
-    /// Renames local accounts still called [`LEGACY_LOCAL_ACCOUNT_NAME`] (profiles made by MailCraft 0.1.x)
+    /// Renames local accounts still called [`LEGACY_LOCAL_ACCOUNT_NAME`] (profiles made by Mail 0.1.x)
     /// to [`LOCAL_ACCOUNT_FALLBACK_NAME`] and drops the matching sender name. Returns how many changed.
     pub fn rename_legacy_local_account(&mut self) -> usize {
         let mut changed = 0;

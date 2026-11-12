@@ -1,6 +1,6 @@
-//! Rich-text layout (layer L2): [`mailcraft_model::Doc`] + fonts → positioned [`DisplayList`].
+//! Rich-text layout (layer L2): [`iridium_mail_model::Doc`] + fonts → positioned [`DisplayList`].
 //!
-//! Line breaking follows UAX #14 (`unicode-linebreak`); runs are measured with `mailcraft-fonts` advances (no
+//! Line breaking follows UAX #14 (`unicode-linebreak`); runs are measured with `iridium-mail-fonts` advances (no
 //! complex shaping in v0). Blocks: paragraphs, headings (h1 2em … h6 0.67em), lists (bullets / numbers, 24 px
 //! indent per level), quotes (left bar + indent), pre, tables (auto column widths, colspan), rules, containers.
 //! Images reserve their box (given size or 16×16 placeholder when unknown) and are emitted as
@@ -11,7 +11,7 @@
 //!
 //! Style inheritance: `opts.base` → `doc.base` → block (headings: size × factor + bold; pre: monospace) →
 //! inline (links: `opts.link_color` + underline unless the text sets its own). Unset family/size fall back to
-//! [`mailcraft_fonts::BODY_FAMILY`] / [`mailcraft_fonts::BODY_SIZE_PT`]; every px value is multiplied by the zoom.
+//! [`iridium_mail_fonts::BODY_FAMILY`] / [`iridium_mail_fonts::BODY_SIZE_PT`]; every px value is multiplied by the zoom.
 //!
 //! Block paths ([`TextPos::block_path`]): the index of the block in its parent sequence, prefixed by the path of
 //! the parent. Lists add `[item, block_in_item]`, quotes and containers `[child]`, tables
@@ -36,9 +36,9 @@ mod table;
 mod tests;
 mod wrap;
 
-use mailcraft_fonts::{FontDb, FontId};
-use mailcraft_geom::{Color, Point, Rect};
-use mailcraft_model::{Doc, TextStyle};
+use iridium_mail_fonts::{FontDb, FontId};
+use iridium_mail_geom::{Color, Point, Rect};
+use iridium_mail_model::{Doc, TextStyle};
 
 use crate::block::{Ctx, Frame, Out, layout_blocks};
 

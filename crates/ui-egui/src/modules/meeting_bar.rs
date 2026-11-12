@@ -8,9 +8,9 @@
 use egui::{Align, ComboBox, Id, Layout, RichText, Sense, TextEdit, Ui, vec2};
 use serde_json::json;
 
-use mailcraft_engine::cmd::calendar::{self, ItipMessage, MeetingMessage};
-use mailcraft_engine::cmd::tasks::{self, TaskMessage, TaskRequestInfo};
-use mailcraft_model::ItemId;
+use iridium_mail_engine::cmd::calendar::{self, ItipMessage, MeetingMessage};
+use iridium_mail_engine::cmd::tasks::{self, TaskMessage, TaskRequestInfo};
+use iridium_mail_model::ItemId;
 
 use super::common::{DAY, clock, day_string, day_time_string, local_secs, parse_day};
 use crate::App;
@@ -39,11 +39,11 @@ struct Propose {
 }
 
 fn cache_id() -> Id {
-    Id::unique("mailcraft.modules.meeting-cache")
+    Id::unique("iridium-mail.modules.meeting-cache")
 }
 
 fn task_cache_id() -> Id {
-    Id::unique("mailcraft.modules.task-message-cache")
+    Id::unique("iridium-mail.modules.task-message-cache")
 }
 
 /// The parsed task part of the message shown last.
@@ -55,7 +55,7 @@ struct TaskCache {
 }
 
 fn propose_id() -> Id {
-    Id::unique("mailcraft.modules.meeting-propose")
+    Id::unique("iridium-mail.modules.meeting-propose")
 }
 
 /// The meeting summary for `mail`, or `None` when it carries no calendar part.
@@ -150,8 +150,8 @@ fn record_reply(ctx: &egui::Context, app: &mut App, m: &MeetingMessage) {
     }
 }
 
-fn calendar_response(r: mailcraft_model::calendar::ResponseStatus) -> &'static str {
-    use mailcraft_model::calendar::ResponseStatus;
+fn calendar_response(r: iridium_mail_model::calendar::ResponseStatus) -> &'static str {
+    use iridium_mail_model::calendar::ResponseStatus;
     match r {
         ResponseStatus::None => "none",
         ResponseStatus::Accepted => "accepted",
@@ -205,7 +205,7 @@ fn buttons(ui: &mut Ui, app: &mut App, m: &MeetingMessage) {
         }
         "REPLY" => {
             if let Some(a) = m.appointment.and_then(|id| app.s.mailbox.appointments.get(&ItemId(id))) {
-                use mailcraft_model::calendar::ResponseStatus;
+                use iridium_mail_model::calendar::ResponseStatus;
                 let n = |r: ResponseStatus| a.attendees.iter().filter(|x| x.response == r).count();
                 let text = format!(
                     "{} accepted, {} tentatively accepted, {} declined.",
@@ -310,8 +310,8 @@ fn task_buttons(ui: &mut Ui, app: &mut App, t: &TaskRequestInfo) {
 
 fn open_propose(ctx: &egui::Context, app: &App, m: &MeetingMessage, response: &str) {
     let tz = app.s.tz_offset_min;
-    let s = local_secs(mailcraft_model::DateTime::from_unix(m.start, tz), tz);
-    let e = local_secs(mailcraft_model::DateTime::from_unix(m.end, tz), tz).max(s);
+    let s = local_secs(iridium_mail_model::DateTime::from_unix(m.start, tz), tz);
+    let e = local_secs(iridium_mail_model::DateTime::from_unix(m.end, tz), tz).max(s);
     let p = Propose {
         mail: m.mail,
         response: response.to_owned(),

@@ -136,7 +136,7 @@ Compose|Insert > Shapes|(gallery of 159 items, e.g. Text Box, Line, Line Arrow)|
 Compose|Insert > Shapes|New Drawing Canvas|insert.shape
 Compose|Insert > More Options|This Device...|insert.model3d
 Compose|Insert > More Options|Stock 3D Models...|-|Stock 3D Models is an online Microsoft content service
-Compose|Insert > Screenshot|Inbox - user@example.com - MailCraft|insert.screenshot
+Compose|Insert > Screenshot|Inbox - user@example.com - Mail|insert.screenshot
 Compose|Insert > Screenshot|13 Reminder(s)|insert.screenshot
 Compose|Insert > Screenshot|Downloads|insert.screenshot
 Compose|Insert > Screenshot|Download Microsoft Office 365 for Windows and Mac \/Microsoft 365 — Mozilla Firefox|insert.screenshot
@@ -220,9 +220,9 @@ Compose|Shape Format › Arrange|Distribute Vertically|drawing.distribute
 Compose|Shape Format › Size|Height|drawing.size
 Compose|Shape Format › Size|Width|drawing.size
 Compose|Shape Format › Size|Size and Position|drawing.format
-# Observed on the Table Layout tab; MailCraft has no Table Layout tab: the eraser is on Insert › Table.
+# Observed on the Table Layout tab; Mail has no Table Layout tab: the eraser is on Insert › Table.
 Compose|Table Layout › Draw|Eraser|drawing.tool
-# Observed on the Chart Design tab; MailCraft has no Chart Design tab: double-click a chart to edit its data.
+# Observed on the Chart Design tab; Mail has no Chart Design tab: double-click a chart to edit its data.
 Compose|Chart Design › Data|Edit Chart Data|insert.editPicture
 Compose|Insert > Symbol|Euro Sign|insert.symbol
 Compose|Insert > Symbol|Pound Sign|insert.symbol

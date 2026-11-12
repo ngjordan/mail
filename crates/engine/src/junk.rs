@@ -1,4 +1,4 @@
-//! The junk filter: applies [`mailcraft_model::junk`] verdicts to mail (Junk Email folder or permanent
+//! The junk filter: applies [`iridium_mail_model::junk`] verdicts to mail (Junk Email folder or permanent
 //! delete), and answers what the reading pane needs (links disabled, suspicious-domain warning).
 //!
 //! Entry points:
@@ -14,8 +14,8 @@
 use serde_json::{Value, json};
 
 use crate::Session;
-use mailcraft_model::junk::{self, JunkContext, JunkList, ScoreInput, Verdict};
-use mailcraft_model::{FolderId, FolderRole, ItemId, MailItem};
+use iridium_mail_model::junk::{self, JunkContext, JunkList, ScoreInput, Verdict};
+use iridium_mail_model::{FolderId, FolderRole, ItemId, MailItem};
 
 /// Bytes of a raw message scanned for declared charsets.
 const MAX_CHARSET_SCAN: usize = 256 * 1024;
@@ -300,8 +300,8 @@ pub fn reading_info(s: &Session, id: ItemId) -> Value {
 mod tests {
     use super::*;
     use crate::sample::sample_session;
-    use mailcraft_model::junk::{JunkLevel, JunkReason};
-    use mailcraft_model::{Address, MailItem};
+    use iridium_mail_model::junk::{JunkLevel, JunkReason};
+    use iridium_mail_model::{Address, MailItem};
 
     fn inbox(s: &Session) -> FolderId {
         let a = s.current_account().unwrap();
@@ -324,9 +324,9 @@ mod tests {
             sent: Some(s.now()),
             ..Default::default()
         };
-        let content = mailcraft_store::Content {
+        let content = iridium_mail_store::Content {
             source: raw.map(|r| r.as_bytes().to_vec()),
-            body: Some(mailcraft_model::Body { text: Some(body.into()), ..Default::default() }),
+            body: Some(iridium_mail_model::Body { text: Some(body.into()), ..Default::default() }),
         };
         s.store_content(&mut item, &content).unwrap();
         s.mailbox.mail.insert(id, item);
@@ -516,7 +516,7 @@ mod tests {
             ];
             mb.junk.blocked_tlds = vec![".RU".into(), "xyz".into()];
             s.mailbox = mb.clone();
-            s.journal(vec![mailcraft_store::Op::Replace(Box::new(mb))]);
+            s.journal(vec![iridium_mail_store::Op::Replace(Box::new(mb))]);
         }
         let mut s = Session::open(dir.path()).unwrap();
         assert_eq!(s.mailbox.junk.blocked_senders, vec!["a@example.org", "z@example.org"]);

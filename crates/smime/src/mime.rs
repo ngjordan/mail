@@ -17,8 +17,8 @@
 //! said. An encryption that cannot be opened stops the unwrapping there.
 
 use base64::Engine;
-use mailcraft_mime::ContentType;
-use mailcraft_mime::header::Headers;
+use iridium_mail_mime::ContentType;
+use iridium_mail_mime::header::Headers;
 
 use crate::cms::{self, CmsKind};
 use crate::trust::{self, Status};
@@ -126,7 +126,7 @@ fn base64_lines(der: &[u8]) -> String {
 }
 
 fn random_boundary() -> Result<String> {
-    Ok(format!("----=_MailCraft_Signed_{}", crate::hex(&crate::random_bytes::<12>()?)))
+    Ok(format!("----=_Mail_Signed_{}", crate::hex(&crate::random_bytes::<12>()?)))
 }
 
 fn trim_crlf(mut s: &[u8]) -> &[u8] {
@@ -241,7 +241,7 @@ fn entity_kind(headers: &Headers) -> Option<Kind> {
     let ct = ContentType::parse(headers.get("Content-Type")?);
     let filename = headers
         .get("Content-Disposition")
-        .map(mailcraft_mime::Disposition::parse)
+        .map(iridium_mail_mime::Disposition::parse)
         .and_then(|(_, p)| p.into_iter().find(|(k, _)| k == "filename").map(|(_, v)| v));
     kind_of(&ct, filename.as_deref())
 }
@@ -366,12 +366,12 @@ fn invalid(reason: String, clear: bool) -> Signature {
 fn clear_parts(entity: &[u8], boundary: &str) -> Option<(Vec<u8>, Vec<u8>)> {
     let (body_at, _) = header_end(entity);
     let body = entity.get(body_at..)?;
-    let parts = mailcraft_mime::message::split_multipart(body, boundary)?;
+    let parts = iridium_mail_mime::message::split_multipart(body, boundary)?;
     let content = parts.first()?.to_vec();
     let sig_part = parts.get(1)?;
     let (h, off) = Headers::parse(sig_part);
     let cte = h.get("Content-Transfer-Encoding").unwrap_or_default().to_owned();
-    let der = mailcraft_mime::transfer::decode(sig_part.get(off..).unwrap_or_default(), &cte);
+    let der = iridium_mail_mime::transfer::decode(sig_part.get(off..).unwrap_or_default(), &cte);
     Some((content, der))
 }
 
@@ -389,7 +389,7 @@ pub fn open(message: &[u8], ids: &[Identity], anchors: &[Cert], now: i64) -> Opt
         let Some(mut kind) = entity_kind(&headers) else { break };
         let payload = || {
             let cte = headers.get("Content-Transfer-Encoding").unwrap_or_default().to_owned();
-            mailcraft_mime::transfer::decode(entity.get(off..).unwrap_or_default(), &cte)
+            iridium_mail_mime::transfer::decode(entity.get(off..).unwrap_or_default(), &cte)
         };
         let mut der = Vec::new();
         if kind == Kind::Pkcs7Unknown || kind == Kind::CertsOnly {
@@ -482,7 +482,7 @@ mod tests {
         Meet at noon.=0D\r\nBring the map.\r\n";
 
     fn text(msg: &[u8]) -> String {
-        mailcraft_mime::parse(msg).unwrap().text_body().unwrap_or_default()
+        iridium_mail_mime::parse(msg).unwrap().text_body().unwrap_or_default()
     }
 
     #[test]
@@ -503,7 +503,7 @@ mod tests {
         assert_eq!(sig.signing_time, Some(testkit::NOW));
         assert!(sig.clear && !o.encrypted());
         assert!(text(&o.message).contains("Bring the map."));
-        assert_eq!(mailcraft_mime::parse(&o.message).unwrap().subject(), "Plans");
+        assert_eq!(iridium_mail_mime::parse(&o.message).unwrap().subject(), "Plans");
         // Not trusting the CA: untrusted, still readable.
         let o = open(&signed, &[], &[], testkit::NOW).unwrap();
         assert_eq!(o.signature().unwrap().status, Status::Untrusted);
@@ -614,13 +614,13 @@ mod tests {
     #[test]
     fn multipart_messages_keep_attachments() {
         let ann = testkit::identity("Ann Lee", "ann@example.com");
-        let mut b = mailcraft_mime::MessageBuilder::new();
-        b.from = Some(mailcraft_mime::Mailbox::new(Some("Ann Lee"), "ann@example.com"));
-        b.to = mailcraft_mime::parse_address_list("bob@example.org");
+        let mut b = iridium_mail_mime::MessageBuilder::new();
+        b.from = Some(iridium_mail_mime::Mailbox::new(Some("Ann Lee"), "ann@example.com"));
+        b.to = iridium_mail_mime::parse_address_list("bob@example.org");
         b.subject = "Report".into();
         b.text = Some("See attached.".into());
         b.html = Some("<p>See <b>attached</b>.</p>".into());
-        b.attachments.push(mailcraft_mime::AttachmentSpec {
+        b.attachments.push(iridium_mail_mime::AttachmentSpec {
             filename: "report.pdf".into(),
             mime_type: "application/pdf".into(),
             data: vec![1, 2, 3, 0, 255],
@@ -632,7 +632,7 @@ mod tests {
         let sealed = protect(&raw, &p).unwrap();
         let o = open(&sealed, std::slice::from_ref(&ann), &[testkit::ca()], testkit::NOW).unwrap();
         assert_eq!(o.signature().unwrap().status, Status::Valid);
-        let m = mailcraft_mime::parse(&o.message).unwrap();
+        let m = iridium_mail_mime::parse(&o.message).unwrap();
         let att = m.attachments();
         assert_eq!(att.len(), 1);
         assert_eq!(att[0].filename, "report.pdf");

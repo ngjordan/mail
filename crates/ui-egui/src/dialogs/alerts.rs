@@ -131,7 +131,7 @@ fn new_item_alerts(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
             muted(ui, app, &detail);
         }
         let sel_item = list.selected.and_then(|i| list.lines.get(i)).map(|a| a.item);
-        let exists = sel_item.is_some_and(|id| app.s.mailbox.mail.contains(mailcraft_model::ItemId(id)));
+        let exists = sel_item.is_some_and(|id| app.s.mailbox.mail.contains(iridium_mail_model::ItemId(id)));
         let mut close = false;
         footer(ui, |ui| {
             if btn(ui, "Close") {
@@ -169,7 +169,7 @@ pub(crate) fn played_sounds(ctx: &Context) -> Vec<String> {
     ctx.data_mut(|m| m.get_temp::<Vec<String>>(Id::unique("mc-rule-sounds"))).unwrap_or_default()
 }
 
-/// Plays a sound file. MailCraft has no audio back end yet, so this does nothing (the request is recorded
+/// Plays a sound file. Mail has no audio back end yet, so this does nothing (the request is recorded
 /// by the caller).
 #[cfg(not(target_arch = "wasm32"))]
 fn play_sound(path: &str) {

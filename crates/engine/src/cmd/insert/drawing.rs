@@ -1,4 +1,4 @@
-//! Floating drawing objects of the compose body ([`mailcraft_model::Drawing`]): drawing them into pixels
+//! Floating drawing objects of the compose body ([`iridium_mail_model::Drawing`]): drawing them into pixels
 //! (the editor shows the same pixels the recipient gets), the objects Insert › Shapes / Text Box / WordArt
 //! create, and turning them into pictures in the text when a message is saved or sent.
 //!
@@ -8,9 +8,9 @@
 //! position floating objects reliably, so the text no longer flows around them: they sit between the
 //! paragraphs where they were drawn. SVG pictures of the message are turned into PNG at the same time.
 
-use mailcraft_geom::Color;
-use mailcraft_model::rich::{Align, Drawing, DrawingKind, ShapeEffects, VAlign, WrapStyle};
-use mailcraft_model::{Block, Doc, Inline, ParaStyle, TextStyle};
+use iridium_mail_geom::Color;
+use iridium_mail_model::rich::{Align, Drawing, DrawingKind, ShapeEffects, VAlign, WrapStyle};
+use iridium_mail_model::{Block, Doc, Inline, ParaStyle, TextStyle};
 
 use super::shapes::{self, Geometry, P};
 use super::{
@@ -73,14 +73,14 @@ impl Raster {
 
     /// PNG encoding.
     pub fn to_png(&self) -> Vec<u8> {
-        mailcraft_render::Canvas { width: self.width, height: self.height, pixels: self.rgba.clone() }
+        iridium_mail_render::Canvas { width: self.width, height: self.height, pixels: self.rgba.clone() }
             .to_png()
     }
 }
 
-fn fonts() -> &'static mailcraft_fonts::FontDb {
-    static FONTS: std::sync::OnceLock<mailcraft_fonts::FontDb> = std::sync::OnceLock::new();
-    FONTS.get_or_init(mailcraft_fonts::FontDb::bundled)
+fn fonts() -> &'static iridium_mail_fonts::FontDb {
+    static FONTS: std::sync::OnceLock<iridium_mail_fonts::FontDb> = std::sync::OnceLock::new();
+    FONTS.get_or_init(iridium_mail_fonts::FontDb::bundled)
 }
 
 fn finite(v: f32, lo: f32, hi: f32, fallback: f32) -> f32 {
@@ -90,7 +90,7 @@ fn finite(v: f32, lo: f32, hi: f32, fallback: f32) -> f32 {
 /// Curve handles: one per point at most, finite and not far outside the box; none when all are plain.
 fn sanitize_handles(d: &mut Drawing) {
     use super::freeform::HANDLE_REACH;
-    use mailcraft_model::rich::PointHandles;
+    use iridium_mail_model::rich::PointHandles;
     d.handles.truncate(d.points.len());
     let fix = |p: Option<(f32, f32)>| {
         p.filter(|(x, y)| x.is_finite() && y.is_finite()).map(|(x, y)| {
@@ -267,9 +267,9 @@ fn effect_of(d: &Drawing, theme: &ResolvedTheme) -> Effect {
 }
 
 /// Display list filling every sub-path of `paths` together (even-odd), one span per device row.
-fn fill_list(paths: &[Vec<P>], ox: f32, oy: f32, list: &mut mailcraft_layout::DisplayList) {
-    use mailcraft_geom::Rect;
-    use mailcraft_layout::DisplayItem;
+fn fill_list(paths: &[Vec<P>], ox: f32, oy: f32, list: &mut iridium_mail_layout::DisplayList) {
+    use iridium_mail_geom::Rect;
+    use iridium_mail_layout::DisplayItem;
     let edges: Vec<(P, P)> = paths
         .iter()
         .filter(|p| p.len() >= 3)
@@ -317,9 +317,9 @@ fn fill_list(paths: &[Vec<P>], ox: f32, oy: f32, list: &mut mailcraft_layout::Di
 }
 
 /// Display list of open lines `width` px wide (round joins).
-fn line_list(lines: &[Vec<P>], width: f32, ox: f32, oy: f32, list: &mut mailcraft_layout::DisplayList) {
-    use mailcraft_geom::Point;
-    use mailcraft_layout::DisplayItem;
+fn line_list(lines: &[Vec<P>], width: f32, ox: f32, oy: f32, list: &mut iridium_mail_layout::DisplayList) {
+    use iridium_mail_geom::Point;
+    use iridium_mail_layout::DisplayItem;
     for line in lines {
         for pair in line.windows(2) {
             if let [a, b] = pair {
@@ -399,7 +399,7 @@ pub fn text_area(d: &Drawing) -> (f32, f32, f32, f32) {
 
 /// The drawing's text as a document laid out `width` px wide (lines split at `\n`; stacked text has one
 /// letter per line).
-pub fn text_layout(d: &Drawing, theme: &ResolvedTheme, width: f32) -> mailcraft_layout::Layout {
+pub fn text_layout(d: &Drawing, theme: &ResolvedTheme, width: f32) -> iridium_mail_layout::Layout {
     let style = TextStyle {
         font_family: d.text_style.font_family.clone().or_else(|| Some(theme.body_font.clone())),
         size_pt: d.text_style.size_pt.or(Some(11.0)),
@@ -439,8 +439,8 @@ pub fn text_layout(d: &Drawing, theme: &ResolvedTheme, width: f32) -> mailcraft_
         })
         .collect();
     let doc = Doc { blocks, ..Doc::default() };
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    mailcraft_layout::layout_doc(&doc, fonts(), &lo)
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    iridium_mail_layout::layout_doc(&doc, fonts(), &lo)
 }
 
 /// Whether the text of `d` runs across the box's height (turned a quarter).
@@ -487,7 +487,7 @@ fn text_mask(d: &Drawing, theme: &ResolvedTheme, m: f32, dw: usize, dh: usize) -
         VAlign::Bottom => (th - layout.height).max(0.0),
     };
     let mut list = layout.display;
-    list.items.retain(|i| !matches!(i, mailcraft_layout::DisplayItem::FillRect { .. }));
+    list.items.retain(|i| !matches!(i, iridium_mail_layout::DisplayItem::FillRect { .. }));
     let mask = if turned {
         // The text on its own canvas (run direction across), then each device pixel of the text area
         // takes the pixel it came from before the turn (clockwise for top to bottom, the other way for
@@ -641,7 +641,7 @@ fn fx_room(fx: &ShapeEffects, h: f32) -> f32 {
     let mut r: f32 = 0.0;
     if let Some(s) = fx.shadow {
         r = r.max(s.distance + s.blur + 2.0);
-        if s.kind == mailcraft_model::rich::ShadowKind::Perspective {
+        if s.kind == iridium_mail_model::rich::ShadowKind::Perspective {
             r = r.max(h * 0.7 + s.distance);
         }
     }
@@ -690,12 +690,12 @@ fn shape_img(d: &Drawing, theme: &ResolvedTheme, with_text: bool) -> Option<(Img
     let fill = d.fill.filter(|_| !g.is_line()).map(|c| faded(c, d.transparency));
     let picture =
         (!g.is_line() && !d.fill_picture.is_empty()).then(|| fx::Picture::decode(&d.fill_picture)).flatten();
-    let mut area_list = mailcraft_layout::DisplayList::default();
+    let mut area_list = iridium_mail_layout::DisplayList::default();
     fill_list(&g.fill, m, m, &mut area_list);
     let area = Mask::from_list(&area_list, dw, dh, fonts());
     let mut face_masks = Vec::new();
     for (path, tint) in &g.faces {
-        let mut l = mailcraft_layout::DisplayList::default();
+        let mut l = iridium_mail_layout::DisplayList::default();
         fill_list(std::slice::from_ref(path), m, m, &mut l);
         face_masks.push((Mask::from_list(&l, dw, dh, fonts()), *tint));
     }
@@ -710,7 +710,7 @@ fn shape_img(d: &Drawing, theme: &ResolvedTheme, with_text: bool) -> Option<(Img
     let outline = d.outline.filter(|_| d.outline_px > 0.0).map(|c| faded(c, d.line_transparency));
     let dashes = !d.line_dash.is_empty();
     let ring = |mask: &Mask| mask.minus(&mask.eroded(((d.outline_px * s / 2.0).round() as i64).max(1)));
-    let mut strokes = mailcraft_layout::DisplayList::default();
+    let mut strokes = iridium_mail_layout::DisplayList::default();
     let lw = d.outline_px.max(0.5);
     line_list(&fx::dashed(&g.lines, false, &d.line_dash, lw), lw, m, m, &mut strokes);
     let heads = arrow_paths(&g.arrows, lw);
@@ -722,7 +722,7 @@ fn shape_img(d: &Drawing, theme: &ResolvedTheme, with_text: bool) -> Option<(Img
             return ring(whole);
         }
         // Dashes along the edge, kept inside it like the solid ring.
-        let mut l = mailcraft_layout::DisplayList::default();
+        let mut l = iridium_mail_layout::DisplayList::default();
         line_list(&fx::dashed(&g.fill, true, &d.line_dash, lw), lw, m, m, &mut l);
         let dashes = Mask::from_list(&l, dw, dh, fonts());
         dashes.map(|x, y| dashes.get(x, y).min(whole.get(x, y)))
@@ -936,9 +936,9 @@ pub fn fit_word_art(d: &mut Drawing, theme: &ResolvedTheme) {
 /// Where the caret is in the body laid out at the editor's width (px): new drawings go there.
 pub fn caret_point(c: &ComposeState) -> (f32, f32) {
     let width = c.view_width.filter(|w| w.is_finite() && *w > 40.0).unwrap_or(DEFAULT_VIEW_WIDTH);
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    let layout = mailcraft_layout::layout_doc(&c.body, fonts(), &lo);
-    let pos = mailcraft_layout::TextPos {
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    let layout = iridium_mail_layout::layout_doc(&c.body, fonts(), &lo);
+    let pos = iridium_mail_layout::TextPos {
         block_path: c.selection.focus.path.clone(),
         offset: c.selection.focus.offset,
     };
@@ -1101,7 +1101,7 @@ fn group_picture(
     if !px.chunks(4).any(|p| p.get(3).is_some_and(|a| *a > 0)) {
         return None;
     }
-    let png = mailcraft_render::Canvas {
+    let png = iridium_mail_render::Canvas {
         width: u32::try_from(dw).ok()?,
         height: u32::try_from(dh).ok()?,
         pixels: px,
@@ -1138,7 +1138,7 @@ fn cropped_png(r: &Raster) -> Option<(Vec<u8>, f32, f32)> {
         let from = (y * w + x0) * 4;
         px.extend_from_slice(r.rgba.get(from..from + cw * 4)?);
     }
-    let png = mailcraft_render::Canvas {
+    let png = iridium_mail_render::Canvas {
         width: u32::try_from(cw).ok()?,
         height: u32::try_from(ch).ok()?,
         pixels: px,
@@ -1149,8 +1149,8 @@ fn cropped_png(r: &Raster) -> Option<(Vec<u8>, f32, f32)> {
 
 /// Tops (px) of the body's top-level blocks laid out at `width` (`None` for blocks without lines).
 fn block_tops(doc: &Doc, width: f32) -> Vec<Option<f32>> {
-    let lo = mailcraft_layout::LayoutOptions { width, ..Default::default() };
-    let layout = mailcraft_layout::layout_doc(doc, fonts(), &lo);
+    let lo = iridium_mail_layout::LayoutOptions { width, ..Default::default() };
+    let layout = iridium_mail_layout::layout_doc(doc, fonts(), &lo);
     let mut tops = vec![None; doc.blocks.len()];
     for line in &layout.index.lines {
         if let Some(i) = line.block_path.first()
@@ -1174,7 +1174,7 @@ pub fn flattened(c: &ComposeState) -> Option<ComposeState> {
         if !svg(img) {
             continue;
         }
-        if let Some(p) = mailcraft_render::svg::svg_to_png(&img.data, RASTER_SCALE) {
+        if let Some(p) = iridium_mail_render::svg::svg_to_png(&img.data, RASTER_SCALE) {
             img.data = p.png;
             img.mime_type = "image/png".into();
             let stem = img.filename.rsplit_once('.').map_or(img.filename.as_str(), |(s, _)| s).to_owned();

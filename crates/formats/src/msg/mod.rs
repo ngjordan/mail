@@ -15,8 +15,8 @@ pub mod rtf;
 pub mod rtfhtml;
 pub mod write;
 
-use mailcraft_mime::{Address, AttachmentSpec, Mailbox, MessageBuilder};
-use mailcraft_model::{BodyFormat, DateTime, FolderId, Importance, MailItem, Sensitivity};
+use iridium_mail_mime::{Address, AttachmentSpec, Mailbox, MessageBuilder};
+use iridium_mail_model::{BodyFormat, DateTime, FolderId, Importance, MailItem, Sensitivity};
 
 pub use read::read;
 pub use write::write;
@@ -24,7 +24,7 @@ pub use write::write;
 /// Compound File Binary signature.
 pub const CFB_SIGNATURE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 /// Largest `.msg` accepted.
-pub const MAX_MSG_BYTES: usize = mailcraft_mime::MAX_MESSAGE_BYTES;
+pub const MAX_MSG_BYTES: usize = iridium_mail_mime::MAX_MESSAGE_BYTES;
 /// Most recipients read per message.
 pub const MAX_RECIPIENTS: usize = 10_000;
 /// Most attachments read per message.
@@ -252,9 +252,9 @@ impl MsgMessage {
     /// A mailbox item for the message and its content: the source is the [`MsgMessage::to_eml`] rendering,
     /// the body the message's own (its format kept; the body store keeps a record only when that is not what
     /// the source gives).
-    pub fn to_mail_item(&self, folder: FolderId, now: DateTime) -> (MailItem, mailcraft_store::Content) {
+    pub fn to_mail_item(&self, folder: FolderId, now: DateTime) -> (MailItem, iridium_mail_store::Content) {
         let raw = self.to_eml();
-        let mut item = mailcraft_store::import::item_from_raw(&raw, folder, now);
+        let mut item = iridium_mail_store::import::item_from_raw(&raw, folder, now);
         item.received = self.received.or(self.sent).or(self.created).unwrap_or(now);
         item.sent = self.sent;
         item.read = self.read;
@@ -268,16 +268,16 @@ impl MsgMessage {
             // The builder invented an id; do not present it as the original.
             item.message_id = None;
         }
-        let mut body = mailcraft_model::Body::from_source(&raw).unwrap_or_default();
+        let mut body = iridium_mail_model::Body::from_source(&raw).unwrap_or_default();
         body.format = self.body_format;
-        (item, mailcraft_store::Content { source: Some(raw), body: Some(body) })
+        (item, iridium_mail_store::Content { source: Some(raw), body: Some(body) })
     }
 
     /// Builds a message from a mailbox item, its `source` (attachment content comes from it) and its `body`.
     pub fn from_mail_item(
         item: &MailItem,
         source: Option<&[u8]>,
-        body: Option<&mailcraft_model::Body>,
+        body: Option<&iridium_mail_model::Body>,
     ) -> MsgMessage {
         Self::from_mail_item_depth(item, source, body, 0)
     }
@@ -285,20 +285,20 @@ impl MsgMessage {
     fn from_mail_item_depth(
         item: &MailItem,
         source: Option<&[u8]>,
-        body: Option<&mailcraft_model::Body>,
+        body: Option<&iridium_mail_model::Body>,
         depth: usize,
     ) -> MsgMessage {
         let mut attachments = Vec::new();
         if let Some(raw) = source
-            && let Ok(msg) = mailcraft_mime::parse(raw)
+            && let Ok(msg) = iridium_mail_mime::parse(raw)
         {
             for a in msg.attachments().into_iter().take(MAX_ATTACHMENTS) {
                 let content = if a.mime_type.eq_ignore_ascii_case("message/rfc822") && depth < MAX_EMBED_DEPTH
                 {
-                    match mailcraft_mime::parse(&a.data) {
+                    match iridium_mail_mime::parse(&a.data) {
                         Ok(inner) => {
                             let sub = MailItem::from_message(&inner, &a.data, item.received);
-                            let sub_body = mailcraft_model::Body::from_message(&inner);
+                            let sub_body = iridium_mail_model::Body::from_message(&inner);
                             AttachmentContent::Message(Box::new(Self::from_mail_item_depth(
                                 &sub,
                                 Some(&a.data),
@@ -354,7 +354,7 @@ pub fn read_item(
     data: &[u8],
     folder: FolderId,
     now: DateTime,
-) -> crate::Result<(MailItem, mailcraft_store::Content)> {
+) -> crate::Result<(MailItem, iridium_mail_store::Content)> {
     Ok(read(data)?.to_mail_item(folder, now))
 }
 
@@ -362,7 +362,7 @@ pub fn read_item(
 pub fn write_item(
     item: &MailItem,
     source: Option<&[u8]>,
-    body: Option<&mailcraft_model::Body>,
+    body: Option<&iridium_mail_model::Body>,
 ) -> crate::Result<Vec<u8>> {
     write(&MsgMessage::from_mail_item(item, source, body))
 }

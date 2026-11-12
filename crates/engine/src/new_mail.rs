@@ -8,7 +8,7 @@
 
 use std::collections::BTreeSet;
 
-use mailcraft_model::{FolderId, FolderKind, FolderRole, ItemId, Mailbox};
+use iridium_mail_model::{FolderId, FolderKind, FolderRole, ItemId, Mailbox};
 
 use crate::Session;
 

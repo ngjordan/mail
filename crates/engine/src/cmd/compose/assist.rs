@@ -23,7 +23,7 @@ use crate::compose::{
     BodySelection, ClipEntry, ComposeAttachment, ComposeState, DocPos, EditSnapshot, InlineImage,
 };
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_model::{Block, BodyFormat, Doc, Inline, TextStyle};
+use iridium_mail_model::{Block, BodyFormat, Doc, Inline, TextStyle};
 
 // =======================================================================================================
 // @mentions
@@ -90,7 +90,7 @@ fn insert_mention(s: &mut Session, p: &Value) -> CmdResult {
     c.mark_edited();
     let already = c.recipients().iter().any(|(_, a)| a.eq_ignore_ascii_case(&addr));
     if !already {
-        let entry = field_mailbox(&mailcraft_mime::Mailbox::new(Some(&name), &addr));
+        let entry = field_mailbox(&iridium_mail_mime::Mailbox::new(Some(&name), &addr));
         let to = c.to.trim().trim_end_matches(';').trim_end();
         c.to = if to.is_empty() { entry } else { format!("{to}; {entry}") };
     }
@@ -485,8 +485,8 @@ pub fn specs() -> Vec<CommandSpec> {
 mod tests {
     use super::super::tests::{open, session};
     use super::*;
-    use mailcraft_geom::Color;
-    use mailcraft_model::{Contact, ParaStyle};
+    use iridium_mail_geom::Color;
+    use iridium_mail_model::{Contact, ParaStyle};
 
     fn set(s: &mut Session, key: &str, v: Value) {
         s.run("options.set", &json!({"key": key, "value": v})).unwrap();
@@ -516,7 +516,7 @@ mod tests {
     #[test]
     fn mention_links_the_name_and_adds_the_person_to_to() {
         let mut s = session();
-        let contact = mailcraft_model::ItemId(s.mailbox.alloc_id());
+        let contact = iridium_mail_model::ItemId(s.mailbox.alloc_id());
         s.mailbox.contacts.insert(
             contact,
             Contact {
@@ -735,7 +735,7 @@ mod tests {
             inlines[0],
             run("Plain heading", TextStyle { size_pt: Some(12.0), bold: Some(false), ..Default::default() })
         );
-        let (a, b) = (mailcraft_html::doc_to_html(&doc), mailcraft_html::doc_to_html(&small));
+        let (a, b) = (iridium_mail_html::doc_to_html(&doc), iridium_mail_html::doc_to_html(&small));
         assert!(b.len() < a.len(), "{b}\n{a}");
         assert!(b.matches("<span").count() < a.matches("<span").count());
     }

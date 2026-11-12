@@ -1,7 +1,7 @@
-//! Rich-text document tree shared by the HTML importer (`mailcraft-html`), the layout engine
-//! (`mailcraft-layout`) and the compose editor (engine). Deliberately small: what mail bodies need.
+//! Rich-text document tree shared by the HTML importer (`iridium-mail-html`), the layout engine
+//! (`iridium-mail-layout`) and the compose editor (engine). Deliberately small: what mail bodies need.
 
-use mailcraft_geom::Color;
+use iridium_mail_geom::Color;
 use serde::{Deserialize, Serialize};
 
 /// Character formatting. `None` fields inherit (from the parent / document defaults).
@@ -14,7 +14,7 @@ pub struct TextStyle {
     pub superscript: Option<bool>,
     pub subscript: Option<bool>,
     pub monospace: Option<bool>,
-    /// Font family list as written ("Aptos, Calibri, sans-serif"); font matching is `mailcraft-fonts`' job.
+    /// Font family list as written ("Aptos, Calibri, sans-serif"); font matching is `iridium-mail-fonts`' job.
     pub font_family: Option<String>,
     /// Size in points.
     pub size_pt: Option<f32>,

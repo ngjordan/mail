@@ -1,4 +1,4 @@
-//! S/MIME in the session (RFC 8551; the cryptography is `mailcraft-smime`): the user's digital IDs, other
+//! S/MIME in the session (RFC 8551; the cryptography is `iridium-mail-smime`): the user's digital IDs, other
 //! people's certificates and the trusted certificates, and the glue to sending (Sign / Encrypt on Send) and
 //! to reading (verify and decrypt when a message is shown).
 //!
@@ -39,9 +39,9 @@ use serde_json::{Value, json};
 use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::compose::ComposeState;
 use crate::{CmdError, CmdResult, CommandSpec, Notice, Session};
-use mailcraft_model::{Body, BodyFormat, DateTime, ItemId, ListTime, MailItem};
-use mailcraft_smime::mime::{Layer, Opened, Protect};
-use mailcraft_smime::{Cert, Identity, PrivateKey, SmimeError, Status};
+use iridium_mail_model::{Body, BodyFormat, DateTime, ItemId, ListTime, MailItem};
+use iridium_mail_smime::mime::{Layer, Opened, Protect};
+use iridium_mail_smime::{Cert, Identity, PrivateKey, SmimeError, Status};
 
 /// Name of the certificates file in the profile (data) folder.
 pub const CERTS_FILE: &str = "certificates.json";
@@ -58,7 +58,7 @@ const MAX_VIEWS: usize = 32;
 /// Longest password accepted.
 const MAX_PASSWORD_CHARS: usize = 1024;
 
-const FILE_NOTE: &str = "MailCraft certificates. Private keys are sealed under secrets kept with the account \
+const FILE_NOTE: &str = "Mail certificates. Private keys are sealed under secrets kept with the account \
 passwords; this file alone cannot open them.";
 
 /// The body shown for an encrypted message none of the user's digital IDs can open.
@@ -245,7 +245,7 @@ pub(crate) fn load(s: &mut Session) {
     slot.loaded = true;
     let Some(dir) = dir else { return };
     let path = dir.join(CERTS_FILE);
-    match mailcraft_store::journal::read_capped(&path, MAX_FILE_BYTES) {
+    match iridium_mail_store::journal::read_capped(&path, MAX_FILE_BYTES) {
         Ok(None) => {}
         Ok(Some(bytes)) => match serde_json::from_slice::<CertBook>(&bytes) {
             Ok(b) => {
@@ -331,7 +331,7 @@ fn system_roots() -> &'static [Cert] {
     ROOTS.get_or_init(|| {
         #[cfg(not(target_arch = "wasm32"))]
         {
-            mailcraft_net::transport::system_root_ders()
+            iridium_mail_net::transport::system_root_ders()
                 .iter()
                 .filter_map(|d| Cert::from_der(d).ok())
                 .collect()
@@ -448,7 +448,7 @@ pub fn cert_choice(s: &Session, address: &str) -> Option<(Cert, CertSource)> {
         for cert in carried.iter().filter(|x| x.has_email(&a)) {
             let anchors = anchors_cache.get_or_insert_with(|| anchors(s));
             let trusted =
-                mailcraft_smime::trust::evaluate(cert, &carried, anchors, now).status == Status::Valid;
+                iridium_mail_smime::trust::evaluate(cert, &carried, anchors, now).status == Status::Valid;
             let source = if trusted { CertSource::TrustedContact } else { CertSource::Contact };
             found.push((cert.clone(), source));
         }
@@ -596,7 +596,7 @@ pub fn add_identity(s: &mut Session, id: &Identity, trust_issuer: bool) -> Resul
     if book(s).ids.len() >= MAX_IDS && !book(s).ids.iter().any(|i| i.fingerprint == fp) {
         return Err(CmdError::Failed(format!("At most {MAX_IDS} digital IDs can be kept.")));
     }
-    let secret = mailcraft_smime::random_secret().map_err(smime_err)?;
+    let secret = iridium_mail_smime::random_secret().map_err(smime_err)?;
     let sealed = id.key.seal(&secret).map_err(smime_err)?;
     s.secrets
         .set(&secret_key(&fp), &secret)
@@ -742,7 +742,7 @@ pub(crate) fn protect_for_send(
         clear_signed: s.settings.bool("trust.smime.clearSigned"),
         now: s.now().unix,
     };
-    match mailcraft_smime::mime::protect(&raw, &opts) {
+    match iridium_mail_smime::mime::protect(&raw, &opts) {
         Ok(out) => {
             if !from_card.is_empty() {
                 s.notify(Notice::Info(format!(
@@ -779,7 +779,8 @@ pub(crate) fn protect_draft(s: &mut Session, from: &str, raw: Vec<u8>) -> Result
         clear_signed: false,
         now: s.now().unix,
     };
-    mailcraft_smime::mime::protect(&raw, &opts).map_err(|e| format!("The draft could not be encrypted: {e}."))
+    iridium_mail_smime::mime::protect(&raw, &opts)
+        .map_err(|e| format!("The draft could not be encrypted: {e}."))
 }
 
 /// Settings and the original decide Sign / Encrypt for a new compose: Options › Trust Center › Email Security
@@ -821,14 +822,14 @@ pub fn is_encrypted(s: &Session, m: &MailItem) -> bool {
     m.attachments.iter().any(|a| a.mime_type.to_ascii_lowercase().contains("pkcs7-mime"))
         && !m.attachments.iter().any(|a| a.mime_type.to_ascii_lowercase().contains("pkcs7-signature"))
         && crate::cmd::compose::stored_head(s, m, KIND_SCAN).as_deref().is_none_or(|r| {
-            !matches!(mailcraft_smime::mime::detect(r), Some(mailcraft_smime::mime::Kind::OpaqueSigned))
+            !matches!(iridium_mail_smime::mime::detect(r), Some(iridium_mail_smime::mime::Kind::OpaqueSigned))
         })
 }
 
 fn source_key(m: &MailItem) -> u64 {
     // Content keys follow the stored bytes: a re-saved draft of the same length gets a new one.
     let bytes = format!("{}:{}:{:?}:{:?}", m.size, m.received.unix, m.blob, m.body_key).into_bytes();
-    mailcraft_model::thread::fnv1a(&bytes)
+    iridium_mail_model::thread::fnv1a(&bytes)
 }
 
 /// The opened form of S/MIME item `id` (None for other mail), cached in memory.
@@ -845,7 +846,7 @@ pub fn view(s: &Session, id: ItemId) -> Option<Arc<View>> {
     let raw = crate::cmd::file::raw_source(s, m);
     let ids = identities(s);
     let anchors = anchors(s);
-    let opened = mailcraft_smime::mime::open(&raw, &ids, &anchors, s.now().unix)?;
+    let opened = iridium_mail_smime::mime::open(&raw, &ids, &anchors, s.now().unix)?;
     let v = Arc::new(build_view(s, m, opened));
     let mut c = cache(s);
     c.views.retain(|(i, _, _)| *i != id);
@@ -862,7 +863,7 @@ fn build_view(s: &Session, m: &MailItem, opened: Opened) -> View {
     if opened.locked() {
         body = Body { format: BodyFormat::PlainText, text: Some(LOCKED_TEXT.into()), html: None };
         item.preview = "Encrypted message".into();
-    } else if let Ok(msg) = mailcraft_mime::parse(&opened.message) {
+    } else if let Ok(msg) = iridium_mail_mime::parse(&opened.message) {
         let fresh = MailItem::from_message(&msg, &opened.message, m.received);
         body = Body::from_message(&msg);
         item.attachments = fresh.attachments;
@@ -1119,7 +1120,7 @@ fn import_digital_id(s: &mut Session, p: &Value) -> CmdResult {
     let pw = password(p)?;
     let trust = opt_bool(p, "trustIssuer").unwrap_or(false);
     let id = if let Some(bytes) = input_bytes(p, "path", "data", "")? {
-        mailcraft_smime::pkcs12::parse(&bytes, &pw).map_err(smime_err)?
+        iridium_mail_smime::pkcs12::parse(&bytes, &pw).map_err(smime_err)?
     } else {
         let key = input_bytes(p, "keyPath", "", "keyPem")?.ok_or_else(|| {
             CmdError::Params("a .pfx file (`path` or `data`) or a key (`keyPath`, `keyPem`) is needed".into())
@@ -1158,7 +1159,7 @@ fn export_digital_id(s: &mut Session, p: &Value) -> CmdResult {
         .find(|i| i.cert.fingerprint() == fp)
         .cloned()
         .ok_or_else(|| CmdError::Failed("the key of this digital ID is not available".into()))?;
-    let pfx = mailcraft_smime::pkcs12::build(&id, &pw, &id.cert.display_name()).map_err(smime_err)?;
+    let pfx = iridium_mail_smime::pkcs12::build(&id, &pw, &id.cert.display_name()).map_err(smime_err)?;
     std::fs::write(path.trim(), &pfx).map_err(|e| CmdError::Failed(format!("cannot write {path}: {e}")))?;
     Ok(json!({"path": path.trim(), "bytes": pfx.len()}))
 }
@@ -1271,7 +1272,9 @@ fn signer_chain(s: &Session, id: ItemId) -> Vec<Cert> {
     let raw = crate::cmd::file::raw_source(s, m);
     let ids = identities(s);
     let anchors = anchors(s);
-    let Some(o) = mailcraft_smime::mime::open(&raw, &ids, &anchors, s.now().unix) else { return Vec::new() };
+    let Some(o) = iridium_mail_smime::mime::open(&raw, &ids, &anchors, s.now().unix) else {
+        return Vec::new();
+    };
     o.signature().map(|sig| sig.chain.clone()).unwrap_or_default()
 }
 
@@ -1303,13 +1306,13 @@ fn signature_details(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::compose::tests::session;
-    use mailcraft_model::{Contact, FolderRole};
-    use mailcraft_smime::testkit;
+    use iridium_mail_model::{Contact, FolderRole};
+    use iridium_mail_smime::testkit;
 
     const PW: &str = "pfx-pw";
 
     fn pfx_of(id: &Identity) -> String {
-        b64(&mailcraft_smime::pkcs12::build(id, PW, "").unwrap())
+        b64(&iridium_mail_smime::pkcs12::build(id, PW, "").unwrap())
     }
 
     /// `s` gets the digital ID of `id`, its CA trusted.
@@ -1333,17 +1336,17 @@ mod tests {
         (s, id)
     }
 
-    fn inbox(s: &Session) -> mailcraft_model::FolderId {
+    fn inbox(s: &Session) -> iridium_mail_model::FolderId {
         let a = s.mailbox.accounts.iter().find(|a| a.can_send()).unwrap().id;
         s.mailbox.role_folder(a, FolderRole::Inbox).unwrap()
     }
 
     /// Files `raw` in `s`'s Inbox as downloaded mail and runs the new-mail steps.
     fn deliver(s: &mut Session, raw: &[u8]) -> ItemId {
-        let msg = mailcraft_mime::parse(raw).unwrap();
+        let msg = iridium_mail_mime::parse(raw).unwrap();
         let mut item = MailItem::from_message(&msg, raw, s.now());
         item.folder = inbox(s);
-        let id = s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap();
+        let id = s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap();
         crate::sync::arrival::on_new_mail(s, &[id]);
         id
     }
@@ -1405,11 +1408,11 @@ mod tests {
         );
         s.run("options.exportDigitalId", &json!({"fingerprint": fp, "path": path_s, "password": "x1"}))
             .unwrap();
-        let back = mailcraft_smime::pkcs12::parse(&std::fs::read(&path).unwrap(), "x1").unwrap();
+        let back = iridium_mail_smime::pkcs12::parse(&std::fs::read(&path).unwrap(), "x1").unwrap();
         assert_eq!(back.cert, me.cert);
         // A PEM key and certificate import too.
         let other = testkit::identity("Me Again", "me@example.com");
-        let key_pem = mailcraft_smime::cert::pem("PRIVATE KEY", &other.key.to_pkcs8_der().unwrap());
+        let key_pem = iridium_mail_smime::cert::pem("PRIVATE KEY", &other.key.to_pkcs8_der().unwrap());
         s.run("options.importDigitalId", &json!({"keyPem": key_pem, "certPem": other.cert.to_pem()}))
             .unwrap();
         assert_eq!(identities(&s).len(), 2);
@@ -1686,8 +1689,8 @@ mod tests {
             assert!(!holds(&bob, stored, secret), "the stored draft holds `{secret}`");
             for op in &bob.pending_ops {
                 let leaked = match op {
-                    mailcraft_store::Op::PutMail(m) => holds(&bob, m, secret),
-                    mailcraft_store::Op::Replace(mb) => mb.mail.items().any(|m| holds(&bob, m, secret)),
+                    iridium_mail_store::Op::PutMail(m) => holds(&bob, m, secret),
+                    iridium_mail_store::Op::Replace(mb) => mb.mail.items().any(|m| holds(&bob, m, secret)),
                     _ => false,
                 };
                 assert!(!leaked, "the journal holds `{secret}`");

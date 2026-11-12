@@ -29,14 +29,14 @@ Tasks:
                              write docs/parity.md (--check: fail when stale or below xtask/parity-floor.txt)
   bench [--size 10k|50k | --size 100k|1m|2m --small-bodies] [--backend legacy|sqlite]
         [--out FILE] [--seed N] [--sync N] [--bulk-move N] [--keep] [--force-large]
-                             storage benchmarks on a synthetic profile (apps/mailcraft-bench, release
+                             storage benchmarks on a synthetic profile (apps/iridium-mail-bench, release
                              build); JSON report in target/scratch/bench/ unless --out. Full bodies stop
                              at 50k messages, small bodies at 2m (--force-large lifts that)
   stats                      lines of Rust, tests and commands per crate
   version show | bump X.Y.Z | check
                              show or bump the workspace version; check it against the CI tag
-  ico                        rasterise assets/app-icon/mailcraft.svg to PNG/ICO/ICNS
-                             (into $MAILCRAFT_ICO_OUT instead of assets/app-icon when set)
+  ico                        rasterise assets/app-icon/iridium-mail.svg to PNG/ICO/ICNS
+                             (into $IRIDIUM_MAIL_ICO_OUT instead of assets/app-icon when set)
 
 Options:
   --root DIR                 repository to work on (default: the one this xtask lives in)

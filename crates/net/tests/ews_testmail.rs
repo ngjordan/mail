@@ -1,4 +1,4 @@
-//! The EWS client against the fake EWS endpoint of `mailcraft-testmail` (HTTPS on 127.0.0.1, synthetic users):
+//! The EWS client against the fake EWS endpoint of `iridium-mail-testmail` (HTTPS on 127.0.0.1, synthetic users):
 //! sign-in (Basic, NTLM, Auto switching to NTLM), folders, item sync, MIME download, flags, moves, deletes,
 //! uploads, sending, contacts/events/tasks, automatic replies, availability, meeting answers and Autodiscover.
 
@@ -6,13 +6,13 @@
 
 use std::time::Duration;
 
-use mailcraft_net::ews::autodiscover::{AutodiscoverOptions, Probe, autodiscover};
-use mailcraft_net::ews::{
+use iridium_mail_net::ews::autodiscover::{AutodiscoverOptions, Probe, autodiscover};
+use iridium_mail_net::ews::{
     EwsAuth, EwsClient, FlagChange, ItemChange, MeetingReply, OofSettings, Signer, is_code,
 };
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::{ConnectOptions, NetError};
-use mailcraft_testmail::{Config, TestServers};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::{ConnectOptions, NetError};
+use iridium_mail_testmail::{Config, TestServers};
 
 const USER: &str = "pat@example.com";
 const PASS: &str = "pat-test-pw";
@@ -320,7 +320,7 @@ fn a_message_too_large_to_download_is_left_out_not_fatal() {
     // The client works on afterwards.
     assert!(c.folder("inbox").unwrap().is_some());
     // Batches follow the sizes: ten at most, and a few MB each.
-    use mailcraft_net::ews::{MIME_BATCH_BYTES, mime_batches};
+    use iridium_mail_net::ews::{MIME_BATCH_BYTES, mime_batches};
     let many: Vec<(String, Option<u64>)> = (0..25).map(|i| (format!("i{i}"), Some(1000))).collect();
     assert_eq!(mime_batches(&many).iter().map(Vec::len).collect::<Vec<_>>(), vec![10, 10, 5]);
     let large = vec![

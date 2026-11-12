@@ -28,8 +28,8 @@ use crate::cmd::util::opt_bool;
 use crate::compose::{ComposeAttachment, ComposeKind, ComposeState, InlineImage, SaveSentTo};
 use crate::settings::OriginalText;
 use crate::{CmdError, CmdResult, CommandSpec, Session};
-use mailcraft_model::subject::{forward_subject, reply_subject};
-use mailcraft_model::{
+use iridium_mail_model::subject::{forward_subject, reply_subject};
+use iridium_mail_model::{
     Address, Block, BodyFormat, FolderKind, FolderRole, Importance, Inline, ItemId, MailItem, ParaStyle,
     TextStyle,
 };
@@ -184,7 +184,7 @@ fn source_inline_images(s: &Session, m: &MailItem) -> Vec<InlineImage> {
     let Some(raw) = crate::cmd::compose::stored_raw(s, m) else {
         return Vec::new();
     };
-    let Ok(msg) = mailcraft_mime::parse(&raw) else {
+    let Ok(msg) = iridium_mail_mime::parse(&raw) else {
         return Vec::new();
     };
     msg.attachments()
@@ -225,7 +225,7 @@ fn header_lines(s: &Session, m: &MailItem) -> Vec<(&'static str, String)> {
 
 /// Body of a response: two empty paragraphs (the caret goes in the first), then the quoted header block,
 /// a blank line and the original ("Include original message text").
-pub fn quoted_body(s: &Session, m: &MailItem) -> mailcraft_model::Doc {
+pub fn quoted_body(s: &Session, m: &MailItem) -> iridium_mail_model::Doc {
     quoted_body_as(s, m, OriginalText::Include, "")
 }
 
@@ -236,10 +236,15 @@ const INDENT_PX: f32 = 36.0;
 /// then (when the original's text goes in) the header block, a blank line and the original: as it is, indented
 /// (a tab before each plain-text line), or with `prefix` before each plain-text line (a quote bar in HTML).
 /// The header block itself is never indented or prefixed.
-pub fn quoted_body_as(s: &Session, m: &MailItem, mode: OriginalText, prefix: &str) -> mailcraft_model::Doc {
+pub fn quoted_body_as(
+    s: &Session,
+    m: &MailItem,
+    mode: OriginalText,
+    prefix: &str,
+) -> iridium_mail_model::Doc {
     let mut blocks = vec![Block::text_paragraph(""), Block::text_paragraph("")];
     if !mode.quotes() {
-        return mailcraft_model::Doc { blocks, ..Default::default() };
+        return iridium_mail_model::Doc { blocks, ..Default::default() };
     }
     let lines = header_lines(s, m);
     // The body as it reads (the opened form of S/MIME mail).
@@ -257,7 +262,7 @@ pub fn quoted_body_as(s: &Session, m: &MailItem, mode: OriginalText, prefix: &st
             _ => "",
         };
         if lead.is_empty() {
-            blocks.extend(mailcraft_model::Doc::from_plain_text(&text).blocks);
+            blocks.extend(iridium_mail_model::Doc::from_plain_text(&text).blocks);
         } else {
             let text = text.replace("\r\n", "\n");
             let text = text.strip_suffix('\n').unwrap_or(&text);
@@ -291,7 +296,7 @@ pub fn quoted_body_as(s: &Session, m: &MailItem, mode: OriginalText, prefix: &st
             _ => blocks.extend(original),
         }
     }
-    mailcraft_model::Doc { blocks, ..Default::default() }
+    iridium_mail_model::Doc { blocks, ..Default::default() }
 }
 
 /// The name a prefaced comment starts with (Options › Mail › "Preface comments with"): the name set there
@@ -511,7 +516,7 @@ fn reply_with_meeting(s: &mut Session, p: &Value) -> CmdResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Body, DateTime, FolderRole, Mailbox};
+    use iridium_mail_model::{Body, DateTime, FolderRole, Mailbox};
 
     fn addr(name: &str, a: &str) -> Address {
         Address::new(Some(name), a)
@@ -552,7 +557,7 @@ mod tests {
             text: Some("The badge reader is down. Please use the side door today.".into()),
             html: None,
         };
-        let plain = s.add_message(plain, &mailcraft_store::Content::body(body)).unwrap();
+        let plain = s.add_message(plain, &iridium_mail_store::Content::body(body)).unwrap();
         let html = MailItem {
             folder: inbox,
             subject: "Re: Newsletter".into(),
@@ -567,7 +572,7 @@ mod tests {
             text: None,
             html: Some("<h1>Weekly</h1><p>Hello <b>there</b></p>".into()),
         };
-        let html = s.add_message(html, &mailcraft_store::Content::body(body)).unwrap();
+        let html = s.add_message(html, &iridium_mail_store::Content::body(body)).unwrap();
         s.selection.folder = inbox;
         s.selection.items = vec![plain];
         s.selection.focus = Some(plain);
@@ -746,12 +751,12 @@ The badge reader is down. Please use the side door today.";
     #[test]
     fn forward_includes_attachments_from_source() {
         let mut f = fx();
-        let raw = mailcraft_mime::MessageBuilder {
+        let raw = iridium_mail_mime::MessageBuilder {
             from: Some(addr("Alice", "alice@example.com")),
             subject: "Files".into(),
             text: Some("See attached.".into()),
             date: Some(DateTime { unix: SENT, offset_min: 0 }),
-            attachments: vec![mailcraft_mime::AttachmentSpec {
+            attachments: vec![iridium_mail_mime::AttachmentSpec {
                 filename: "plan.txt".into(),
                 mime_type: "text/plain".into(),
                 data: b"step one".to_vec(),
@@ -760,10 +765,10 @@ The badge reader is down. Please use the side door today.";
             ..Default::default()
         }
         .build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, DateTime::default());
         item.folder = f.s.selection.folder;
-        let id = f.s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap();
+        let id = f.s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap();
         let r = forward(&mut f.s, &json!({"ids": [id.0]})).unwrap();
         let c = &f.s.composes[&r["compose"].as_u64().unwrap()];
         assert_eq!(c.attachments.len(), 1);
@@ -800,7 +805,7 @@ The badge reader is down. Please use the side door today.";
         assert_eq!(c.attachments.len(), 2);
         assert_eq!(c.attachments[0].filename, "URGENT_ server room access.eml");
         assert_eq!(c.attachments[0].mime_type, "message/rfc822");
-        let parsed = mailcraft_mime::parse(&c.attachments[0].data).unwrap();
+        let parsed = iridium_mail_mime::parse(&c.attachments[0].data).unwrap();
         assert_eq!(parsed.subject(), "URGENT: server room access");
         assert_eq!(eml_name("  "), "message.eml");
     }
@@ -830,12 +835,12 @@ The badge reader is down. Please use the side door today.";
         let (b1, b2) = (
             f.s.add_message(
                 MailItem { folder, ..Default::default() },
-                &mailcraft_store::Content::source(big.clone()),
+                &iridium_mail_store::Content::source(big.clone()),
             )
             .unwrap(),
             f.s.add_message(
                 MailItem { folder, ..Default::default() },
-                &mailcraft_store::Content::source(big),
+                &iridium_mail_store::Content::source(big),
             )
             .unwrap(),
         );
@@ -846,7 +851,7 @@ The badge reader is down. Please use the side door today.";
     #[test]
     fn forward_as_attachment_gets_the_reply_signature() {
         let mut f = fx();
-        f.s.mailbox.add_signature("Short", mailcraft_model::Doc::from_plain_text("-- T")).unwrap();
+        f.s.mailbox.add_signature("Short", iridium_mail_model::Doc::from_plain_text("-- T")).unwrap();
         f.s.mailbox.set_signature_defaults(None, None, Some(Some("Short"))).unwrap();
         let r = forward_as_attachment(&mut f.s, &Value::Null).unwrap();
         let c = &f.s.composes[&r["compose"].as_u64().unwrap()];
@@ -893,7 +898,7 @@ The badge reader is down. Please use the side door today.";
             ..Default::default()
         };
         let body = Body { format: BodyFormat::PlainText, text: Some("Hi".into()), html: None };
-        let id = s.add_message(item, &mailcraft_store::Content::body(body)).unwrap();
+        let id = s.add_message(item, &iridium_mail_store::Content::body(body)).unwrap();
         s.selection.folder = inbox;
         s.selection.items = vec![id];
         s.selection.focus = Some(id);
@@ -920,7 +925,7 @@ The badge reader is down. Please use the side door today.";
         assert_eq!(cc, ["bob@example.org", "carol@example.com"]);
         assert!(matches!(
             s.mailbox.mail.get(src).unwrap().response,
-            mailcraft_model::ResponseState::RepliedAll(_)
+            iridium_mail_model::ResponseState::RepliedAll(_)
         ));
     }
 
@@ -944,20 +949,20 @@ The badge reader is down. Please use the side door today.";
     #[test]
     fn html_response_keeps_inline_images() {
         let mut f = fx();
-        let raw = mailcraft_mime::MessageBuilder {
+        let raw = iridium_mail_mime::MessageBuilder {
             from: Some(addr("News Desk", "news@example.org")),
             subject: "Logo".into(),
             html: Some("<p>Our logo: <img src=\"cid:logo@x\" alt=\"Logo\"></p>".into()),
             text: Some("Our logo".into()),
             date: Some(DateTime { unix: SENT, offset_min: 0 }),
             attachments: vec![
-                mailcraft_mime::AttachmentSpec {
+                iridium_mail_mime::AttachmentSpec {
                     filename: "logo.png".into(),
                     mime_type: "image/png".into(),
                     data: b"PNGDATA".to_vec(),
                     content_id: Some("logo@x".into()),
                 },
-                mailcraft_mime::AttachmentSpec {
+                iridium_mail_mime::AttachmentSpec {
                     filename: "report.pdf".into(),
                     mime_type: "application/pdf".into(),
                     data: b"PDF".to_vec(),
@@ -967,10 +972,10 @@ The badge reader is down. Please use the side door today.";
             ..Default::default()
         }
         .build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, DateTime::default());
         item.folder = f.s.selection.folder;
-        let id = f.s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap();
+        let id = f.s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap();
         for (run, kind) in [(reply as fn(&mut Session, &Value) -> CmdResult, "reply"), (forward, "forward")] {
             let r = run(&mut f.s, &json!({"ids": [id.0]})).unwrap();
             let c = &f.s.composes[&r["compose"].as_u64().unwrap()];
@@ -1050,7 +1055,7 @@ The badge reader is down. Please use the side door today.";
         set(&mut f.s, "mail.reply.forwardText", json!("prefix"));
         let c = respond_to(&mut f, html, ComposeKind::Forward);
         assert!(matches!(c.body.blocks.last(), Some(Block::Quote { blocks }) if !blocks.is_empty()));
-        assert!(mailcraft_html::doc_to_html(&c.body).contains("<blockquote"));
+        assert!(iridium_mail_html::doc_to_html(&c.body).contains("<blockquote"));
         set(&mut f.s, "mail.reply.forwardText", json!("indent"));
         let c = respond_to(&mut f, html, ComposeKind::Forward);
         assert!(matches!(

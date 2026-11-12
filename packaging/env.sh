@@ -11,21 +11,21 @@
 # shellcheck disable=SC2034
 
 # Reverse-DNS application id: desktop file, AppStream id, icon name, Flatpak id, macOS bundle id.
-APP_ID="saint.dev.MailCraft"
-APP_NAME="MailCraft"
+APP_ID="ph.mail"
+APP_NAME="Mail"
 APP_SUMMARY="Desktop mail, calendar and contacts in the classic three-pane layout"
 # Executables shipped in every package.
-APP_BINS="mailcraft mailcraft-cli"
+APP_BINS="iridium-mail iridium-mail-cli"
 
 # GitHub repository (owner/name): homepage, issues, releases.
 GH_OWNER="MonkeySaint"
-GH_REPO="mailcraft"
+GH_REPO="iridium-mail"
 HOMEPAGE="https://github.com/$GH_OWNER/$GH_REPO"
 # Files on the default branch (AppStream screenshots).
 RAW_URL="https://raw.githubusercontent.com/$GH_OWNER/$GH_REPO/master"
 # deb/rpm Maintainer/Packager (Debian policy wants a name and an address).
-MAINTAINER="${MAILCRAFT_MAINTAINER:-MonkeySaint <monkey@saint.dev>}"
-VENDOR="MailCraft contributors"
+MAINTAINER="${IRIDIUM_MAIL_MAINTAINER:-MonkeySaint <monkey@saint.dev>}"
+VENDOR="Mail contributors"
 LICENSE_SPDX="MIT OR Apache-2.0"
 
 # Repository root, whatever the caller's working directory.
@@ -53,21 +53,21 @@ mc_version() {
 MC_VERSION="$(mc_version)"
 [ -n "$MC_VERSION" ] || mc_die "no version in [workspace.package] of $MC_ROOT/Cargo.toml"
 
-# Build details for `--version` and the About page (read by apps/mailcraft/build.rs and, through
-# option_env!, by mailcraft-cli and the UI). The date is the commit date so rebuilding a tag gives the
+# Build details for `--version` and the About page (read by apps/iridium-mail/build.rs and, through
+# option_env!, by iridium-mail-cli and the UI). The date is the commit date so rebuilding a tag gives the
 # same output; SOURCE_DATE_EPOCH also pins timestamps inside the archives.
-if [ -z "${MAILCRAFT_GIT_HASH:-}" ]; then
-	MAILCRAFT_GIT_HASH="$(git -C "$MC_ROOT" rev-parse --short=10 HEAD 2>/dev/null || echo unknown)"
+if [ -z "${IRIDIUM_MAIL_GIT_HASH:-}" ]; then
+	IRIDIUM_MAIL_GIT_HASH="$(git -C "$MC_ROOT" rev-parse --short=10 HEAD 2>/dev/null || echo unknown)"
 fi
 if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
 	SOURCE_DATE_EPOCH="$(git -C "$MC_ROOT" log -1 --format=%ct 2>/dev/null || date +%s)"
 fi
-if [ -z "${MAILCRAFT_BUILD_DATE:-}" ]; then
+if [ -z "${IRIDIUM_MAIL_BUILD_DATE:-}" ]; then
 	# GNU date takes -d @N, BSD date (macOS, FreeBSD) takes -r N.
-	MAILCRAFT_BUILD_DATE="$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%d 2>/dev/null ||
+	IRIDIUM_MAIL_BUILD_DATE="$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%d 2>/dev/null ||
 		date -u -r "$SOURCE_DATE_EPOCH" +%Y-%m-%d 2>/dev/null || echo unknown)"
 fi
-export MAILCRAFT_GIT_HASH MAILCRAFT_BUILD_DATE SOURCE_DATE_EPOCH
+export IRIDIUM_MAIL_GIT_HASH IRIDIUM_MAIL_BUILD_DATE SOURCE_DATE_EPOCH
 
 # SHA-256 of a file, hex only (sha256sum on Linux, shasum on macOS, sha256 on FreeBSD).
 mc_sha256() {

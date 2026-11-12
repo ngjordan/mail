@@ -18,7 +18,7 @@
 //! `contact:<id>`.
 //!
 //! **Options › Advanced › Reminders.** "Show reminders" ([`popups_on`]) lets the Reminders window open by
-//! itself; "Show reminders on top of other windows" ([`on_top`]) brings MailCraft's window to the front and
+//! itself; "Show reminders on top of other windows" ([`on_top`]) brings Mail's window to the front and
 //! keeps it there while the Reminders window is up. "Automatically dismiss reminders for past calendar
 //! events" decides what happens to an appointment's reminder once the event has ended: on, it drops out; off
 //! (the default) it stays, overdue, until dismissed or snoozed. Only reminders that came due while the
@@ -33,7 +33,7 @@ use serde_json::{Value, json};
 
 use crate::cmd::calendar::{occurrences, pim};
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::{DateTime, FlagState, FolderKind, FolderRole, ItemId, Mailbox, TaskStatus};
+use iridium_mail_model::{DateTime, FlagState, FolderKind, FolderRole, ItemId, Mailbox, TaskStatus};
 
 /// Snooze choices offered by the Reminders window (minutes).
 pub const SNOOZE_MINUTES: [u32; 13] = [5, 10, 15, 30, 60, 120, 240, 480, 1440, 2880, 4320, 10_080, 20_160];
@@ -172,16 +172,16 @@ impl Key {
     }
 }
 
-fn in_kind(mb: &Mailbox, folder: mailcraft_model::FolderId, kind: FolderKind) -> bool {
+fn in_kind(mb: &Mailbox, folder: iridium_mail_model::FolderId, kind: FolderKind) -> bool {
     mb.folder(folder).is_some_and(|f| f.kind == kind)
 }
 
-fn in_deleted(mb: &Mailbox, folder: mailcraft_model::FolderId) -> bool {
+fn in_deleted(mb: &Mailbox, folder: iridium_mail_model::FolderId) -> bool {
     in_role(mb, folder, FolderRole::DeletedItems)
 }
 
 /// Whether `folder` is the account's `role` folder or inside it.
-fn in_role(mb: &Mailbox, folder: mailcraft_model::FolderId, role: FolderRole) -> bool {
+fn in_role(mb: &Mailbox, folder: iridium_mail_model::FolderId, role: FolderRole) -> bool {
     mb.folder_account(folder)
         .and_then(|a| mb.role_folder(a, role))
         .is_some_and(|d| mb.is_in_subtree(folder, d))
@@ -603,7 +603,7 @@ pub fn run_open(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::cmd::calendar::tests::{role, session};
-    use mailcraft_model::{FolderRole, MailItem};
+    use iridium_mail_model::{FolderRole, MailItem};
 
     fn at(s: &Session, minutes: i64) -> DateTime {
         pim::add_secs(s.now(), minutes * 60)

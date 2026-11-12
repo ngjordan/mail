@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use crate::Session;
 use crate::cmd::compose::tests::{open, session};
 use crate::cmd::insert::tests::last_dialog;
-use mailcraft_model::{Block, Inline};
+use iridium_mail_model::{Block, Inline};
 
 fn with_text(text: &str) -> (Session, u64) {
     let mut s = session();
@@ -250,7 +250,7 @@ fn sort_a_table_by_a_column() {
                     .map(|r| {
                         r.iter()
                             .map(|c| {
-                                mailcraft_model::Doc { blocks: c.blocks.clone(), ..Default::default() }
+                                iridium_mail_model::Doc { blocks: c.blocks.clone(), ..Default::default() }
                                     .to_plain_text()
                             })
                             .collect::<Vec<_>>()
@@ -293,11 +293,11 @@ fn junk_find_and_sort_params_never_panic() {
 fn go_to_lines_next_previous_and_relative() {
     let (mut s, id) = with_text("one\ntwo\nthree");
     // A line break inside a paragraph starts a line too.
-    if let Some(mailcraft_model::Block::Paragraph { inlines, .. }) =
+    if let Some(iridium_mail_model::Block::Paragraph { inlines, .. }) =
         s.composes.get_mut(&id).unwrap().body.blocks.get_mut(0)
     {
-        inlines.push(mailcraft_model::Inline::LineBreak);
-        inlines.push(mailcraft_model::Inline::Text { text: "more".into(), style: Default::default() });
+        inlines.push(iridium_mail_model::Inline::LineBreak);
+        inlines.push(iridium_mail_model::Inline::Text { text: "more".into(), style: Default::default() });
     }
     let lines = s.composes[&id].line_starts();
     assert_eq!(lines.len(), 4, "{lines:?}");

@@ -11,7 +11,7 @@
 //! - `MC_LIVE_STALWART_USER`: the login and address of a mailbox kept for testing,
 //! - `MC_LIVE_STALWART_PASS`: its password.
 //!
-//! Run: `cargo test -p mailcraft-engine --test live_servers -- --ignored --test-threads=1`.
+//! Run: `cargo test -p iridium-mail-engine --test live_servers -- --ignored --test-threads=1`.
 //!
 //! Rules the tests keep: mail goes only to the test mailbox itself; everything a test creates carries a run tag
 //! (`MCLIVE…`) and is removed at the end, even when the test fails (a drop guard); nothing else in the mailbox
@@ -21,13 +21,13 @@
 
 use std::time::{Duration, Instant};
 
-use mailcraft_engine::Session;
-use mailcraft_engine::model::{AccountId, DateTime, FolderId, FolderRole, ItemId, Mailbox};
-use mailcraft_engine::sync::PushMode;
-use mailcraft_net::ConnectOptions;
-use mailcraft_net::dav::{DavAuth, DavClient, Precondition, Service};
-use mailcraft_net::http::HttpClient;
-use mailcraft_net::jmap::{JmapAuth, JmapClient};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::model::{AccountId, DateTime, FolderId, FolderRole, ItemId, Mailbox};
+use iridium_mail_engine::sync::PushMode;
+use iridium_mail_net::ConnectOptions;
+use iridium_mail_net::dav::{DavAuth, DavClient, Precondition, Service};
+use iridium_mail_net::http::HttpClient;
+use iridium_mail_net::jmap::{JmapAuth, JmapClient};
 use serde_json::{Value, json};
 
 const WAIT: Duration = Duration::from_secs(90);
@@ -140,7 +140,7 @@ impl Server {
     fn raw_message(&self, subject: &str, body: &str) -> Vec<u8> {
         let user = &self.live.user;
         format!(
-            "From: MailCraft Live Test <{user}>\r\nTo: {user}\r\nSubject: {subject}\r\n\
+            "From: Mail Live Test <{user}>\r\nTo: {user}\r\nSubject: {subject}\r\n\
              Date: {}\r\nMessage-ID: <{}@example.com>\r\nMIME-Version: 1.0\r\n\
              Content-Type: text/plain; charset=utf-8\r\n\r\n{body}\r\n",
             DateTime::now_utc().to_rfc5322(),
@@ -420,7 +420,7 @@ fn add_imap(s: &mut Session, l: &Live, extra: Value) -> AccountId {
     let mut p = json!({
         "kind": "imap",
         "address": l.user,
-        "senderName": "MailCraft Live Test",
+        "senderName": "Mail Live Test",
         "incoming": {"host": l.host, "port": 993, "security": "tls"},
         "outgoing": {"host": l.host, "port": 465, "security": "tls"},
         "password": l.pass,
@@ -435,7 +435,7 @@ fn add_jmap(s: &mut Session, l: &Live, extra: Value) -> AccountId {
     let mut p = json!({
         "kind": "jmap",
         "address": l.user,
-        "senderName": "MailCraft Live Test",
+        "senderName": "Mail Live Test",
         "incoming": {"host": format!("https://{}/", l.host)},
         "password": l.pass,
     });
@@ -449,7 +449,7 @@ fn send_to_self(s: &mut Session, l: &Live, subject: &str) {
     let c = run(s, "mail.newEmail", json!({}))["compose"].as_u64().unwrap();
     run(s, "compose.setTo", json!({"compose": c, "value": l.user}));
     run(s, "compose.setSubject", json!({"compose": c, "value": subject}));
-    run(s, "compose.insertText", json!({"compose": c, "text": "Sent by the MailCraft live tests."}));
+    run(s, "compose.insertText", json!({"compose": c, "text": "Sent by the Mail live tests."}));
     let r = run(s, "compose.send", json!({"compose": c}));
     assert_eq!(r["sent"], true, "{r}");
 }
@@ -495,7 +495,7 @@ fn live_imap_and_smtp() {
     let a = id_of(&run(
         &mut s,
         "accounts.add",
-        json!({"kind": "imap", "address": l.user, "senderName": "MailCraft Live Test",
+        json!({"kind": "imap", "address": l.user, "senderName": "Mail Live Test",
                "incoming": server(&d["imap"]), "outgoing": server(&d["smtp"]), "password": l.pass}),
     ));
     let r = run(&mut s, "accounts.test", json!({"account": a.0, "wait": true}));
@@ -579,7 +579,7 @@ fn live_imap_and_smtp() {
     poll_until(&mut s, "the message sent to ourselves", |s| find(s, inbox, &sent_subject).is_some());
 
     // Quota and shared folders: reported when the server has them.
-    let q = mailcraft_engine::sync::account_quota(&s, a);
+    let q = iridium_mail_engine::sync::account_quota(&s, a);
     eprintln!("IMAP quota: {:?}", q.as_ref().map(|q| q.text()));
     let shared = run(&mut s, "accounts.sharedMailboxes", json!({"account": a.0}));
     eprintln!("shared mailboxes: {}", shared["mailboxes"]);
@@ -690,7 +690,7 @@ fn live_include_older_results() {
         assert!(s.wait_for_sync(WAIT), "{kind}: server search timed out");
         no_errors(&s);
         let id = find(&s, inbox, &old).unwrap_or_else(|| panic!("{kind}: the old match was added"));
-        assert!(mailcraft_engine::search_index::results(&s).contains(&id), "{kind}");
+        assert!(iridium_mail_engine::search_index::results(&s).contains(&id), "{kind}");
         run(&mut s, "search.includeOlderResults", json!({"on": false}));
     }
 }
@@ -810,7 +810,7 @@ fn live_jmap_mail_push_and_submission() {
     );
     poll_until(&mut s, "the message sent to ourselves", |s| find(s, inbox, &sent_subject).is_some());
 
-    let q = mailcraft_engine::sync::account_quota(&s, a);
+    let q = iridium_mail_engine::sync::account_quota(&s, a);
     eprintln!("JMAP quota: {:?}", q.as_ref().map(|q| q.text()));
     assert!(s.mailbox.validate().is_empty(), "{:?}", s.mailbox.validate());
     let _ = find_any(&s, &first);

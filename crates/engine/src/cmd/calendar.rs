@@ -45,13 +45,13 @@ use self::pim::Kind;
 use crate::cmd::util::{opt_bool, opt_str, opt_u64};
 use crate::compose::{ComposeAttachment, ComposeState};
 use crate::{CmdError, CmdResult, CommandSpec, Module, Session, always};
-pub use mailcraft_formats::ics::itip::ItipMessage;
-use mailcraft_formats::ics::itip::{self, Method};
-use mailcraft_formats::ics::{ImportOptions, rrule};
-use mailcraft_model::calendar::{
+pub use iridium_mail_formats::ics::itip::ItipMessage;
+use iridium_mail_formats::ics::itip::{self, Method};
+use iridium_mail_formats::ics::{ImportOptions, rrule};
+use iridium_mail_model::calendar::{
     AttendeeRole, ItemAttachment, MAX_ITEM_ATTACHMENT_BYTES, MAX_ITEM_ATTACHMENTS, ResponseStatus,
 };
-use mailcraft_model::{
+use iridium_mail_model::{
     Address, Appointment, Attendee, BusyStatus, DateTime, Doc, FolderId, FolderKind, FolderRole, Importance,
     ItemId, ListTime, MailItem, Recurrence, Sensitivity,
 };
@@ -65,7 +65,7 @@ pub mod pim {
 
     use crate::cmd::util::{opt_bool, opt_folder, opt_str, opt_u64};
     use crate::{CmdError, CmdResult, Notice, Session};
-    use mailcraft_model::{
+    use iridium_mail_model::{
         Address, Category, DateTime, FolderId, FolderKind, FolderRole, ItemId, Mailbox, dates,
     };
 
@@ -495,7 +495,7 @@ pub mod pim {
     pub fn parse_addresses(items: &[String]) -> Vec<Address> {
         let mut out: Vec<Address> = Vec::new();
         for item in items {
-            for a in mailcraft_mime::parse_address_list(item) {
+            for a in iridium_mail_mime::parse_address_list(item) {
                 for m in a.mailboxes() {
                     if !m.addr.is_empty() && !out.iter().any(|o| o.same_address(&m)) && out.len() < MAX_LIST {
                         out.push(m);
@@ -601,7 +601,7 @@ pub mod pim {
 // View state
 // ---------------------------------------------------------------------------------------------------------
 
-pub use mailcraft_model::calendar::{
+pub use iridium_mail_model::calendar::{
     CalendarColumn, CalendarCurrentView, CalendarMode, CalendarProps, CalendarSource, CalendarTimeZones,
     CalendarViewState, DailyTaskList, Subscription,
 };
@@ -610,7 +610,7 @@ pub use mailcraft_model::calendar::{
 /// `tz`), each on its due day (else its start day); overdue tasks show on `today`. Sorted by day, then due
 /// time and subject; at most `max`.
 pub fn tasks_for_days(
-    mb: &mailcraft_model::Mailbox,
+    mb: &iridium_mail_model::Mailbox,
     tz: i32,
     today: i64,
     from_day: i64,
@@ -620,7 +620,7 @@ pub fn tasks_for_days(
     let mut out: Vec<(i64, i64, String, ItemId)> = mb
         .tasks
         .values()
-        .filter(|t| t.status != mailcraft_model::TaskStatus::Completed && t.completed.is_none())
+        .filter(|t| t.status != iridium_mail_model::TaskStatus::Completed && t.completed.is_none())
         .filter(|t| mb.folder(t.folder).is_some_and(|f| f.role != Some(FolderRole::DeletedItems)))
         .filter_map(|t| {
             let when = t.due.or(t.start)?;
@@ -654,7 +654,7 @@ pub const CALENDAR_RGB: [(&str, [u8; 3]); 9] = [
 
 /// The colour a calendar is drawn in: its View › Color, else (Automatic) the palette entry for its position
 /// among the calendar folders (the first calendar blue, the next green, …).
-pub fn calendar_color(mb: &mailcraft_model::Mailbox, folder: FolderId) -> (&'static str, [u8; 3]) {
+pub fn calendar_color(mb: &iridium_mail_model::Mailbox, folder: FolderId) -> (&'static str, [u8; 3]) {
     let chosen = props::read(mb, folder).color;
     if let Some(c) =
         chosen.as_deref().and_then(|c| CALENDAR_RGB.iter().find(|(n, _)| n.eq_ignore_ascii_case(c)))
@@ -860,7 +860,7 @@ fn run_set_properties(s: &mut Session, p: &Value) -> CmdResult {
         })?;
         x.color = (*color != "Automatic").then(|| (*color).to_owned());
     }
-    let internet = x.source == mailcraft_model::calendar::CalendarSource::Internet;
+    let internet = x.source == iridium_mail_model::calendar::CalendarSource::Internet;
     if let Some(url) = pim::text(p, "url")? {
         let sub = x
             .subscription
@@ -904,12 +904,12 @@ fn run_set_properties(s: &mut Session, p: &Value) -> CmdResult {
 
 /// A calendar's properties as Folder › Properties shows them: colour, source, read-only, and for an
 /// internet calendar its address, update interval and last update.
-pub fn calendar_properties_json(mb: &mailcraft_model::Mailbox, folder: FolderId) -> Value {
+pub fn calendar_properties_json(mb: &iridium_mail_model::Mailbox, folder: FolderId) -> Value {
     let x = props::read(mb, folder);
     let source = match x.source {
-        mailcraft_model::calendar::CalendarSource::Local => "local",
-        mailcraft_model::calendar::CalendarSource::Internet => "internet",
-        mailcraft_model::calendar::CalendarSource::File => "file",
+        iridium_mail_model::calendar::CalendarSource::Local => "local",
+        iridium_mail_model::calendar::CalendarSource::Internet => "internet",
+        iridium_mail_model::calendar::CalendarSource::File => "file",
     };
     let sub = x.subscription.as_ref();
     json!({
@@ -1050,7 +1050,7 @@ fn run_change_time_zone(s: &mut Session, p: &Value) -> CmdResult {
 ///   name?, account?}` (From Address Book): another person's calendar on a Microsoft 365 (Graph) account,
 ///   read (and, when they allow it, changed) through the service; it goes below Shared Calendars. Without
 ///   such an account: refused with the reason.
-/// - `roomList`: room lists live in the organization's directory, which MailCraft does not read; refused
+/// - `roomList`: room lists live in the organization's directory, which Mail does not read; refused
 ///   (a room's calendar opens by its address with `shared`).
 fn run_add_calendar(s: &mut Session, p: &Value) -> CmdResult {
     let Some(source) = opt_str(p, "source") else {
@@ -1062,7 +1062,7 @@ fn run_add_calendar(s: &mut Session, p: &Value) -> CmdResult {
         "blank" => add_blank_calendar(s, p),
         "addressBook" | "shared" => add_shared_calendar(s, p, source),
         "roomList" => Err(CmdError::Disabled(
-            "room lists come from the organization's directory, which MailCraft does not read; open a room's \
+            "room lists come from the organization's directory, which Mail does not read; open a room's \
              calendar by its address with Open Shared Calendar on a Microsoft 365 account"
                 .into(),
         )),
@@ -1071,7 +1071,7 @@ fn run_add_calendar(s: &mut Session, p: &Value) -> CmdResult {
 }
 
 /// The Microsoft 365 (Graph) accounts whose calendars live on the service.
-pub fn graph_calendar_accounts(s: &Session) -> Vec<mailcraft_model::AccountId> {
+pub fn graph_calendar_accounts(s: &Session) -> Vec<iridium_mail_model::AccountId> {
     s.mailbox
         .accounts
         .iter()
@@ -1085,7 +1085,7 @@ pub fn graph_calendar_accounts(s: &Session) -> Vec<mailcraft_model::AccountId> {
 fn add_shared_calendar(s: &mut Session, p: &Value, source: &str) -> CmdResult {
     let accounts = graph_calendar_accounts(s);
     let account =
-        match opt_u64(p, "account").and_then(|a| u32::try_from(a).ok()).map(mailcraft_model::AccountId) {
+        match opt_u64(p, "account").and_then(|a| u32::try_from(a).ok()).map(iridium_mail_model::AccountId) {
             Some(a) if accounts.contains(&a) => a,
             Some(a) => {
                 return Err(CmdError::Params(format!("account {} keeps no calendars on Microsoft 365", a.0)));
@@ -1112,7 +1112,7 @@ fn add_shared_calendar(s: &mut Session, p: &Value, source: &str) -> CmdResult {
     let Some(address) = address else {
         if source == "addressBook" {
             // From Address Book: the person is picked from the contacts with an address.
-            let mut people: Vec<&mailcraft_model::Contact> =
+            let mut people: Vec<&iridium_mail_model::Contact> =
                 s.mailbox.contacts.values().filter(|c| c.emails.iter().any(|e| e.contains('@'))).collect();
             people.sort_by_key(|c| (c.full_name().to_lowercase(), c.id));
             let ids: Vec<u64> = people.iter().take(500).map(|c| c.id.0).collect();
@@ -1124,8 +1124,8 @@ fn add_shared_calendar(s: &mut Session, p: &Value, source: &str) -> CmdResult {
         }
         return pim::dialog(s, "addCalendar", json!({ "source": source, "account": account.0 }));
     };
-    let parsed: Vec<mailcraft_mime::Mailbox> =
-        mailcraft_mime::addr::parse_mailbox(&address).into_iter().collect();
+    let parsed: Vec<iridium_mail_mime::Mailbox> =
+        iridium_mail_mime::addr::parse_mailbox(&address).into_iter().collect();
     let Some(addr) = parsed.first().map(|m| m.addr.trim().to_owned()).filter(|a| {
         a.len() <= 320
             && a.contains('@')
@@ -1172,12 +1172,13 @@ fn add_shared_calendar(s: &mut Session, p: &Value, source: &str) -> CmdResult {
     let folder = create_calendar(s, parent, &name)?;
     if let Some(a) = s.mailbox.accounts.iter_mut().find(|a| a.id == account) {
         a.sync.graph_calendars.retain(|o| !o.address.eq_ignore_ascii_case(&addr));
-        a.sync
-            .graph_calendars
-            .push(mailcraft_model::account::SharedCalendarRef { address: addr.clone(), name: name.clone() });
+        a.sync.graph_calendars.push(iridium_mail_model::account::SharedCalendarRef {
+            address: addr.clone(),
+            name: name.clone(),
+        });
         a.sync.dav.insert(
             folder,
-            mailcraft_model::account::DavFolderState { collection: url, ..Default::default() },
+            iridium_mail_model::account::DavFolderState { collection: url, ..Default::default() },
         );
     }
     // Read-only until the service says the owner lets this user change it.
@@ -1188,7 +1189,7 @@ fn add_shared_calendar(s: &mut Session, p: &Value, source: &str) -> CmdResult {
 
 /// Forgets the other people's calendars opened on `account` whose folder is gone or deleted (in Deleted
 /// Items), and the folder states left behind for removed folders.
-fn prune_shared_calendars(s: &mut Session, account: mailcraft_model::AccountId) {
+fn prune_shared_calendars(s: &mut Session, account: iridium_mail_model::AccountId) {
     let Some(a) = s.mailbox.accounts.iter().find(|a| a.id == account) else { return };
     let live: std::collections::BTreeSet<String> = a
         .sync
@@ -1214,7 +1215,7 @@ fn prune_shared_calendars(s: &mut Session, account: mailcraft_model::AccountId) 
 fn data_text(p: &Value) -> Result<Option<String>, CmdError> {
     match p.get("data") {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::String(t)) if t.len() <= mailcraft_formats::ics::MAX_ICS_BYTES => Ok(Some(t.clone())),
+        Some(Value::String(t)) if t.len() <= iridium_mail_formats::ics::MAX_ICS_BYTES => Ok(Some(t.clone())),
         Some(Value::String(_)) => Err(CmdError::Params("`data` is too large for a calendar".into())),
         Some(_) => Err(CmdError::Params("`data` must be iCalendar text".into())),
     }
@@ -1334,7 +1335,7 @@ fn add_internet_calendar(s: &mut Session, p: &Value) -> CmdResult {
 }
 
 /// Largest .ics file read by From File.
-const MAX_FILE_BYTES: u64 = mailcraft_formats::ics::MAX_ICS_BYTES as u64;
+const MAX_FILE_BYTES: u64 = iridium_mail_formats::ics::MAX_ICS_BYTES as u64;
 
 fn add_file_calendar(s: &mut Session, p: &Value) -> CmdResult {
     let (data, stem) = match (data_text(p)?, pim::text(p, "path")?) {
@@ -1356,7 +1357,7 @@ fn add_file_calendar(s: &mut Session, p: &Value) -> CmdResult {
         _ => return pim::dialog(s, "addCalendar", json!({ "source": "file" })),
     };
     // Refuse non-calendars before creating anything.
-    mailcraft_formats::ics::read(&data, ImportOptions { local_offset_min: s.tz_offset_min })
+    iridium_mail_formats::ics::read(&data, ImportOptions { local_offset_min: s.tz_offset_min })
         .map_err(|e| CmdError::Params(format!("not an iCalendar file: {e}")))?;
     let parent = calendar_parent(s, p)?;
     let name = opt_name(p)?
@@ -1569,8 +1570,8 @@ fn run_share(s: &mut Session, p: &Value) -> CmdResult {
         .collect();
     let mut compose = ComposeState {
         subject: name.clone(),
-        body: mailcraft_html::html_to_doc(&html),
-        format: mailcraft_model::BodyFormat::Html,
+        body: iridium_mail_html::html_to_doc(&html),
+        format: iridium_mail_model::BodyFormat::Html,
         format_explicit: true,
         attachments: vec![ComposeAttachment {
             filename: format!("{}.ics", file_safe(&name)),
@@ -1733,7 +1734,7 @@ pub fn attachment_from_path(path: &str) -> Result<ItemAttachment, CmdError> {
 /// `calendar.saveAttachment {id, index | name, path, overwrite}`: writes a file attached to an appointment to
 /// `path` (atomically). `index` picks the file (two files may share a name); `name` alone picks the first
 /// file so named, and with `index` it must match. Without `path` the Save Attachment window asks for one,
-/// suggesting the file's name made safe ([`mailcraft_mime::message::safe_file_name`]: a name from another
+/// suggesting the file's name made safe ([`iridium_mail_mime::message::safe_file_name`]: a name from another
 /// calendar never names another folder or a hidden file). An existing file is replaced only with
 /// `overwrite: true` (the window asks first).
 fn run_save_attachment(s: &mut Session, p: &Value) -> CmdResult {
@@ -1756,7 +1757,7 @@ fn run_save_attachment(s: &mut Session, p: &Value) -> CmdResult {
     };
     let (index, file) = found.ok_or_else(|| CmdError::Params("the appointment has no such file".into()))?;
     let Some(path) = opt_str(p, "path").map(str::trim).filter(|x| !x.is_empty()) else {
-        let suggested = mailcraft_mime::message::safe_file_name(&file.filename);
+        let suggested = iridium_mail_mime::message::safe_file_name(&file.filename);
         let suggested = if suggested.is_empty() { "attachment".to_owned() } else { suggested };
         let params = json!({
             "id": id.0, "index": index, "name": file.filename, "suggested": suggested, "size": file.data.len()
@@ -1812,7 +1813,7 @@ pub(crate) fn new_uid(s: &Session, id: ItemId, stamp: i64) -> String {
     }
     feed(&id.0.to_be_bytes());
     feed(&stamp.to_be_bytes());
-    format!("mailcraft-{}-{}-{:016x}@localhost", id.0, stamp, h)
+    format!("iridium-mail-{}-{}-{:016x}@localhost", id.0, stamp, h)
 }
 
 /// Length of a new appointment or meeting in minutes: File › Options › Calendar › Default duration, less the
@@ -1930,10 +1931,10 @@ pub fn apply_appointment_fields(s: &Session, a: &mut Appointment, p: &Value) -> 
                 a.body_html = None;
             } else {
                 // Kept as the notes' formatting; their plain text (search, list, invitation text) follows.
-                let doc = mailcraft_html::html_to_doc(h);
-                a.body_html = Some(mailcraft_html::doc_to_html(&doc));
+                let doc = iridium_mail_html::html_to_doc(h);
+                a.body_html = Some(iridium_mail_html::doc_to_html(&doc));
                 if p.get("body").is_none() {
-                    a.body = mailcraft_html::doc_to_text(&doc).trim_end().to_owned();
+                    a.body = iridium_mail_html::doc_to_text(&doc).trim_end().to_owned();
                 }
             }
         }
@@ -2402,7 +2403,7 @@ pub fn create_meeting(s: &mut Session, p: &Value) -> CmdResult {
 /// The Microsoft 365 (Graph) account whose service schedules the meetings of calendar `folder`: their
 /// invitations, updates, cancellations and answers go from the service when the calendar is updated, never
 /// as iTIP mail from here.
-pub fn graph_scheduled(s: &Session, folder: FolderId) -> Option<mailcraft_model::AccountId> {
+pub fn graph_scheduled(s: &Session, folder: FolderId) -> Option<iridium_mail_model::AccountId> {
     let f = s.mailbox.folder(folder)?;
     let a = s.mailbox.account(f.account)?;
     (crate::sync::pim::via_graph(a, crate::sync::pim::PimKind::Calendar)
@@ -2444,7 +2445,7 @@ pub fn meeting_compose(s: &mut Session, id: ItemId) -> Option<u64> {
     meeting_compose_seq(s, id, 0)
 }
 
-/// Opens a compose carrying the invitation (iTIP REQUEST, written by `mailcraft-formats`) for appointment
+/// Opens a compose carrying the invitation (iTIP REQUEST, written by `iridium-mail-formats`) for appointment
 /// `id` with SEQUENCE `sequence` (0 for a new meeting, higher for updates).
 pub fn meeting_compose_seq(s: &mut Session, id: ItemId, sequence: u32) -> Option<u64> {
     let a = s.mailbox.appointments.get(&id)?.clone();
@@ -2470,7 +2471,7 @@ pub fn meeting_compose_seq(s: &mut Session, id: ItemId, sequence: u32) -> Option
         Some(html) => {
             text.push('\n');
             let mut doc = Doc::from_plain_text(&text);
-            doc.blocks.extend(mailcraft_html::html_to_doc(html).blocks);
+            doc.blocks.extend(iridium_mail_html::html_to_doc(html).blocks);
             doc
         }
         None => {
@@ -2635,7 +2636,7 @@ fn check_writable(s: &Session, folder: FolderId) -> Result<(), CmdError> {
     if props::is_read_only(&s.mailbox, folder) {
         let name = s.mailbox.folder(folder).map(|f| f.name.clone()).unwrap_or_default();
         let why = if props::read(&s.mailbox, folder).source
-            == mailcraft_model::calendar::CalendarSource::Internet
+            == iridium_mail_model::calendar::CalendarSource::Internet
         {
             "is a subscribed internet calendar"
         } else {
@@ -2834,18 +2835,18 @@ pub fn ics_escape(s: &str) -> String {
     out
 }
 
-/// A VCALENDAR object holding `appts` (`method` e.g. "REQUEST", "PUBLISH"), written by `mailcraft-formats`
+/// A VCALENDAR object holding `appts` (`method` e.g. "REQUEST", "PUBLISH"), written by `iridium-mail-formats`
 /// (recurrence exceptions as EXDATE, exceptions with RECURRENCE-ID, reminders as VALARM).
 pub fn ics_calendar(method: Option<&str>, appts: &[&Appointment], stamp: DateTime) -> String {
     let method = method.map(Method::parse);
-    mailcraft_formats::ics::write(appts, &[], method.as_ref(), stamp)
+    iridium_mail_formats::ics::write(appts, &[], method.as_ref(), stamp)
 }
 
 // ---------------------------------------------------------------------------------------------------------
 // Occurrences and recurrence
 // ---------------------------------------------------------------------------------------------------------
 
-/// Occurrences (start, end) of `a` overlapping `[from, to)`, expanded by `mailcraft-formats` (RRULE with
+/// Occurrences (start, end) of `a` overlapping `[from, to)`, expanded by `iridium-mail-formats` (RRULE with
 /// EXDATEs, in the appointment's own UTC offset). At most `max` (capped by the formats limit).
 pub fn occurrences(a: &Appointment, from: DateTime, to: DateTime, max: usize) -> Vec<(DateTime, DateTime)> {
     let max = max.min(rrule::MAX_OCCURRENCES);
@@ -2856,7 +2857,7 @@ pub fn occurrences(a: &Appointment, from: DateTime, to: DateTime, max: usize) ->
     {
         return tz::expand_zoned(a, z, from, to, max);
     }
-    mailcraft_formats::ics::expand_appointment(a, from, to, max)
+    iridium_mail_formats::ics::expand_appointment(a, from, to, max)
 }
 
 /// The Appointment Recurrence dialog's model and its RRULE mapping (RFC 5545 §3.3.10).
@@ -2864,8 +2865,8 @@ pub mod recurrence {
     use serde::{Deserialize, Serialize};
 
     use super::pim;
-    use mailcraft_formats::ics::rrule::{self, Freq, Rrule, Until};
-    use mailcraft_model::{DateTime, dates};
+    use iridium_mail_formats::ics::rrule::{self, Freq, Rrule, Until};
+    use iridium_mail_model::{DateTime, dates};
 
     /// Recurrence pattern (left column of the dialog).
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -3481,7 +3482,7 @@ pub fn calendar_data(s: &Session, m: &MailItem) -> Option<Vec<u8>> {
         return None;
     }
     let raw = crate::cmd::compose::stored_raw(s, m)?;
-    let msg = mailcraft_mime::parse(&raw).ok()?;
+    let msg = iridium_mail_mime::parse(&raw).ok()?;
     let parts = msg.parts();
     let pick = parts
         .iter()
@@ -4053,7 +4054,7 @@ fn run_respond(s: &mut Session, p: &Value) -> CmdResult {
         if let Some(a) = s.mailbox.accounts.iter_mut().find(|a| a.id == account) {
             a.sync.graph_responses.retain(|r| r.uid != uid);
             if a.sync.graph_responses.len() < 500 {
-                a.sync.graph_responses.push(mailcraft_model::account::GraphResponse {
+                a.sync.graph_responses.push(iridium_mail_model::account::GraphResponse {
                     uid,
                     response: answer.into(),
                     comment: comment.chars().take(32 * 1024).collect(),
@@ -4202,7 +4203,7 @@ fn run_propose_new_time(s: &mut Session, p: &Value) -> CmdResult {
     let mut compose = None;
     let mut sent = false;
     if let Some(org) = answered.organizer.clone().filter(|_| mode != SendMode::None) {
-        let ics = mailcraft_formats::ics::write(&[&proposal], &[], Some(&Method::Counter), s.now());
+        let ics = iridium_mail_formats::ics::write(&[&proposal], &[], Some(&Method::Counter), s.now());
         let body = if comment.trim().is_empty() {
             format!("Proposed new time: {}", when_text(&proposal, tz))
         } else {
@@ -4527,7 +4528,7 @@ fn run_cancel_meeting(s: &mut Session, p: &Value) -> CmdResult {
         {
             acc.sync.graph_cancels.retain(|c| c.url != remote.url);
             if acc.sync.graph_cancels.len() < 500 {
-                acc.sync.graph_cancels.push(mailcraft_model::account::GraphCancel {
+                acc.sync.graph_cancels.push(iridium_mail_model::account::GraphCancel {
                     uid,
                     url: remote.url.clone(),
                     comment: comment.chars().take(32 * 1024).collect(),
@@ -4969,12 +4970,12 @@ mod window_tests;
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use mailcraft_model::{FolderRole, Mailbox};
+    use iridium_mail_model::{FolderRole, Mailbox};
 
     /// Session over a fresh local mailbox, clock fixed at 2026-10-09 10:07 UTC (a Friday).
     pub(crate) fn session() -> Session {
         let mut s = Session::new(Mailbox::new_local("Test"));
-        s.fixed_now = mailcraft_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0);
+        s.fixed_now = iridium_mail_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0);
         if let Some(a) = s.mailbox.accounts.first_mut() {
             a.address = "me@example.com".into();
             a.sender_name = "Me Myself".into();
@@ -5016,9 +5017,9 @@ pub(crate) mod tests {
 
     #[test]
     fn next_half_hour_rounds_up() {
-        let now = mailcraft_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0).unwrap();
+        let now = iridium_mail_model::dates::local_datetime(2026, 10, 9, 10, 7, 0, 0).unwrap();
         assert_eq!(pim::datetime_string(next_half_hour(now, 0), 0), "2026-10-09T10:30");
-        let exact = mailcraft_model::dates::local_datetime(2026, 10, 9, 10, 30, 0, 0).unwrap();
+        let exact = iridium_mail_model::dates::local_datetime(2026, 10, 9, 10, 30, 0, 0).unwrap();
         assert_eq!(pim::datetime_string(next_half_hour(exact, 0), 0), "2026-10-09T11:00");
         // Local offset -04:00: 10:07 UTC is 06:07 local → 06:30 local.
         assert_eq!(pim::datetime_string(next_half_hour(now, -240), -240), "2026-10-09T06:30");
@@ -5312,7 +5313,7 @@ pub(crate) mod tests {
         ));
     }
 
-    fn graph_account(s: &mut Session) -> mailcraft_model::AccountId {
+    fn graph_account(s: &mut Session) -> iridium_mail_model::AccountId {
         let r = s
             .run(
                 "accounts.add",
@@ -5320,7 +5321,7 @@ pub(crate) mod tests {
                         "incoming": {"host": "https://graph.example.com/v1.0"}}),
             )
             .unwrap();
-        mailcraft_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap())
+        iridium_mail_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap())
     }
 
     #[test]
@@ -5420,7 +5421,7 @@ pub(crate) mod tests {
                         "incoming": {"host": "https://graph.example.com/v1.0"}}),
             )
             .unwrap();
-        let a = mailcraft_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap());
+        let a = iridium_mail_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap());
         // From Address Book without a person: the window asks; with a contact: that person's calendar.
         let r = s.run("calendar.addCalendar", &json!({"source": "addressBook"})).unwrap();
         assert_eq!(r["dialog"], "chooseContact", "{r}");
@@ -5821,9 +5822,9 @@ pub(crate) mod tests {
         // Shared as iCalendar, the deleted occurrence stays deleted and the moved one stays moved.
         let r = s.run("calendar.share", &json!({"calendar": "calendar"})).unwrap();
         let data = s.composes[&r["compose"].as_u64().unwrap()].attachments[0].data.clone();
-        let cal = mailcraft_formats::ics::read(&data, ImportOptions::default()).unwrap();
+        let cal = iridium_mail_formats::ics::read(&data, ImportOptions::default()).unwrap();
         let master = cal.events.iter().find(|e| e.appointment.recurrence.is_some()).unwrap();
-        let back = mailcraft_formats::ics::expand_appointment(
+        let back = iridium_mail_formats::ics::expand_appointment(
             &master.appointment,
             t("2026-10-01T00:00"),
             t("2026-11-01T00:00"),
@@ -5892,16 +5893,16 @@ pub(crate) mod tests {
     /// Delivers compose `cid` of `from` into `to`'s Inbox (built like a sent message).
     pub(crate) fn deliver(from: &Session, cid: u64, to: &mut Session) -> ItemId {
         let c = &from.composes[&cid];
-        let mut b = mailcraft_mime::MessageBuilder::new();
+        let mut b = iridium_mail_mime::MessageBuilder::new();
         let acc = from.mailbox.default_account().unwrap();
         b.from = Some(Address::new(Some(&acc.sender_name), &acc.address));
-        b.to = mailcraft_mime::parse_address_list(&c.to);
+        b.to = iridium_mail_mime::parse_address_list(&c.to);
         b.subject = c.subject.clone();
         b.text = Some(c.body.to_plain_text());
         b.attachments = c
             .attachments
             .iter()
-            .map(|a| mailcraft_mime::AttachmentSpec {
+            .map(|a| iridium_mail_mime::AttachmentSpec {
                 filename: a.filename.clone(),
                 mime_type: a.mime_type.clone(),
                 data: a.data.clone(),
@@ -5909,10 +5910,10 @@ pub(crate) mod tests {
             })
             .collect();
         let raw = b.build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, to.now());
         item.folder = role(to, FolderRole::Inbox);
-        to.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap()
+        to.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap()
     }
 
     pub(crate) fn invite(org: &mut Session) -> (ItemId, u64) {
@@ -5946,7 +5947,7 @@ pub(crate) mod tests {
         // Regression: a copy and a new exception carried the original's server link (a synchronised calendar
         // then overwrote the original on the server), while an organizer's update dropped the meeting's link
         // (its server copy was deleted and uploaded again under the same UID).
-        let link = |n: &str| mailcraft_model::RemoteRef {
+        let link = |n: &str| iridium_mail_model::RemoteRef {
             url: format!("https://dav.example.com/c/{n}.ics"),
             uid: n.into(),
             ..Default::default()
@@ -6143,22 +6144,22 @@ pub(crate) mod tests {
 
     /// Delivers a scheduling message written by "Org" into `to`'s Inbox.
     fn deliver_ics(to: &mut Session, method: &str, ics: &str) -> ItemId {
-        let mut b = mailcraft_mime::MessageBuilder::new();
+        let mut b = iridium_mail_mime::MessageBuilder::new();
         b.from = Some(Address::new(Some("Org"), "org@example.com"));
-        b.to = mailcraft_mime::parse_address_list("ann@example.com");
+        b.to = iridium_mail_mime::parse_address_list("ann@example.com");
         b.subject = "Weekly sync".into();
         b.text = Some("See invite".into());
-        b.attachments = vec![mailcraft_mime::AttachmentSpec {
+        b.attachments = vec![iridium_mail_mime::AttachmentSpec {
             filename: "invite.ics".into(),
             mime_type: format!("text/calendar; method={method}"),
             data: ics.replace('\n', "\r\n").into_bytes(),
             content_id: None,
         }];
         let raw = b.build();
-        let msg = mailcraft_mime::parse(&raw).unwrap();
+        let msg = iridium_mail_mime::parse(&raw).unwrap();
         let mut item = MailItem::from_message(&msg, &raw, to.now());
         item.folder = role(to, FolderRole::Inbox);
-        to.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap()
+        to.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap()
     }
 
     const SERIES: &str = "BEGIN:VEVENT\nUID:sync-1@example.com\nSEQUENCE:0\nDTSTART:20261012T150000Z\n\

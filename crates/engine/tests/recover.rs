@@ -3,8 +3,8 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::indexing_slicing)]
 
-use mailcraft_engine::model::{DateTime, FolderRole, ItemId, MailItem, Note};
-use mailcraft_engine::{Notice, Session};
+use iridium_mail_engine::model::{DateTime, FolderRole, ItemId, MailItem, Note};
+use iridium_mail_engine::{Notice, Session};
 use serde_json::{Value, json};
 
 fn run(s: &mut Session, id: &str, p: Value) -> Value {
@@ -91,11 +91,11 @@ fn survives_restart_and_the_undo_limit_then_purges() {
 fn an_unreadable_recover_file_is_set_aside_and_reported() {
     let dir = tempfile::tempdir().unwrap();
     drop(Session::open(dir.path()).unwrap());
-    let file = dir.path().join(mailcraft_store::RECOVERABLE_FILE);
+    let file = dir.path().join(iridium_mail_store::RECOVERABLE_FILE);
     std::fs::write(&file, b"{\"items\": [garbled").unwrap();
     let mut s = Session::open(dir.path()).unwrap();
     assert!(!file.exists(), "the unreadable file is moved away");
-    let bad = dir.path().join(format!("{}.bad", mailcraft_store::RECOVERABLE_FILE));
+    let bad = dir.path().join(format!("{}.bad", iridium_mail_store::RECOVERABLE_FILE));
     assert_eq!(std::fs::read(&bad).unwrap(), b"{\"items\": [garbled", "kept as .bad for inspection");
     assert!(
         s.notices.iter().any(|n| matches!(n, Notice::Error(t) if t.contains("recoverable deleted items"))),
@@ -115,8 +115,8 @@ fn an_unreadable_recover_file_is_set_aside_and_reported() {
 
 #[test]
 fn removing_an_account_does_not_fill_the_bin() {
-    use mailcraft_engine::model::{Account, AccountKind, ServerSettings};
-    let mut s = Session::new(mailcraft_engine::model::Mailbox::new_local("Local Folders"));
+    use iridium_mail_engine::model::{Account, AccountKind, ServerSettings};
+    let mut s = Session::new(iridium_mail_engine::model::Mailbox::new_local("Local Folders"));
     at(&mut s, T0);
     let kept = delete_for_good(&mut s, "Deleted on purpose");
     let id = s.mailbox.add_account(Account {
@@ -144,7 +144,7 @@ fn removing_an_account_does_not_fill_the_bin() {
 
 #[test]
 fn retention_option_and_purge_selected() {
-    let mut s = Session::new(mailcraft_engine::model::Mailbox::new_local("Local Folders"));
+    let mut s = Session::new(iridium_mail_engine::model::Mailbox::new_local("Local Folders"));
     at(&mut s, T0);
     let a = delete_for_good(&mut s, "One");
     let b = delete_for_good(&mut s, "Two");
@@ -167,7 +167,7 @@ fn retention_option_and_purge_selected() {
 
 #[test]
 fn notes_are_recoverable_too() {
-    let mut s = Session::new(mailcraft_engine::model::Mailbox::new_local("Local Folders"));
+    let mut s = Session::new(iridium_mail_engine::model::Mailbox::new_local("Local Folders"));
     at(&mut s, T0);
     let account = s.mailbox.accounts[0].id;
     let notes = s.mailbox.role_folder(account, FolderRole::Notes).unwrap();

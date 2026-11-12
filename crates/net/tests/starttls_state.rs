@@ -8,8 +8,8 @@ use std::net::TcpListener;
 use std::sync::Arc;
 use std::time::Duration;
 
-use mailcraft_net::imap::ImapClient;
-use mailcraft_net::{ConnectOptions, Security};
+use iridium_mail_net::imap::ImapClient;
+use iridium_mail_net::{ConnectOptions, Security};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 
 /// Reads one line byte by byte (so nothing past it is consumed), without its line ending.

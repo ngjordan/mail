@@ -33,8 +33,8 @@
 //! that changed. Only calendar, contact, task and note changes still journal a whole-mailbox `Replace`, until
 //! storage stage S12.
 
-use mailcraft_model::{ChangeToken, MailChanges, Mailbox};
-use mailcraft_store::Op;
+use iridium_mail_model::{ChangeToken, MailChanges, Mailbox};
+use iridium_mail_store::Op;
 
 use crate::Session;
 
@@ -54,11 +54,11 @@ impl Recording {
         &self.small
     }
 
-    /// The mail before-images written so far (see [`mailcraft_model::MailTable::recorded`]).
+    /// The mail before-images written so far (see [`iridium_mail_model::MailTable::recorded`]).
     pub(crate) fn mail_so_far<'a>(
         &self,
         now: &'a Mailbox,
-    ) -> Vec<(mailcraft_model::ItemId, Option<&'a mailcraft_model::MailItem>)> {
+    ) -> Vec<(iridium_mail_model::ItemId, Option<&'a iridium_mail_model::MailItem>)> {
         now.mail.recorded(self.token)
     }
 }
@@ -324,7 +324,7 @@ impl Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{ItemId, MailItem};
+    use iridium_mail_model::{ItemId, MailItem};
 
     fn session() -> Session {
         crate::sample::sample_session()
@@ -478,7 +478,7 @@ mod tests {
     fn configuration_changes_journal_the_parts_that_changed() {
         let mut s = session();
         let ops = recorded(&mut s, |mb| {
-            mb.categories.push(mailcraft_model::Category { name: "Fresh".into(), ..Default::default() })
+            mb.categories.push(iridium_mail_model::Category { name: "Fresh".into(), ..Default::default() })
         });
         let [Op::PutConfig(state)] = ops.as_slice() else { panic!("{ops:?}") };
         assert!(state.categories.is_some() && state.accounts.is_none() && state.rules.is_none());
@@ -499,7 +499,7 @@ mod tests {
             mb.accounts.reverse();
             let gone = mb.accounts.pop();
             let mut fresh = gone.unwrap_or_default();
-            fresh.id = mailcraft_model::AccountId(9_000);
+            fresh.id = iridium_mail_model::AccountId(9_000);
             fresh.sync.next_op = 5;
             mb.accounts.push(fresh);
         });
@@ -508,7 +508,7 @@ mod tests {
         assert!(!ops.iter().any(|o| matches!(o, Op::Replace(_))));
         // Calendar, contacts, tasks and notes still journal the whole mailbox (until stage S12).
         let ops = recorded(&mut s, |mb| {
-            mb.notes.insert(ItemId(8_000_000), mailcraft_model::Note::default());
+            mb.notes.insert(ItemId(8_000_000), iridium_mail_model::Note::default());
         });
         assert!(matches!(ops.as_slice(), [Op::Replace(_)]), "{ops:?}");
         // Repeated account ids cannot be said per account.
@@ -528,7 +528,7 @@ mod tests {
         let s = session();
         let before = s.mailbox.clone();
         let mut now = before.clone();
-        now.categories.push(mailcraft_model::Category { name: "Fresh".into(), ..Default::default() });
+        now.categories.push(iridium_mail_model::Category { name: "Fresh".into(), ..Default::default() });
         let account = now.accounts.first().map(|a| a.id).unwrap();
         if let Some(a) = now.accounts.first_mut() {
             a.sync.next_op = a.sync.next_op.wrapping_add(3);
@@ -546,7 +546,7 @@ mod tests {
             .iter()
             .cloned()
             .map(|o| match o {
-                Op::PutSync(id, sy) if id == account => Op::PutSync(mailcraft_model::AccountId(9_999), sy),
+                Op::PutSync(id, sy) if id == account => Op::PutSync(iridium_mail_model::AccountId(9_999), sy),
                 o => o,
             })
             .collect();

@@ -5,7 +5,7 @@
 //! frequencies are rejected; BYHOUR/BYMINUTE/BYSECOND are ignored (occurrences keep DTSTART's time of day). DTSTART is always
 //! the first occurrence. Expansion is bounded by a period cap and a result cap.
 
-use mailcraft_model::dates::{days_from_civil, days_in_month};
+use iridium_mail_model::dates::{days_from_civil, days_in_month};
 
 use super::value::{self, DAY, MAX_YEAR, MIN_YEAR};
 
@@ -246,7 +246,7 @@ pub struct Expand<'a> {
 }
 
 fn month_index(day: i64) -> (i64, i64) {
-    let (y, m, _) = mailcraft_model::dates::civil_from_days(day);
+    let (y, m, _) = iridium_mail_model::dates::civil_from_days(day);
     (y, y * 12 + i64::from(m) - 1)
 }
 
@@ -353,7 +353,7 @@ impl Rrule {
     }
 
     fn day_matches_limits(&self, day: i64, check_by_day: bool) -> bool {
-        let (y, m, d) = mailcraft_model::dates::civil_from_days(day);
+        let (y, m, d) = iridium_mail_model::dates::civil_from_days(day);
         if !self.by_month.is_empty() && !self.by_month.contains(&m) {
             return false;
         }
@@ -368,7 +368,7 @@ impl Rrule {
         }
         if !self.by_year_day.is_empty() {
             let Some(jan1) = days_from_civil(y, 1, 1) else { return false };
-            let len = if mailcraft_model::dates::is_leap_year(y) { 366 } else { 365 };
+            let len = if iridium_mail_model::dates::is_leap_year(y) { 366 } else { 365 };
             let yd = day - jan1 + 1;
             if !self.by_year_day.iter().any(|&n| {
                 let n = i64::from(n);
@@ -384,13 +384,13 @@ impl Rrule {
     fn period(&self, k: i64, start_day: i64) -> Option<(i64, Vec<i64>)> {
         let step = k.checked_mul(i64::from(self.interval))?;
         let (sy, smi) = month_index(start_day);
-        let (_, _, sdom) = mailcraft_model::dates::civil_from_days(start_day);
+        let (_, _, sdom) = iridium_mail_model::dates::civil_from_days(start_day);
         let mut out = Vec::new();
         let first_day;
         match self.freq {
             Freq::Daily => {
                 let day = start_day.checked_add(step)?;
-                if mailcraft_model::dates::civil_from_days(day).0 > MAX_YEAR {
+                if iridium_mail_model::dates::civil_from_days(day).0 > MAX_YEAR {
                     return None;
                 }
                 first_day = day;
@@ -401,7 +401,7 @@ impl Rrule {
             Freq::Weekly => {
                 let ws0 = self.week_start(start_day);
                 let ws = ws0.checked_add(step.checked_mul(7)?)?;
-                if mailcraft_model::dates::civil_from_days(ws).0 > MAX_YEAR {
+                if iridium_mail_model::dates::civil_from_days(ws).0 > MAX_YEAR {
                     return None;
                 }
                 first_day = ws;
@@ -413,7 +413,7 @@ impl Rrule {
                     }
                 }
                 out.retain(|&d| {
-                    let (y, m, _) = mailcraft_model::dates::civil_from_days(d);
+                    let (y, m, _) = iridium_mail_model::dates::civil_from_days(d);
                     y <= MAX_YEAR && (self.by_month.is_empty() || self.by_month.contains(&m))
                 });
             }
@@ -455,7 +455,7 @@ impl Rrule {
                         }
                     }
                     out.retain(|&d| {
-                        let (_, m, _) = mailcraft_model::dates::civil_from_days(d);
+                        let (_, m, _) = iridium_mail_model::dates::civil_from_days(d);
                         (self.by_month.is_empty() || self.by_month.contains(&m))
                             && (self.by_day.is_empty() || self.by_day.iter().any(|&(_, wd)| wd == weekday(d)))
                     });
@@ -466,7 +466,7 @@ impl Rrule {
                         nth_weekdays(jan1, dec31, ord, wd, &mut out);
                     }
                 } else {
-                    let (_, sm, _) = mailcraft_model::dates::civil_from_days(start_day);
+                    let (_, sm, _) = iridium_mail_model::dates::civil_from_days(start_day);
                     let months: Vec<u8> = if !self.by_month.is_empty() {
                         self.by_month.clone()
                     } else if !self.by_month_day.is_empty() {

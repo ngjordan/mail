@@ -3,7 +3,7 @@
 # libraries it bundles: the test the AppImage catalog runs, and what a user on a desktop without the app's
 # libraries sees.
 #
-#     packaging/linux/appimage-smoke.sh [--timeout SECONDS] [--settle SECONDS] <MailCraft-ARCH.AppImage>
+#     packaging/linux/appimage-smoke.sh [--timeout SECONDS] [--settle SECONDS] <Mail-ARCH.AppImage>
 #     packaging/linux/appimage-smoke.sh --check-maps <MAPS-FILE> <LIBDIR>
 #
 #   --timeout     how long to wait for the window (default 30 s)
@@ -14,7 +14,7 @@
 # Meant for a clean, offline system: packaging/linux/appimage-test.sh runs it inside an Ubuntu 22.04
 # container without network. Needs Xvfb and xdotool. The AppImage runs with APPIMAGE_EXTRACT_AND_RUN=1
 # (no FUSE needed), a new empty HOME and no arguments, like a first start.
-# Exit status 0 when, in this order: a visible MailCraft window appears within the timeout; the app is
+# Exit status 0 when, in this order: a visible Mail window appears within the timeout; the app is
 # still running when the settle time is over; its environment has no LD_LIBRARY_PATH; and the libraries in
 # FROM_BUNDLE below, plus every other library it loaded that the AppImage bundles, were loaded from the
 # AppImage's usr/lib. 1 otherwise, after printing the app's output.
@@ -140,18 +140,18 @@ for _ in $(seq 1 "$((timeout * 2))"); do
 	if ! kill -0 "$app_pid" 2>/dev/null; then
 		break
 	fi
-	found="$(DISPLAY="$display" xdotool search --onlyvisible --name 'MailCraft' 2>/dev/null | head -n 1 || true)"
+	found="$(DISPLAY="$display" xdotool search --onlyvisible --name 'Mail' 2>/dev/null | head -n 1 || true)"
 	[ -n "$found" ] && break
 	sleep 0.5
 done
 
-# Process id of the running app (the process whose executable is .../usr/bin/mailcraft), or nothing.
+# Process id of the running app (the process whose executable is .../usr/bin/iridium-mail), or nothing.
 app_proc() {
 	local p exe
 	for p in /proc/[0-9]*; do
 		exe="$(readlink "$p/exe" 2>/dev/null || true)"
 		case "$exe" in
-		*/usr/bin/mailcraft) echo "${p#/proc/}"; return 0 ;;
+		*/usr/bin/iridium-mail) echo "${p#/proc/}"; return 0 ;;
 		esac
 	done
 }
@@ -170,7 +170,7 @@ reap() {
 }
 if [ -z "$found" ]; then
 	if kill -0 "$app_pid" 2>/dev/null; then
-		fail "no MailCraft window after $timeout s"
+		fail "no Mail window after $timeout s"
 	else
 		reap
 		fail "the app exited (status $code) before showing a window"
@@ -188,7 +188,7 @@ else
 		reap
 		fail "the app exited (status $code) within $settle s after its window appeared"
 	elif [ -z "$pid" ]; then
-		fail "the app's usr/bin/mailcraft process is gone $settle s after its window appeared"
+		fail "the app's usr/bin/iridium-mail process is gone $settle s after its window appeared"
 	else
 		echo "appimage-smoke: still running $settle s later: ok"
 		# The app is started with an empty environment, so an LD_LIBRARY_PATH here came from the AppImage
@@ -199,7 +199,7 @@ else
 		fi
 		exe="$(readlink "/proc/$pid/exe" 2>/dev/null || true)"
 		cat "/proc/$pid/maps" >"$work/maps" 2>/dev/null || true
-		if check_maps "$work/maps" "${exe%/bin/mailcraft}/lib"; then
+		if check_maps "$work/maps" "${exe%/bin/iridium-mail}/lib"; then
 			echo "appimage-smoke: bundled libraries loaded from the AppImage: ok"
 		else
 			status=1

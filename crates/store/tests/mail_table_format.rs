@@ -10,12 +10,12 @@
 use std::collections::BTreeMap;
 use std::ops::ControlFlow;
 
-use mailcraft_model::{
+use iridium_mail_model::{
     Account, AccountSignatures, Address, Appointment, Category, Contact, DateTime, Folder, FolderId,
     FolderRole, ItemId, JunkSettings, MailItem, Mailbox, Note, QuickStep, RecentRecipient, Rule, ScanFilter,
     Signature, Task, ViewSettings,
 };
-use mailcraft_store::{MailRepo, Op, Store, journal};
+use iridium_mail_store::{MailRepo, Op, Store, journal};
 use serde::Serialize;
 
 /// `Mailbox` as it was declared before S2, field for field, with the bare map.
@@ -111,7 +111,7 @@ fn fixture() -> Mailbox {
     let calendar = mb.role_folder(account, FolderRole::Calendar).unwrap();
     mb.appointments
         .insert(id, Appointment { id, folder: calendar, subject: "Standup".into(), ..Default::default() });
-    mb.custom_dictionary.push("MailCraft".into());
+    mb.custom_dictionary.push("Mail".into());
     mb
 }
 
@@ -138,7 +138,7 @@ fn snapshot_file_is_byte_identical() {
     journal::write_snapshot(dir.path(), 7, &mb).unwrap();
     let written = std::fs::read(dir.path().join(journal::SNAPSHOT_FILE)).unwrap();
     // Since storage stage S5 the envelope marks that items carry no content inline.
-    let mut want = b"{\"mailcraft_snapshot\":2,\"generation\":7,\"bodies\":2,\"mailbox\":".to_vec();
+    let mut want = b"{\"iridium_mail_snapshot\":2,\"generation\":7,\"bodies\":2,\"mailbox\":".to_vec();
     want.extend(serde_json::to_vec(&legacy(&mb)).unwrap());
     want.push(b'}');
     assert_eq!(written, want);
@@ -203,7 +203,7 @@ fn repo_trait_object_reads_what_the_table_reads() {
     })
     .unwrap();
     assert_eq!(seen, t.ids_in(inbox));
-    let empty = mailcraft_model::MailTable::new();
+    let empty = iridium_mail_model::MailTable::new();
     let repo: &dyn MailRepo = &empty;
     assert!(repo.is_empty() && repo.all_counts().is_empty() && repo.ids_in(inbox).is_empty());
 }
@@ -234,7 +234,7 @@ fn repo_trait_object_writes_into_change_records() {
     assert_eq!(changes.ids().collect::<Vec<_>>(), vec![ids[0], ids[1], ItemId(900)]);
     assert_eq!(changes.before(ItemId(900)), Some(None));
     assert_eq!(changes.before(ids[0]).flatten(), start.get(ids[0]));
-    assert!(matches!(repo.commit(token), Err(mailcraft_store::StoreError::NoChangeRecord)));
+    assert!(matches!(repo.commit(token), Err(iridium_mail_store::StoreError::NoChangeRecord)));
     // A rollback puts back what was written since its begin.
     let after = mb.mail.clone();
     let repo: &mut dyn MailRepo = &mut mb.mail;

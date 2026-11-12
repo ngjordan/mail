@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::model::{Account, DateTime, FolderId, FolderRole, Mailbox, ServerSettings};
-use mailcraft_store::Content;
+use iridium_mail_store::Content;
 
 const NOW: i64 = 1_791_000_000;
 
@@ -229,7 +229,7 @@ fn opening_downloads_the_body_again_when_online() {
     assert!(text.contains("Downloading") || text.contains("could not be downloaded"), "{text}");
     // The whole message arrives: the body is back and the item is an ordinary one again.
     f.s.view.work_offline = true;
-    let msg = mailcraft_net::sync::NewMessage {
+    let msg = iridium_mail_net::sync::NewMessage {
         uid: 7,
         raw: raw(7),
         flags: vec![],
@@ -309,7 +309,7 @@ fn content_stays_until_the_store_holds_the_change() {
     let dir = tempfile::tempdir().unwrap();
     let mut f = fx();
     // The journal's size cap makes the write fail (a legacy profile).
-    let mut s = Session::open_with(dir.path(), mailcraft_store::StoreKind::Legacy).unwrap();
+    let mut s = Session::open_with(dir.path(), iridium_mail_store::StoreKind::Legacy).unwrap();
     s.mailbox = std::mem::take(&mut f.s.mailbox);
     s.fixed_now = f.s.fixed_now;
     s.view.work_offline = true;
@@ -423,7 +423,7 @@ fn a_message_without_its_body_never_leaves_its_server() {
     f.s.run("mail.move", &json!({"ids": [old.0], "folder": old_folder.0})).unwrap();
     assert!(matches!(
         f.s.mailbox.account(acct).unwrap().sync.pending.last().map(|p| &p.op),
-        Some(mailcraft_model::account::RemoteOp::Move { .. })
+        Some(iridium_mail_model::account::RemoteOp::Move { .. })
     ));
     // Once downloaded again, it moves out like any other message.
     f.s.set_source(old, Some(&raw(1))).unwrap();

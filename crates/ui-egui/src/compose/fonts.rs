@@ -1,5 +1,5 @@
 //! Font names for the compose Font list (ribbon Font box, Font dialog): the theme's heading and body fonts,
-//! then every font MailCraft knows a stand-in for ([`mailcraft_fonts::MENU_FAMILIES`]) together with the
+//! then every font Mail knows a stand-in for ([`iridium_mail_fonts::MENU_FAMILIES`]) together with the
 //! fonts installed on this computer. Installed fonts come from the platform: the desktop app installs a
 //! reader with [`set_installed_fonts_reader`] (it scans the system font folders in the background); without
 //! one (web, tests) only the known names are listed. Text in any font is drawn with the closest bundled
@@ -29,7 +29,7 @@ pub fn installed_fonts() -> Vec<String> {
 
 /// The known names plus `installed`, sorted without regard to case, each once, at most [`MAX_FONT_NAMES`].
 pub fn merge_font_names(installed: &[String]) -> Vec<String> {
-    let mut all: Vec<String> = mailcraft_fonts::MENU_FAMILIES.iter().map(|s| (*s).to_owned()).collect();
+    let mut all: Vec<String> = iridium_mail_fonts::MENU_FAMILIES.iter().map(|s| (*s).to_owned()).collect();
     for name in installed {
         let n = name.trim();
         // Hidden system faces start with a dot; very long names are not font names.
@@ -74,8 +74,8 @@ mod tests {
 
     #[test]
     fn every_known_name_has_a_bundled_stand_in() {
-        for n in mailcraft_fonts::MENU_FAMILIES {
-            assert!(mailcraft_fonts::bundled_family_for(n).is_some(), "{n}");
+        for n in iridium_mail_fonts::MENU_FAMILIES {
+            assert!(iridium_mail_fonts::bundled_family_for(n).is_some(), "{n}");
         }
     }
 }

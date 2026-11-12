@@ -1,9 +1,9 @@
 //! Hostile-parameter fuzzing of every registered command: nothing may panic (the panic guard in
 //! `Session::run` must never be what saves a command) and the mailbox must stay structurally valid.
 
-use mailcraft_engine::compose::ComposeState;
-use mailcraft_engine::sample::sample_session;
-use mailcraft_engine::{CmdError, Session};
+use iridium_mail_engine::compose::ComposeState;
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_engine::{CmdError, Session};
 use serde_json::{Value, json};
 
 /// Parameter keys commands use (ids, folders, names, sizes, modes …).
@@ -79,7 +79,7 @@ fn hostile_params(missing_dir: &str) -> Vec<Value> {
 /// commands are enabled.
 fn prepared() -> Session {
     let mut s = sample_session();
-    let first = mailcraft_engine::queries::visible_item_ids(&s).first().copied();
+    let first = iridium_mail_engine::queries::visible_item_ids(&s).first().copied();
     if let Some(id) = first {
         s.selection.items = vec![id];
         s.selection.focus = Some(id);
@@ -122,9 +122,9 @@ fn no_command_panics_on_hostile_params() {
                     break;
                 }
                 // Read-only views must cope with whatever state the command left.
-                let _ = mailcraft_engine::queries::list_rows(&s);
-                let _ = mailcraft_engine::queries::folder_rows(&s);
-                let _ = mailcraft_engine::queries::status_counts(&s);
+                let _ = iridium_mail_engine::queries::list_rows(&s);
+                let _ = iridium_mail_engine::queries::folder_rows(&s);
+                let _ = iridium_mail_engine::queries::status_counts(&s);
                 // The memoised folder counts must follow whatever the command did (issue #25).
                 if *s.all_folder_counts() != s.mailbox.folder_counts() {
                     failures.push(format!("{id} left stale folder counts"));

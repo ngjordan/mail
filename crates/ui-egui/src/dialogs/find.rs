@@ -8,8 +8,8 @@ use super::common::{
     take_replies, window, with_state,
 };
 use crate::App;
-use mailcraft_engine::cmd::search::{item_matches, token};
-use mailcraft_model::{FolderId, ItemId};
+use iridium_mail_engine::cmd::search::{item_matches, token};
+use iridium_mail_model::{FolderId, ItemId};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -279,7 +279,7 @@ fn build_query(st: &FindState) -> String {
 /// Advanced tab: "Define more criteria" (a field, a condition and a value, added to the list below) over the
 /// form fields the engine knows (`search.refine` kind field uses the same ones).
 fn criteria_ui(ui: &mut egui::Ui, app: &App, uid: u64, st: &mut FindState) {
-    use mailcraft_engine::cmd::search::{FORM_FIELDS, FieldType, conditions_of, field_term};
+    use iridium_mail_engine::cmd::search::{FORM_FIELDS, FieldType, conditions_of, field_term};
     ui.label(RichText::new("Define more criteria:").strong());
     ui.end_row();
     let labels: Vec<&str> = FORM_FIELDS.iter().map(|(_, l, _)| *l).collect();
@@ -451,7 +451,7 @@ fn found_row(app: &App, id: ItemId) -> Option<FoundRow> {
         return Some(FoundRow {
             from: m.from.as_ref().map(|f| f.display().to_owned()).unwrap_or_default(),
             subject: untitled(&m.subject),
-            when: mailcraft_model::ListTime::short_date_time(m.received, tz),
+            when: iridium_mail_model::ListTime::short_date_time(m.received, tz),
             folder: folder(m.folder),
             window: None,
         });
@@ -461,7 +461,7 @@ fn found_row(app: &App, id: ItemId) -> Option<FoundRow> {
         return Some(FoundRow {
             from: kind.to_owned(),
             subject: untitled(&a.subject),
-            when: mailcraft_model::ListTime::short_date_time(a.start, tz),
+            when: iridium_mail_model::ListTime::short_date_time(a.start, tz),
             folder: folder(a.folder),
             window: Some("appointment"),
         });
@@ -480,7 +480,7 @@ fn found_row(app: &App, id: ItemId) -> Option<FoundRow> {
         return Some(FoundRow {
             from: "Task".to_owned(),
             subject: untitled(&t.subject),
-            when: t.due.map(|d| mailcraft_model::ListTime::short_date_time(d, tz)).unwrap_or_default(),
+            when: t.due.map(|d| iridium_mail_model::ListTime::short_date_time(d, tz)).unwrap_or_default(),
             folder: folder(t.folder),
             window: Some("task"),
         });
@@ -524,7 +524,7 @@ type Entry = (String, String, String, Option<u64>);
 /// Properties › Address Book, under the name given there), the recent recipients.
 fn books(app: &App) -> Vec<(String, String)> {
     let mut v = vec![(String::new(), "Contacts (all address books)".to_owned())];
-    let folders: Vec<(String, String)> = mailcraft_engine::cmd::people::address_books(&app.s)
+    let folders: Vec<(String, String)> = iridium_mail_engine::cmd::people::address_books(&app.s)
         .into_iter()
         .map(|(f, name)| (f.0.to_string(), name))
         .collect();
@@ -561,7 +561,7 @@ fn entries(app: &App, book: &str) -> Vec<Entry> {
             .collect()
     } else {
         let folder = book.parse::<u64>().ok();
-        let shown = mailcraft_engine::cmd::people::BookFilter::new(&app.s);
+        let shown = iridium_mail_engine::cmd::people::BookFilter::new(&app.s);
         app.s
             .mailbox
             .contacts
@@ -870,7 +870,7 @@ fn check_names(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         |_: &App| CheckState { picks: vec![0; unresolved.len()] },
         |st, app| {
             window(ctx, app, d, "Check Names", 460.0, |ui, app| {
-                muted(ui, app, "MailCraft found more than one match, or none, for these names.");
+                muted(ui, app, "Mail found more than one match, or none, for these names.");
                 egui::ScrollArea::vertical().id_salt(("cn", uid)).max_height(300.0).show(ui, |ui| {
                     for (i, u) in unresolved.iter().enumerate() {
                         let name = u.get("name").and_then(Value::as_str).unwrap_or_default();

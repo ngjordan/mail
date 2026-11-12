@@ -6,8 +6,8 @@ use egui_kittest::kittest::{NodeT, Queryable};
 use serde_json::{Value, json};
 
 use crate::{App, Surface};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{FlagState, FolderId, ItemId, RuleAction, RuleCondition};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{FlagState, FolderId, ItemId, RuleAction, RuleCondition};
 
 fn harness(app: App) -> Harness<'static, App> {
     let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(
@@ -502,7 +502,7 @@ fn module_dialogs_raised_mid_frame_do_not_flash_a_generic_window() {
     h.state_mut()
         .s
         .notices
-        .push(mailcraft_engine::Notice::OpenDialog("mailMerge".into(), json!({"ids": []})));
+        .push(iridium_mail_engine::Notice::OpenDialog("mailMerge".into(), json!({"ids": []})));
     h.run_steps(1);
     assert!(h.query_by_label_contains("is not available yet").is_none());
     assert!(h.query_by_label_contains("needs a word processor").is_none());
@@ -684,7 +684,7 @@ fn read_window_backstage_acts_on_its_own_message() {
 /// nothing, and a change is applied (also while turning the conversation view off).
 #[test]
 fn conversation_settings_dialog_follows_the_engine() {
-    use mailcraft_engine::queries::{conversation_settings, view_settings};
+    use iridium_mail_engine::queries::{conversation_settings, view_settings};
     let mut app = sample_app();
     app.run("view.conversations", json!({"on": true}));
     let folder = app.s.selection.folder;
@@ -726,7 +726,7 @@ fn ignore_prompt_offers_dont_ask_again() {
     step(&mut h);
     let app = h.state();
     assert!(app.s.mailbox.mail.get(ItemId(item)).unwrap().ignored);
-    assert!(app.s.settings.bool(mailcraft_engine::cmd::mail::IGNORE_DONT_ASK));
+    assert!(app.s.settings.bool(iridium_mail_engine::cmd::mail::IGNORE_DONT_ASK));
 }
 
 #[test]
@@ -794,7 +794,7 @@ fn new_folder_from_the_account_root_goes_to_the_top_level() {
     assert_eq!(f.account, acct);
 }
 
-fn module_folder(app: &mut App, kind: mailcraft_model::FolderKind) -> FolderId {
+fn module_folder(app: &mut App, kind: iridium_mail_model::FolderKind) -> FolderId {
     let f = app.s.mailbox.folders.values().find(|f| f.kind == kind).map(|f| f.id).unwrap();
     app.run("nav.selectFolder", json!({"folder": f.0})).unwrap();
     f
@@ -803,7 +803,7 @@ fn module_folder(app: &mut App, kind: mailcraft_model::FolderKind) -> FolderId {
 #[test]
 fn module_show_columns_adds_and_orders_columns() {
     let mut app = sample_app();
-    let folder = module_folder(&mut app, mailcraft_model::FolderKind::Contacts);
+    let folder = module_folder(&mut app, iridium_mail_model::FolderKind::Contacts);
     app.run("view.changeView", json!({"name": "Phone"})).unwrap();
     app.run("view.addColumns", json!({})).unwrap();
     let mut h = harness(app);
@@ -818,7 +818,7 @@ fn module_show_columns_adds_and_orders_columns() {
     step(&mut h);
     assert!(names(&h).is_empty());
     let cols: Vec<&str> =
-        mailcraft_engine::cmd::view::table::columns(&h.state().s, folder).iter().map(|c| c.id).collect();
+        iridium_mail_engine::cmd::view::table::columns(&h.state().s, folder).iter().map(|c| c.id).collect();
     let n = cols.len();
     assert_eq!(cols.get(n - 2), Some(&"department"), "{cols:?}");
     assert_eq!(cols.last(), Some(&"flagStatus"));
@@ -826,9 +826,9 @@ fn module_show_columns_adds_and_orders_columns() {
 
 #[test]
 fn module_format_columns_aligns_a_task_column() {
-    use mailcraft_engine::cmd::view::table;
+    use iridium_mail_engine::cmd::view::table;
     let mut app = sample_app();
-    let folder = module_folder(&mut app, mailcraft_model::FolderKind::Tasks);
+    let folder = module_folder(&mut app, iridium_mail_model::FolderKind::Tasks);
     app.run("view.changeView", json!({"name": "Detailed"})).unwrap();
     app.run("view.formatColumns", json!({})).unwrap();
     let mut h = harness(app);
@@ -845,9 +845,9 @@ fn module_format_columns_aligns_a_task_column() {
 
 #[test]
 fn module_manage_views_creates_renames_and_deletes() {
-    use mailcraft_engine::cmd::view::modules;
+    use iridium_mail_engine::cmd::view::modules;
     let mut app = sample_app();
-    let folder = module_folder(&mut app, mailcraft_model::FolderKind::Tasks);
+    let folder = module_folder(&mut app, iridium_mail_model::FolderKind::Tasks);
     app.run("view.manageViews", json!({})).unwrap();
     let mut h = harness(app);
     assert_eq!(names(&h), ["manageViews"]);
@@ -899,7 +899,7 @@ fn module_manage_views_creates_renames_and_deletes() {
 #[test]
 fn module_manage_views_describes_the_selected_view_and_has_ok() {
     let mut app = sample_app();
-    module_folder(&mut app, mailcraft_model::FolderKind::Tasks);
+    module_folder(&mut app, iridium_mail_model::FolderKind::Tasks);
     app.run("view.changeView", json!({"name": "Simple List"})).unwrap();
     app.run("view.columns", json!({"columns": ["subject", "priority"]})).unwrap();
     app.run("view.manageViews", json!({})).unwrap();
@@ -923,7 +923,7 @@ fn module_manage_views_describes_the_selected_view_and_has_ok() {
 #[test]
 fn contact_color_categories_assign_through_people_categorize() {
     let mut app = sample_app();
-    let folder = module_folder(&mut app, mailcraft_model::FolderKind::Contacts);
+    let folder = module_folder(&mut app, iridium_mail_model::FolderKind::Contacts);
     let id = app.s.mailbox.contacts.values().find(|c| c.folder == folder).map(|c| c.id).unwrap();
     app.s.selection.items = vec![id];
     app.s.selection.focus = Some(id);
@@ -994,10 +994,10 @@ fn new_data_file_saves_a_file_of_its_own_with_a_password() {
     assert!(names(&h).is_empty(), "{:?}", names(&h));
     assert!(file.is_file(), "the file is written at once");
     let bytes = std::fs::read(&file).unwrap();
-    assert!(mailcraft_engine::datafile::is_sealed(&bytes), "and encrypted");
+    assert!(iridium_mail_engine::datafile::is_sealed(&bytes), "and encrypted");
     let a = h.state().s.mailbox.accounts.iter().find(|a| a.data_file.is_some()).cloned().unwrap();
     // Closing a protected file whose password is not kept asks for it in its own dialog.
-    h.state_mut().s.secrets.remove(&mailcraft_engine::datafile::secret_key(a.id)).unwrap();
+    h.state_mut().s.secrets.remove(&iridium_mail_engine::datafile::secret_key(a.id)).unwrap();
     h.state_mut().run("file.closeDataFile", json!({"store": a.id.0, "confirm": true}));
     step(&mut h);
     assert_eq!(names(&h), ["dataFilePassword"]);
@@ -1022,7 +1022,7 @@ fn closing_a_protected_data_file_without_its_file_asks_for_the_password_twice() 
     let mut app = sample_app();
     app.run("file.newDataFile", json!({"path": file.to_str().unwrap(), "password": "pw-123"})).unwrap();
     let id = app.s.mailbox.accounts.iter().find(|a| a.data_file.is_some()).map(|a| a.id).unwrap();
-    app.s.secrets.remove(&mailcraft_engine::datafile::secret_key(id)).unwrap();
+    app.s.secrets.remove(&iridium_mail_engine::datafile::secret_key(id)).unwrap();
     std::fs::remove_file(&file).unwrap();
     app.run("file.closeDataFile", json!({"store": id.0, "confirm": true}));
     let mut h = harness(app);
@@ -1042,7 +1042,10 @@ fn closing_a_protected_data_file_without_its_file_asks_for_the_password_twice() 
     assert!(names(&h).is_empty(), "{:?}", names(&h));
     assert!(h.state().s.mailbox.account(id).is_none(), "closed");
     let bytes = std::fs::read(&file).unwrap();
-    assert!(mailcraft_engine::datafile::unseal(&bytes, "pw-123").is_ok(), "written under the typed password");
+    assert!(
+        iridium_mail_engine::datafile::unseal(&bytes, "pw-123").is_ok(),
+        "written under the typed password"
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
@@ -1050,7 +1053,7 @@ fn closing_a_protected_data_file_without_its_file_asks_for_the_password_twice() 
 fn stationery_picker_opens_a_message_on_the_chosen_stationery() {
     let mut app = sample_app();
     let before = app.s.composes.len();
-    let list = mailcraft_engine::cmd::mail::stationery_list();
+    let list = iridium_mail_engine::cmd::mail::stationery_list();
     crate::dialogs::open(&mut app, "pickStationery", json!({"stationery": list, "default": "none"}));
     let mut h = harness(app);
     h.get_by_label("Linen").click();
@@ -1081,7 +1084,7 @@ fn send_receive_groups_dialog_lists_and_adds_groups() {
         .s
         .run("sendReceive.defineGroups", &json!({"action": "save", "group": {"name": "Evening"}}))
         .unwrap();
-    assert_eq!(mailcraft_engine::sync::groups::groups(&h.state().s).len(), 1);
+    assert_eq!(iridium_mail_engine::sync::groups::groups(&h.state().s).len(), 1);
 }
 
 #[test]
@@ -1130,8 +1133,8 @@ fn training_lessons_page_with_next_and_back() {
 fn recover_deleted_items_purges_selected() {
     let mut app = sample_app();
     let account = app.s.current_account().unwrap();
-    let deleted = app.s.mailbox.role_folder(account, mailcraft_model::FolderRole::DeletedItems).unwrap();
-    app.s.mailbox.add_mail(mailcraft_model::MailItem {
+    let deleted = app.s.mailbox.role_folder(account, iridium_mail_model::FolderRole::DeletedItems).unwrap();
+    app.s.mailbox.add_mail(iridium_mail_model::MailItem {
         folder: deleted,
         subject: "Old memo".into(),
         ..Default::default()
@@ -1145,7 +1148,7 @@ fn recover_deleted_items_purges_selected() {
         .iter()
         .rev()
         .find_map(|n| match n {
-            mailcraft_engine::Notice::OpenDialog(d, p) if d == "recoverDeletedItems" => Some(p.clone()),
+            iridium_mail_engine::Notice::OpenDialog(d, p) if d == "recoverDeletedItems" => Some(p.clone()),
             _ => None,
         })
         .unwrap();
@@ -1159,7 +1162,7 @@ fn recover_deleted_items_purges_selected() {
     step(&mut h);
     h.get_by_label("Purge Selected Items").click();
     step(&mut h);
-    assert!(mailcraft_engine::recover::listed(&h.state().s).is_empty());
+    assert!(iridium_mail_engine::recover::listed(&h.state().s).is_empty());
 }
 
 #[test]
@@ -1178,7 +1181,7 @@ fn custom_flag_due_date_from_the_month_picker() {
     match &h.state().s.mailbox.mail.get(ItemId(item)).unwrap().flag {
         FlagState::Flagged { due: Some(d), .. } => {
             let tz = h.state().s.tz_offset_min;
-            assert_eq!(mailcraft_model::dates::LocalTime::of(*d, tz).day, 15);
+            assert_eq!(iridium_mail_model::dates::LocalTime::of(*d, tz).day, 15);
         }
         other => panic!("no due date: {other:?}"),
     }
@@ -1188,7 +1191,7 @@ fn custom_flag_due_date_from_the_month_picker() {
 fn calendar_properties_tab_saves_colour_and_read_only() {
     let mut app = sample_app();
     let acct = app.s.mailbox.accounts.first().map(|a| a.id).unwrap();
-    let cal = app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Calendar).unwrap();
+    let cal = app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Calendar).unwrap();
     app.run("folder.properties", json!({"folder": cal.0})).unwrap();
     let mut h = harness(app);
     assert_eq!(names(&h), ["folderProperties"]);
@@ -1200,13 +1203,13 @@ fn calendar_properties_tab_saves_colour_and_read_only() {
     h.get_by_label("OK").click();
     step(&mut h);
     assert!(names(&h).is_empty());
-    assert!(mailcraft_engine::cmd::calendar::props::read(&h.state().s.mailbox, cal).read_only);
+    assert!(iridium_mail_engine::cmd::calendar::props::read(&h.state().s.mailbox, cal).read_only);
 }
 
 #[test]
 fn new_search_folder_searches_the_chosen_mailbox() {
     let mut app = sample_app();
-    let other = app.s.mailbox.add_account(mailcraft_model::Account {
+    let other = app.s.mailbox.add_account(iridium_mail_model::Account {
         display_name: "Second".into(),
         address: "second@example.org".into(),
         ..Default::default()
@@ -1222,7 +1225,8 @@ fn new_search_folder_searches_the_chosen_mailbox() {
     step(&mut h);
     h.get_by_label("OK").click();
     step(&mut h);
-    let made = h.state().s.mailbox.folders.values().filter(|f| f.kind == mailcraft_model::FolderKind::Search);
+    let made =
+        h.state().s.mailbox.folders.values().filter(|f| f.kind == iridium_mail_model::FolderKind::Search);
     assert!(made.clone().any(|f| f.account == other), "{:?}", made.map(|f| f.account).collect::<Vec<_>>());
 }
 
@@ -1277,7 +1281,7 @@ fn folder_description_from_an_older_profile_moves_once_and_can_be_cleared() {
 fn contacts_properties_have_an_address_book_tab_and_no_autoarchive() {
     let mut app = sample_app();
     let acct = app.s.mailbox.accounts.first().map(|a| a.id).unwrap();
-    let contacts = app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Contacts).unwrap();
+    let contacts = app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Contacts).unwrap();
     app.run("folder.properties", json!({"folder": contacts.0})).unwrap();
     let mut h = harness(app);
     assert!(h.query_by_label("AutoArchive").is_none(), "AutoArchive does not apply to contacts");
@@ -1288,7 +1292,7 @@ fn contacts_properties_have_an_address_book_tab_and_no_autoarchive() {
     h.get_by_label("OK").click();
     step(&mut h);
     assert!(names(&h).is_empty());
-    assert!(!mailcraft_engine::cmd::people::in_address_book(&h.state().s, contacts));
+    assert!(!iridium_mail_engine::cmd::people::in_address_book(&h.state().s, contacts));
 }
 
 #[test]
@@ -1314,7 +1318,7 @@ fn address_book_searches_names_or_all_columns() {
     let mut app = sample_app();
     // A second contacts folder, shown as its own address book.
     let acct = app.s.mailbox.accounts.first().map(|a| a.id).unwrap();
-    let contacts = app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::Contacts).unwrap();
+    let contacts = app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::Contacts).unwrap();
     let club = app.s.mailbox.create_folder(contacts, "Club").unwrap();
     app.run("compose.addressBook", json!({})).unwrap();
     let mut h = harness(app);
@@ -1490,8 +1494,10 @@ fn advanced_view_settings_shows_the_whole_columns_summary() {
         let mut app = sample_app();
         crate::dialogs::open(&mut app, "advancedViewSettings", json!({}));
         let folder = app.s.selection.folder;
-        let cols: Vec<String> =
-            mailcraft_engine::cmd::view::mail::columns(&app.s, folder).into_iter().map(|c| c.label).collect();
+        let cols: Vec<String> = iridium_mail_engine::cmd::view::mail::columns(&app.s, folder)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
         assert!(cols.len() > 4, "a long column list");
         let h = sized(app, w, ht);
         let summary = h.get_by_label(cols.join(", ").as_str()).rect();
@@ -1556,7 +1562,7 @@ fn backstage_exit_has_room_and_the_storage_bar_needs_a_limit() {
         );
     }
     use crate::backstage::storage_fill;
-    use mailcraft_engine::MailboxQuota;
+    use iridium_mail_engine::MailboxQuota;
     assert_eq!(storage_fill(None), None);
     assert_eq!(storage_fill(Some(&MailboxQuota { used: 300_000, limit: 0, ..Default::default() })), None);
     let half = storage_fill(Some(&MailboxQuota { used: 50, limit: 100, ..Default::default() }));
@@ -1570,7 +1576,7 @@ fn backstage_exit_has_room_and_the_storage_bar_needs_a_limit() {
 
 #[test]
 fn import_export_wizard_imports_a_pst_file_and_shows_its_progress_and_report() {
-    use mailcraft_testmail::pst::{ItemDef, PstBuilder, Value as P};
+    use iridium_mail_testmail::pst::{ItemDef, PstBuilder, Value as P};
     let dir = scratch_dir("pst");
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("old mail.pst");
@@ -1599,7 +1605,7 @@ fn import_export_wizard_imports_a_pst_file_and_shows_its_progress_and_report() {
     assert_eq!(names(&h), ["pstProgress"], "{:?}", h.state().ui.toast);
     // Regression: after Hide nothing opened the window again (no Stop, no report). The harness does not
     // poll, so the import is still running here.
-    assert!(mailcraft_engine::pst::running(&h.state().s));
+    assert!(iridium_mail_engine::pst::running(&h.state().s));
     h.get_by_label("Hide").click();
     step(&mut h);
     assert!(names(&h).is_empty());
@@ -1613,7 +1619,7 @@ fn import_export_wizard_imports_a_pst_file_and_shows_its_progress_and_report() {
     step(&mut h);
     for _ in 0..2000 {
         h.state_mut().s.poll_sync();
-        if !mailcraft_engine::pst::running(&h.state().s) {
+        if !iridium_mail_engine::pst::running(&h.state().s) {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -1631,7 +1637,7 @@ fn import_export_wizard_imports_a_pst_file_and_shows_its_progress_and_report() {
 }
 
 /// The sample session with a Microsoft 365 account (offline: nothing is sent anywhere).
-fn graph_app() -> (App, mailcraft_model::AccountId) {
+fn graph_app() -> (App, iridium_mail_model::AccountId) {
     let mut app = sample_app();
     app.s.view.work_offline = true;
     let r = app
@@ -1640,7 +1646,7 @@ fn graph_app() -> (App, mailcraft_model::AccountId) {
             json!({"kind": "graph", "address": "me@example.com", "incoming": {"host": "https://graph.example.com/v1.0"}}),
         )
         .unwrap();
-    let a = mailcraft_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap());
+    let a = iridium_mail_model::AccountId(u32::try_from(r["account"].as_u64().unwrap()).unwrap());
     (app, a)
 }
 
@@ -1666,7 +1672,7 @@ fn from_address_book_picks_the_person_whose_calendar_opens() {
 #[test]
 fn cancel_meeting_on_a_microsoft_365_calendar_asks_for_the_note_first() {
     let (mut app, a) = graph_app();
-    let cal = app.s.mailbox.role_folder(a, mailcraft_model::FolderRole::Calendar).unwrap();
+    let cal = app.s.mailbox.role_folder(a, iridium_mail_model::FolderRole::Calendar).unwrap();
     let r = app
         .run(
             "calendar.newMeeting",

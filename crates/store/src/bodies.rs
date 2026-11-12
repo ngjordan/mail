@@ -1,6 +1,6 @@
 //! Message bodies and sources out of memory (storage stage S5, `plan/storage-adr.md` §6).
 //!
-//! A [`mailcraft_model::MailItem`] holds no body and no source. Its content lives in a [`BodyStore`]:
+//! A [`iridium_mail_model::MailItem`] holds no body and no source. Its content lives in a [`BodyStore`]:
 //! - the RFC 5322 **source**, under the item's `blob` key; the decoded body is parsed from it on demand;
 //! - a **body record** (a serialised [`Body`]), under the item's `body_key`, for an item without a source (a
 //!   local draft, a message made here) or one whose body differs from its source (changed here). A body
@@ -25,7 +25,7 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use mailcraft_model::{Body, MailItem};
+use iridium_mail_model::{Body, MailItem};
 use serde::{Deserialize, Serialize};
 
 use crate::blob::{self, BlobKey};

@@ -3,8 +3,8 @@
 //! List (tables with the view's columns, grouped by the arrangement, collapsible; a header click sorts, the
 //! Flag Status and Categories cells take the Quick Click flag and category). The reading pane (contact card)
 //! follows View › Reading Pane in the People, Phone and List views. The rows, their order and groups come
-//! from the engine (`mailcraft_engine::cmd::people::view_rows`); the columns from
-//! `mailcraft_engine::cmd::view::table`.
+//! from the engine (`iridium_mail_engine::cmd::people::view_rows`); the columns from
+//! `iridium_mail_engine::cmd::view::table`.
 
 use egui::{
     Align, Align2, Color32, CornerRadius, FontId, Id, Key, Layout, Modifiers, Rect, RichText, Role,
@@ -12,11 +12,11 @@ use egui::{
 };
 use serde_json::json;
 
-use mailcraft_engine::cmd::calendar::pim::Kind;
-use mailcraft_engine::cmd::people::{business_card_lines, display_name, is_group};
-use mailcraft_engine::cmd::view::modules::{ModuleKind, ModuleView, ViewRow};
-use mailcraft_engine::queries::{initials, persona_color};
-use mailcraft_model::{Contact, FlagState, FolderId, FolderKind, ItemId};
+use iridium_mail_engine::cmd::calendar::pim::Kind;
+use iridium_mail_engine::cmd::people::{business_card_lines, display_name, is_group};
+use iridium_mail_engine::cmd::view::modules::{ModuleKind, ModuleView, ViewRow};
+use iridium_mail_engine::queries::{initials, persona_color};
+use iridium_mail_model::{Contact, FlagState, FolderId, FolderKind, ItemId};
 
 use super::common::{
     ModState, a11y, change_view, child, collapsed_labels, current_folder, empty_message, folder_rows,
@@ -27,7 +27,7 @@ use super::common::{
 use super::editors;
 use super::table as mt;
 use crate::App;
-use mailcraft_engine::cmd::view::table;
+use iridium_mail_engine::cmd::view::table;
 
 const INDEX_W: f32 = 30.0;
 /// The narrowest search box the People bar keeps before the view switch gives up its labels.
@@ -60,7 +60,7 @@ const VIEWS: [(&str, &str); 5] = [
 /// Rows of the current contacts folder's view matching the search.
 fn view_rows(app: &App, st: &ModState) -> Vec<ViewRow> {
     let Some(folder) = current_folder(app, Kind::Contact) else { return Vec::new() };
-    mailcraft_engine::cmd::people::view_rows(&app.s, folder, &st.people_search)
+    iridium_mail_engine::cmd::people::view_rows(&app.s, folder, &st.people_search)
 }
 
 /// Contacts of the current folder matching the search, in list order.
@@ -432,7 +432,7 @@ pub const SHOW_LATIN_INDEX: &str = "Show the a to z index";
 fn letter_index(ui: &mut Ui, app: &mut App, st: &mut ModState, rect: Rect, ids: &[ItemId]) {
     // People › Contacts index › "Show an additional index": a switch at the bottom flips the bar between a–z
     // and the chosen alphabet (Arabic, Cyrillic, Greek, Hebrew, Thai or Vietnamese).
-    let extra = mailcraft_engine::cmd::people::additional_index(&app.s);
+    let extra = iridium_mail_engine::cmd::people::additional_index(&app.s);
     let showing_alt =
         extra.is_some() && ui.ctx().data(|d| d.get_temp::<bool>(alt_index_id())).unwrap_or(false);
     if let Some(letters) = extra.filter(|_| showing_alt) {
@@ -493,7 +493,7 @@ fn alt_letter_index(
     ids: &[ItemId],
     letters: &[char],
 ) {
-    use mailcraft_engine::cmd::people::index_bucket;
+    use iridium_mail_engine::cmd::people::index_bucket;
     let names: Vec<(ItemId, Option<usize>)> = ids
         .iter()
         .filter_map(|id| {
@@ -525,12 +525,13 @@ fn alt_letter_index(
 fn jump_target(app: &App, st: &ModState, ids: &[ItemId]) -> Option<ItemId> {
     let want = st.people_jump?;
     if !INDEX.contains(&want)
-        && let Some(letters) = mailcraft_engine::cmd::people::additional_index(&app.s)
+        && let Some(letters) = iridium_mail_engine::cmd::people::additional_index(&app.s)
         && let Some(k) = letters.iter().position(|l| *l == want)
     {
         let at_or_after = |id: &ItemId| {
             app.s.mailbox.contacts.get(id).is_some_and(|c| {
-                mailcraft_engine::cmd::people::index_bucket(&display_name(c), letters).is_some_and(|b| b >= k)
+                iridium_mail_engine::cmd::people::index_bucket(&display_name(c), letters)
+                    .is_some_and(|b| b >= k)
             })
         };
         return ids.iter().copied().find(at_or_after).or_else(|| ids.last().copied());
@@ -826,8 +827,8 @@ fn contact_card(ui: &mut Ui, app: &mut App, st: &mut ModState, id: ItemId) {
                     info_row(ui, app, "calendar", "Anniversary", a);
                 }
             }
-            if let mailcraft_model::FlagState::Flagged { label, reminder: Some(r), .. } = &c.flag {
-                let when = mailcraft_model::ListTime::short_date_time(*r, app.s.tz_offset_min);
+            if let iridium_mail_model::FlagState::Flagged { label, reminder: Some(r), .. } = &c.flag {
+                let when = iridium_mail_model::ListTime::short_date_time(*r, app.s.tz_offset_min);
                 info_row(ui, app, "flag", "Follow up", &format!("{label}. Reminder: {when}"));
             }
         }
@@ -1105,7 +1106,7 @@ mod tests {
 
     #[test]
     fn search_filters() {
-        let app = App::new(mailcraft_engine::sample::sample_session());
+        let app = App::new(iridium_mail_engine::sample::sample_session());
         let mut st = ModState::default();
         assert_eq!(contact_ids(&app, &st).len(), 6);
         st.people_search = "example org".into();

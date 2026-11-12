@@ -11,7 +11,7 @@ use super::{find, num, targets};
 use crate::cmd::insert::drawing as draw;
 use crate::cmd::util::{dialog, opt_bool, opt_str};
 use crate::{CmdError, CmdResult, Session};
-use mailcraft_model::rich::{Drawing, DrawingKind, Gradient, GradientStop, VAlign};
+use iridium_mail_model::rich::{Drawing, DrawingKind, Gradient, GradientStop, VAlign};
 
 /// A 0..=1 parameter (a number above 1 or a string with `%` is a percentage).
 pub(super) fn unit_param(p: &Value, key: &str) -> Result<Option<f32>, CmdError> {
@@ -52,7 +52,7 @@ pub(super) fn picture_param(p: &Value) -> Result<Option<String>, CmdError> {
                 None => return Err(CmdError::Params("give the picture as `path` or `data_base64`".into())),
             }
         }
-        Some(Value::String(b64)) => mailcraft_mime::transfer::decode_base64(b64.as_bytes()),
+        Some(Value::String(b64)) => iridium_mail_mime::transfer::decode_base64(b64.as_bytes()),
         Some(_) => {
             return Err(CmdError::Params("`picture` is true (with a file), base64 PNG or null".into()));
         }
@@ -80,7 +80,7 @@ pub(super) fn gradient_param(p: &Value) -> Result<Option<Option<Gradient>>, CmdE
             as f32;
         let pos = if pos > 1.0 { pos / 100.0 } else { pos };
         let text = st.get("color").and_then(Value::as_str).unwrap_or("");
-        let mut color = mailcraft_html::parse_css_color(text)
+        let mut color = iridium_mail_html::parse_css_color(text)
             .ok_or_else(|| CmdError::Params(format!("`{text}` is not a colour")))?;
         if let Some(t) = unit_param(st, "transparency")? {
             color = color.with_alpha(((1.0 - t) * 255.0).round() as u8);
@@ -107,7 +107,7 @@ pub(super) fn format_dialog(s: &mut Session, p: &Value, page: &str) -> CmdResult
         .ok_or_else(|| CmdError::Params(format!("no drawing with id {primary}")))?;
     let look = super::leaves(&c.body.drawings, &[primary]).first().copied().unwrap_or(primary);
     let d = &find(&c.body.drawings, look).cloned().unwrap_or_else(|| t.clone());
-    let hex = |c: Option<mailcraft_geom::Color>| c.map(|c| c.to_hex());
+    let hex = |c: Option<iridium_mail_geom::Color>| c.map(|c| c.to_hex());
     let stops: Vec<Value> = d
         .gradient_fill
         .iter()

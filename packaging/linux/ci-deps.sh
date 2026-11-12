@@ -16,7 +16,7 @@ set -euo pipefail
 
 triple="${1:-}"
 nfpm_version="${NFPM_VERSION:-2.43.0}"
-cache="${MC_TOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/mailcraft-packaging}"
+cache="${MC_TOOL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/iridium-mail-packaging}"
 env_file="${GITHUB_ENV:-/dev/null}"
 path_file="${GITHUB_PATH:-/dev/null}"
 

@@ -11,9 +11,9 @@ use serde_json::{Value, json};
 use crate::cmd::util::{ok, opt_bool, opt_str, req_str};
 use crate::compose::{ComposeKind, ComposeState};
 use crate::{CmdError, CmdResult, CommandSpec, Notice, SearchScope, Session, always};
-use mailcraft_model::dates::{local_day, weekday_of_day};
-use mailcraft_model::subject::strip_prefixes;
-use mailcraft_model::{
+use iridium_mail_model::dates::{local_day, weekday_of_day};
+use iridium_mail_model::subject::strip_prefixes;
+use iridium_mail_model::{
     AccountId, BodyFormat, Category, CategoryColor, Conversation, DateTime, FlagState, FocusClass, FolderId,
     FolderKind, FolderRole, Importance, ItemId, JunkLevel, JunkList, MailItem, Sensitivity, thread,
 };
@@ -67,8 +67,8 @@ pub(crate) fn need_one(s: &Session) -> Option<&'static str> {
 pub(crate) fn journal(s: &mut Session, ids: &[ItemId]) {
     for id in ids {
         let op = match s.mailbox.mail.get(*id) {
-            Some(m) => mailcraft_store::Op::PutMail(Box::new(m.clone())),
-            None => mailcraft_store::Op::RemoveMail(*id),
+            Some(m) => iridium_mail_store::Op::PutMail(Box::new(m.clone())),
+            None => iridium_mail_store::Op::RemoveMail(*id),
         };
         s.pending_ops.push(op);
     }
@@ -129,7 +129,7 @@ pub(crate) fn param_folder(s: &Session, p: &Value) -> Result<Option<FolderId>, C
         return Ok(Some(FolderId(n)));
     }
     let current = s.current_account();
-    let mut candidates: Vec<&mailcraft_model::Folder> = s.mailbox.folders.values().collect();
+    let mut candidates: Vec<&iridium_mail_model::Folder> = s.mailbox.folders.values().collect();
     // Current account first, then the rest in id order.
     candidates.sort_by_key(|f| (Some(f.account) != current, f.id));
     let by_path = candidates.iter().find(|f| s.mailbox.folder_path(f.id).eq_ignore_ascii_case(text));
@@ -775,7 +775,10 @@ pub(crate) fn account_from(s: &Session, account: Option<AccountId>) -> String {
         Some(a) if !a.address.trim().is_empty() => {
             let name =
                 if a.sender_name.trim().is_empty() { a.display_name.trim() } else { a.sender_name.trim() };
-            crate::cmd::compose::field_mailbox(&mailcraft_model::Address::new(Some(name), a.address.trim()))
+            crate::cmd::compose::field_mailbox(&iridium_mail_model::Address::new(
+                Some(name),
+                a.address.trim(),
+            ))
         }
         _ => String::new(),
     }
@@ -795,7 +798,7 @@ pub fn stationery_list() -> Vec<Value> {
     crate::compose::STATIONERY
         .iter()
         .map(|(id, name, page, theme)| {
-            json!({"id": id, "name": name, "page": mailcraft_geom::Color::hex(*page).to_hex(), "theme": theme})
+            json!({"id": id, "name": name, "page": iridium_mail_geom::Color::hex(*page).to_hex(), "theme": theme})
         })
         .collect()
 }
@@ -856,7 +859,7 @@ fn new_from_mailto(s: &mut Session, p: &Value) -> CmdResult {
         ..Default::default()
     };
     if !m.body.is_empty() {
-        c.body = mailcraft_model::Doc::from_plain_text(&m.body);
+        c.body = iridium_mail_model::Doc::from_plain_text(&m.body);
     }
     let c = crate::compose::with_default_signature(&s.mailbox, c);
     let id = s.open_compose(c);
@@ -995,18 +998,18 @@ fn choose_form(s: &mut Session, p: &Value) -> CmdResult {
     let folder = s.selection.folder;
     let is_eml = path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("eml"));
     let read = if is_eml {
-        mailcraft_formats::eml::read(&data, folder, s.now())
-            .map(|m| (m, mailcraft_store::Content::source(data)))
+        iridium_mail_formats::eml::read(&data, folder, s.now())
+            .map(|m| (m, iridium_mail_store::Content::source(data)))
     } else {
-        mailcraft_formats::msg::read_item(&data, folder, s.now())
+        iridium_mail_formats::msg::read_item(&data, folder, s.now())
     };
     let (m, content) = read.map_err(|e| CmdError::Failed(format!("the template could not be read: {e}")))?;
     let body = content
         .body
         .clone()
-        .or_else(|| content.source.as_deref().and_then(mailcraft_model::Body::from_source))
+        .or_else(|| content.source.as_deref().and_then(iridium_mail_model::Body::from_source))
         .unwrap_or_default();
-    let join = |l: &[mailcraft_model::Address]| {
+    let join = |l: &[iridium_mail_model::Address]| {
         l.iter().map(crate::cmd::compose::field_mailbox).collect::<Vec<_>>().join("; ")
     };
     let c = ComposeState {
@@ -1041,13 +1044,13 @@ fn is_me(me: &[String], addr: &str) -> bool {
 /// or attendees besides the user), or a selected message (observed disabled with nothing selected).
 fn need_meeting_or_message(s: &Session) -> Option<&'static str> {
     let me = my_addresses(s);
-    let others = |a: &mailcraft_model::Appointment| {
+    let others = |a: &iridium_mail_model::Appointment| {
         a.organizer
             .iter()
             .chain(
                 a.attendees
                     .iter()
-                    .filter(|x| x.role != mailcraft_model::calendar::AttendeeRole::Resource)
+                    .filter(|x| x.role != iridium_mail_model::calendar::AttendeeRole::Resource)
                     .map(|x| &x.mailbox),
             )
             .any(|m| !is_me(&me, &m.addr))
@@ -1075,7 +1078,7 @@ fn meeting_with_all(s: &mut Session, p: &Value) -> CmdResult {
     let mut required: Vec<String> = Vec::new();
     let mut optional: Vec<String> = Vec::new();
     let mut seen: BTreeSet<String> = BTreeSet::new();
-    let mut add = |list: &mut Vec<String>, m: &mailcraft_model::Address| {
+    let mut add = |list: &mut Vec<String>, m: &iridium_mail_model::Address| {
         if !is_me(&me, &m.addr) && seen.insert(m.addr.trim().to_lowercase()) {
             list.push(crate::cmd::compose::field_mailbox(m));
         }
@@ -1085,10 +1088,10 @@ fn meeting_with_all(s: &mut Session, p: &Value) -> CmdResult {
     }
     for at in &a.attendees {
         match at.role {
-            mailcraft_model::calendar::AttendeeRole::Optional => add(&mut optional, &at.mailbox),
-            mailcraft_model::calendar::AttendeeRole::Required => add(&mut required, &at.mailbox),
+            iridium_mail_model::calendar::AttendeeRole::Optional => add(&mut optional, &at.mailbox),
+            iridium_mail_model::calendar::AttendeeRole::Required => add(&mut required, &at.mailbox),
             // Rooms and equipment are booked by the new meeting's own Scheduling, not invited.
-            mailcraft_model::calendar::AttendeeRole::Resource => {}
+            iridium_mail_model::calendar::AttendeeRole::Resource => {}
         }
     }
     if required.is_empty() && optional.is_empty() {
@@ -1135,22 +1138,22 @@ fn new_post(s: &mut Session, p: &Value) -> CmdResult {
     let account = s.mailbox.folder_account(folder);
     let from = account.and_then(|a| s.mailbox.account(a)).filter(|a| !a.address.trim().is_empty()).map(|a| {
         let name = if a.sender_name.trim().is_empty() { a.display_name.trim() } else { a.sender_name.trim() };
-        mailcraft_model::Address::new(Some(name).filter(|n| !n.is_empty()), a.address.trim())
+        iridium_mail_model::Address::new(Some(name).filter(|n| !n.is_empty()), a.address.trim())
     });
     let now = s.now();
     let body = match html {
-        Some(h) => mailcraft_model::Body {
+        Some(h) => iridium_mail_model::Body {
             format: BodyFormat::Html,
-            text: Some(text.map_or_else(|| mailcraft_html::html_to_text(h), str::to_owned)),
+            text: Some(text.map_or_else(|| iridium_mail_html::html_to_text(h), str::to_owned)),
             html: Some(h.to_owned()),
         },
-        None => mailcraft_model::Body {
+        None => iridium_mail_model::Body {
             format: BodyFormat::PlainText,
             text: Some(text.unwrap_or("").to_owned()),
             html: None,
         },
     };
-    let builder = mailcraft_mime::MessageBuilder {
+    let builder = iridium_mail_mime::MessageBuilder {
         from: from.clone(),
         subject: subject.to_owned(),
         date: Some(now),
@@ -1356,7 +1359,7 @@ fn mentioned_ids(m: &MailItem) -> impl Iterator<Item = &str> {
         .iter()
         .chain(m.in_reply_to.iter())
         .chain(m.references.iter())
-        .map(|i| mailcraft_model::thread::norm_id(i))
+        .map(|i| iridium_mail_model::thread::norm_id(i))
         .filter(|i| !i.is_empty())
 }
 
@@ -2475,7 +2478,7 @@ fn junk(s: &mut Session, p: &Value) -> CmdResult {
         "import" => {
             let list = junk_list(p)?;
             let path = junk_path(p)?;
-            let bytes = mailcraft_store::journal::read_capped(&path, MAX_JUNK_LIST_FILE)
+            let bytes = iridium_mail_store::journal::read_capped(&path, MAX_JUNK_LIST_FILE)
                 .map_err(|e| CmdError::Failed(format!("could not read {}: {e}", path.display())))?
                 .ok_or_else(|| CmdError::Failed(format!("{} does not exist", path.display())))?;
             let text = String::from_utf8_lossy(&bytes);
@@ -2486,8 +2489,10 @@ fn junk(s: &mut Session, p: &Value) -> CmdResult {
             let list = junk_list(p)?;
             let path = junk_path(p)?;
             let text = s.mailbox.junk.export_text(list);
-            mailcraft_store::journal::write_atomic(&path, |w| std::io::Write::write_all(w, text.as_bytes()))
-                .map_err(|e| CmdError::Failed(format!("could not write {}: {e}", path.display())))?;
+            iridium_mail_store::journal::write_atomic(&path, |w| {
+                std::io::Write::write_all(w, text.as_bytes())
+            })
+            .map_err(|e| CmdError::Failed(format!("could not write {}: {e}", path.display())))?;
             Ok(
                 json!({"list": list.key(), "exported": s.mailbox.junk.list(list).len(), "path": path.display().to_string()}),
             )
@@ -2580,7 +2585,7 @@ fn list_id_of(value: &str) -> Option<String> {
         None => value,
     };
     let id = inner.trim().to_lowercase();
-    let ok = id.chars().count() <= mailcraft_model::junk::MAX_ENTRY_CHARS
+    let ok = id.chars().count() <= iridium_mail_model::junk::MAX_ENTRY_CHARS
         && id.contains('.')
         && !id.starts_with('.')
         && !id.ends_with('.')
@@ -2652,7 +2657,7 @@ fn block(s: &mut Session, p: &Value) -> CmdResult {
                 "neverSender" => (JunkList::SafeSenders, sender),
                 "neverDomain" => (
                     JunkList::SafeSenders,
-                    mailcraft_model::junk::domain_of(&sender).map(|d| format!("@{d}")).unwrap_or_default(),
+                    iridium_mail_model::junk::domain_of(&sender).map(|d| format!("@{d}")).unwrap_or_default(),
                 ),
                 _ => (JunkList::SafeRecipients, group.unwrap_or_default()),
             };
@@ -2885,12 +2890,12 @@ fn edit_message(s: &mut Session, p: &Value) -> CmdResult {
     match (text, html) {
         (_, Some(h)) => {
             body.html = Some(h.to_owned());
-            body.text = Some(text.map_or_else(|| mailcraft_html::html_to_text(h), str::to_owned));
+            body.text = Some(text.map_or_else(|| iridium_mail_html::html_to_text(h), str::to_owned));
         }
         (Some(t), None) => {
             body.text = Some(t.to_owned());
             if body.html.is_some() {
-                body.html = Some(mailcraft_html::text_to_html(t));
+                body.html = Some(iridium_mail_html::text_to_html(t));
             }
         }
         (None, None) => {}
@@ -2981,10 +2986,10 @@ pub(crate) fn item_source(s: &Session, m: &MailItem) -> Vec<u8> {
         return raw;
     }
     let body = s.body_or_empty(m);
-    let mb = |list: &[mailcraft_model::Address]| {
-        list.iter().cloned().map(mailcraft_mime::Address::Mailbox).collect::<Vec<_>>()
+    let mb = |list: &[iridium_mail_model::Address]| {
+        list.iter().cloned().map(iridium_mail_mime::Address::Mailbox).collect::<Vec<_>>()
     };
-    let b = mailcraft_mime::MessageBuilder {
+    let b = iridium_mail_mime::MessageBuilder {
         from: m.from.clone(),
         sender: m.sender.clone(),
         to: mb(&m.to),
@@ -3044,15 +3049,15 @@ fn encoding(s: &mut Session, p: &Value) -> CmdResult {
         return Err(CmdError::Disabled("No message is selected.".into()));
     };
     let charset = opt_str(p, "charset").map(str::trim).unwrap_or("auto").to_ascii_lowercase();
-    if charset != "auto" && !mailcraft_mime::charset::is_known(&charset) {
+    if charset != "auto" && !iridium_mail_mime::charset::is_known(&charset) {
         let shown: String = charset.chars().take(40).collect();
-        return Err(CmdError::Params(format!("`{shown}` is not a character set MailCraft knows")));
+        return Err(CmdError::Params(format!("`{shown}` is not a character set Mail knows")));
     }
     let raw = s.mailbox.mail.get(focus).and_then(|m| crate::cmd::compose::stored_raw(s, m));
     let Some(raw) = raw.filter(|r| !r.is_empty()) else {
         return Err(CmdError::Failed("the source of this message is not available".into()));
     };
-    let msg = mailcraft_mime::parse(&raw)
+    let msg = iridium_mail_mime::parse(&raw)
         .map_err(|e| CmdError::Failed(format!("the message cannot be read: {e}")))?;
     let (text, html) =
         if charset == "auto" { (msg.text_body(), msg.html_body()) } else { msg.bodies_as(&charset) };
@@ -3062,7 +3067,7 @@ fn encoding(s: &mut Session, p: &Value) -> CmdResult {
     let current = s.body_or_empty(m);
     let changed = current.text != text || current.html != html;
     if changed {
-        let body = mailcraft_model::Body { format: current.format, text, html };
+        let body = iridium_mail_model::Body { format: current.format, text, html };
         s.set_body(focus, &body)?;
         journal(s, &[focus]);
     }
@@ -3093,22 +3098,22 @@ fn view_in_browser(s: &mut Session, p: &Value) -> CmdResult {
     let content = s.body_or_empty(m);
     let text_body = || match (&content.text, &content.html) {
         (Some(t), _) => t.clone(),
-        (None, Some(h)) => mailcraft_html::html_to_text(h),
+        (None, Some(h)) => iridium_mail_html::html_to_text(h),
         (None, None) => String::new(),
     };
     let body = if links_off {
         // Escaped text only: nothing a browser could follow or load.
         format!("<pre style=\"white-space:pre-wrap;font-family:sans-serif\">{}</pre>", esc(&text_body()))
     } else if plain {
-        mailcraft_html::text_to_html(&text_body())
+        iridium_mail_html::text_to_html(&text_body())
     } else {
         match (&content.html, &content.text) {
-            (Some(h), _) => mailcraft_html::doc_to_html(&mailcraft_html::html_to_doc(h)),
-            (None, Some(t)) => mailcraft_html::text_to_html(t),
+            (Some(h), _) => iridium_mail_html::doc_to_html(&iridium_mail_html::html_to_doc(h)),
+            (None, Some(t)) => iridium_mail_html::text_to_html(t),
             (None, None) => String::new(),
         }
     };
-    let people = |list: &[mailcraft_model::Address]| {
+    let people = |list: &[iridium_mail_model::Address]| {
         list.iter().map(|a| esc(&a.to_display_string())).collect::<Vec<_>>().join("; ")
     };
     let mut head = String::new();
@@ -3119,8 +3124,8 @@ fn view_in_browser(s: &mut Session, p: &Value) -> CmdResult {
     let tz = s.tz_offset_min;
     let sent = format!(
         "{} {}",
-        mailcraft_model::ListTime::long_date(when, tz),
-        mailcraft_model::ListTime::clock(when, tz)
+        iridium_mail_model::ListTime::long_date(when, tz),
+        iridium_mail_model::ListTime::clock(when, tz)
     );
     head.push_str(&format!("<div><b>Sent:</b> {}</div>", esc(&sent)));
     if !m.to.is_empty() {
@@ -3200,7 +3205,7 @@ pub(crate) fn source_attachments(s: &Session, m: &MailItem) -> Vec<crate::compos
 
 /// Attachments with their data, from the message source `raw` (none when it does not parse).
 pub(crate) fn attachments_in(raw: &[u8]) -> Vec<crate::compose::ComposeAttachment> {
-    let Ok(msg) = mailcraft_mime::parse(raw) else {
+    let Ok(msg) = iridium_mail_mime::parse(raw) else {
         return Vec::new();
     };
     msg.attachments()
@@ -3215,12 +3220,12 @@ pub(crate) fn attachments_in(raw: &[u8]) -> Vec<crate::compose::ComposeAttachmen
 }
 
 /// A message body as a rich-text document: the HTML through `html_to_doc`, or the plain text.
-pub fn body_doc(b: &mailcraft_model::Body) -> mailcraft_model::Doc {
+pub fn body_doc(b: &iridium_mail_model::Body) -> iridium_mail_model::Doc {
     match (&b.format, &b.html) {
         (BodyFormat::PlainText, _) | (_, None) => {
-            mailcraft_model::Doc::from_plain_text(b.text.as_deref().unwrap_or_default())
+            iridium_mail_model::Doc::from_plain_text(b.text.as_deref().unwrap_or_default())
         }
-        (_, Some(h)) => mailcraft_html::html_to_doc(h),
+        (_, Some(h)) => iridium_mail_html::html_to_doc(h),
     }
 }
 
@@ -3251,7 +3256,7 @@ fn resend(s: &mut Session, p: &Value) -> CmdResult {
     let Some(m) = s.mailbox.mail.get(focus) else {
         return Err(CmdError::Failed("message not found".into()));
     };
-    let join = |l: &[mailcraft_model::Address]| {
+    let join = |l: &[iridium_mail_model::Address]| {
         l.iter().map(crate::cmd::compose::field_mailbox).collect::<Vec<_>>().join("; ")
     };
     let c = ComposeState {
@@ -3281,10 +3286,10 @@ fn resend(s: &mut Session, p: &Value) -> CmdResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_model::{Address, Mailbox};
+    use iridium_mail_model::{Address, Mailbox};
 
     /// A test message: the item, its body and (when set) its source, added with [`AddM::add_m`].
-    pub(crate) struct M(pub MailItem, pub mailcraft_model::Body, pub Option<Vec<u8>>);
+    pub(crate) struct M(pub MailItem, pub iridium_mail_model::Body, pub Option<Vec<u8>>);
 
     impl std::ops::Deref for M {
         type Target = MailItem;
@@ -3314,8 +3319,8 @@ mod tests {
     impl AddM for Session {
         fn add_m(&mut self, m: M) -> ItemId {
             let content = match m.2 {
-                Some(raw) => mailcraft_store::Content::source(raw),
-                None => mailcraft_store::Content::body(m.1),
+                Some(raw) => iridium_mail_store::Content::source(raw),
+                None => iridium_mail_store::Content::body(m.1),
             };
             self.add_message(m.0, &content).unwrap()
         }
@@ -3345,7 +3350,7 @@ mod tests {
         };
         M(
             item,
-            mailcraft_model::Body { format: BodyFormat::PlainText, text: Some(text.into()), html: None },
+            iridium_mail_model::Body { format: BodyFormat::PlainText, text: Some(text.into()), html: None },
             None,
         )
     }
@@ -3390,8 +3395,8 @@ mod tests {
                         Content-Type: text/plain; charset=utf-8\r\n\r\nGr"
             .to_vec();
         raw.extend_from_slice(&[0xFC, 0xDF, b'e', b'\r', b'\n']);
-        let item = mailcraft_store::import::item_from_raw(&raw, f.inbox, at(20735, 9));
-        let id = f.s.add_message(item, &mailcraft_store::Content::source(raw.clone())).unwrap();
+        let item = iridium_mail_store::import::item_from_raw(&raw, f.inbox, at(20735, 9));
+        let id = f.s.add_message(item, &iridium_mail_store::Content::source(raw.clone())).unwrap();
         f.s.selection.items = vec![id];
         f.s.selection.focus = Some(id);
         let text = |s: &Session| s.body(id).unwrap().unwrap().text.clone().unwrap();
@@ -3549,22 +3554,22 @@ mod tests {
     fn opening_the_profile_removes_pages_a_crash_left() {
         let profile = scratch_dir();
         let base = crate::browser::profile_base(profile.path());
-        let left = base.join("mailcraft-pages-AbC123");
+        let left = base.join("iridium-mail-pages-AbC123");
         std::fs::create_dir_all(&left).unwrap();
         std::fs::write(left.join("message-7.html"), b"<p>private</p>").unwrap();
         let keep = base.join("not-ours");
         std::fs::create_dir_all(&keep).unwrap();
-        std::fs::write(base.join("mailcraft-pages-file"), b"x").unwrap();
+        std::fs::write(base.join("iridium-mail-pages-file"), b"x").unwrap();
         let outside = scratch_dir();
         std::fs::write(outside.path().join("keep.txt"), b"x").unwrap();
         #[cfg(unix)]
-        std::os::unix::fs::symlink(outside.path(), base.join("mailcraft-pages-link")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), base.join("iridium-mail-pages-link")).unwrap();
         let mut s = Session::open(profile.path()).unwrap();
         assert!(!left.exists(), "a leftover page folder is removed");
-        assert!(keep.is_dir() && base.join("mailcraft-pages-file").is_file(), "other entries stay");
+        assert!(keep.is_dir() && base.join("iridium-mail-pages-file").is_file(), "other entries stay");
         assert!(outside.path().join("keep.txt").is_file(), "a link is never followed");
         #[cfg(unix)]
-        assert!(std::fs::symlink_metadata(base.join("mailcraft-pages-link")).is_ok());
+        assert!(std::fs::symlink_metadata(base.join("iridium-mail-pages-link")).is_ok());
         // The session's own pages still work, in the profile's folder.
         let inbox = s.mailbox.folders.values().find(|f| f.role == Some(FolderRole::Inbox)).unwrap().id;
         let id = s.add_m(msg(inbox, "Hi", "ann@example.com", "Hello.", at(20735, 9)));
@@ -3804,16 +3809,16 @@ mod tests {
     fn meeting_with_all_invites_everyone_but_me() {
         let mut f = fx();
         let cal = role(&f.s, FolderRole::Calendar);
-        let att = |name: &str, addr: &str, role| mailcraft_model::Attendee {
+        let att = |name: &str, addr: &str, role| iridium_mail_model::Attendee {
             mailbox: Address::new(Some(name), addr),
             role,
             ..Default::default()
         };
-        use mailcraft_model::calendar::AttendeeRole;
+        use iridium_mail_model::calendar::AttendeeRole;
         let id = ItemId(f.s.mailbox.alloc_id());
         f.s.mailbox.appointments.insert(
             id,
-            mailcraft_model::Appointment {
+            iridium_mail_model::Appointment {
                 id,
                 folder: cal,
                 subject: "Budget review".into(),
@@ -3859,7 +3864,7 @@ mod tests {
         let cal = f.s.mailbox.appointments[&id].folder;
         f.s.mailbox.appointments.insert(
             alone,
-            mailcraft_model::Appointment {
+            iridium_mail_model::Appointment {
                 id: alone,
                 folder: cal,
                 subject: "Dentist".into(),
@@ -4131,7 +4136,7 @@ mod tests {
         let appt = ItemId(f.s.mailbox.alloc_id());
         f.s.mailbox
             .appointments
-            .insert(appt, mailcraft_model::Appointment { id: appt, ..Default::default() });
+            .insert(appt, iridium_mail_model::Appointment { id: appt, ..Default::default() });
         private(&mut f.s, &Value::Null).unwrap();
         assert_eq!(f.s.mailbox.mail.get(f.a).unwrap().sensitivity, Sensitivity::Private);
         private(&mut f.s, &Value::Null).unwrap();
@@ -4370,14 +4375,14 @@ mod tests {
     #[test]
     fn new_email_uses_the_current_folders_account() {
         let mut f = fx();
-        let work = f.s.mailbox.add_account(mailcraft_model::Account {
+        let work = f.s.mailbox.add_account(iridium_mail_model::Account {
             display_name: "Work".into(),
             address: "kim@work.example.org".into(),
             sender_name: "Kim".into(),
             ..Default::default()
         });
         f.s.mailbox.create_default_folders(work);
-        let data = f.s.mailbox.add_account(mailcraft_model::Account {
+        let data = f.s.mailbox.add_account(iridium_mail_model::Account {
             display_name: "Archive file".into(),
             ..Default::default()
         });
@@ -4444,7 +4449,7 @@ mod tests {
     fn report_phishing_never_blocks_my_own_address() {
         let mut f = fx();
         if let Some(m) = f.s.mailbox.mail.get_mut(f.c) {
-            m.from = Some(mailcraft_model::Address::new(Some("Me"), "Test.User@example.net"));
+            m.from = Some(iridium_mail_model::Address::new(Some("Me"), "Test.User@example.net"));
         }
         f.s.run(
             "mail.junk",
@@ -4473,10 +4478,10 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
         let mut s = Session::open(dir.path()).unwrap();
         let acct = s.mailbox.default_account().map(|a| a.id).unwrap();
         let inbox = s.mailbox.role_folder(acct, FolderRole::Inbox).unwrap();
-        let msg = mailcraft_mime::parse(RAW).unwrap();
+        let msg = iridium_mail_mime::parse(RAW).unwrap();
         let mut item = MailItem::from_message(&msg, RAW, s.now());
         item.folder = inbox;
-        let id = s.add_message(item, &mailcraft_store::Content::source(RAW.to_vec())).unwrap();
+        let id = s.add_message(item, &iridium_mail_store::Content::source(RAW.to_vec())).unwrap();
         s.store.as_mut().unwrap().checkpoint(&s.mailbox).unwrap();
         assert!(s.mailbox.mail.get(id).unwrap().blob.is_some(), "the source lives in the store");
         s.settings.set(REPORT_ADDRESS, &json!("abuse@example.net")).unwrap();
@@ -4577,7 +4582,7 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
         let cid = f.s.mailbox.alloc_id();
         f.s.mailbox.contacts.insert(
             ItemId(cid),
-            mailcraft_model::Contact {
+            iridium_mail_model::Contact {
                 id: ItemId(cid),
                 emails: vec!["assistant@example.com".into()],
                 ..Default::default()
@@ -4714,7 +4719,7 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
         let mut old = serde_json::to_value(&f.s.mailbox).unwrap();
         old.as_object_mut().unwrap().remove("junk");
         let back: Mailbox = serde_json::from_value(old).unwrap();
-        assert_eq!(back.junk, mailcraft_model::JunkSettings::default());
+        assert_eq!(back.junk, iridium_mail_model::JunkSettings::default());
     }
 
     #[test]
@@ -4947,13 +4952,13 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
         })
         .unwrap();
         let mut doc = body_doc(&f.s.body(f.a).unwrap().unwrap());
-        doc.blocks.insert(0, mailcraft_model::Doc::from_plain_text("Paid in full.").blocks.remove(0));
-        let html = mailcraft_html::doc_to_html(&doc);
+        doc.blocks.insert(0, iridium_mail_model::Doc::from_plain_text("Paid in full.").blocks.remove(0));
+        let html = iridium_mail_html::doc_to_html(&doc);
         edit_message(&mut f.s, &json!({"ids": [f.a.0], "html": html})).unwrap();
         let b = f.s.body(f.a).unwrap().unwrap();
         let stored = b.html.as_deref().unwrap();
         assert!(stored.contains("Paid in full."), "{stored}");
-        assert!(mailcraft_html::html_to_doc(stored).to_plain_text().contains("Due Friday"), "{stored}");
+        assert!(iridium_mail_html::html_to_doc(stored).to_plain_text().contains("Due Friday"), "{stored}");
         assert!(stored.contains("<b>") || stored.contains("<strong>") || stored.contains("bold"), "{stored}");
         assert!(b.text.as_deref().is_some_and(|t| t.contains("Paid in full.")));
     }
@@ -4968,8 +4973,8 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
                     --b\r\nContent-Type: text/plain\r\n\r\nSee the notes.\r\n\
                     --b\r\nContent-Type: text/plain; name=notes.txt\r\n\
                     Content-Disposition: attachment; filename=notes.txt\r\n\r\nhello notes\r\n--b--\r\n";
-        let item = mailcraft_store::import::item_from_raw(raw, f.inbox, at(20735, 9));
-        let id = f.s.add_message(item, &mailcraft_store::Content::source(raw.to_vec())).unwrap();
+        let item = iridium_mail_store::import::item_from_raw(raw, f.inbox, at(20735, 9));
+        let id = f.s.add_message(item, &iridium_mail_store::Content::source(raw.to_vec())).unwrap();
         let blob = f.s.mailbox.mail.get(id).unwrap().blob.clone();
         assert!(blob.is_some());
         edit_message(&mut f.s, &json!({"ids": [id.0], "subject": "Report (edited)"})).unwrap();
@@ -5021,7 +5026,7 @@ Subject: Verify now\r\nDate: Thu, 08 Oct 2026 07:30:00 +0000\r\nMessage-ID: <p1@
         // A read window (a check scoped to its message) offers it for any message.
         assert!(f.s.enabled_for("mail.resend", &[f.b]).is_none());
         // Message recall needs an Exchange server (its catalog row is not applicable): there is no command.
-        f.s.mailbox.accounts[0].kind = mailcraft_model::AccountKind::Exchange;
+        f.s.mailbox.accounts[0].kind = iridium_mail_model::AccountKind::Exchange;
         assert!(matches!(f.s.run("mail.recall", &Value::Null), Err(CmdError::Unknown(_))));
     }
 

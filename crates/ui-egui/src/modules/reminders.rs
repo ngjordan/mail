@@ -17,10 +17,10 @@ use std::time::Duration;
 use egui::{Align, ComboBox, Id, Layout, RichText, ScrollArea, Sense, vec2};
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::calendar::reminders::{
+use iridium_mail_engine::cmd::calendar::reminders::{
     self, DEFAULT_SNOOZE, Reminder, ReminderKind, ReminderState, SNOOZE_MINUTES,
 };
-use mailcraft_model::DateTime;
+use iridium_mail_model::DateTime;
 
 use super::common::{clock, local_secs, long_date};
 use crate::App;
@@ -52,7 +52,7 @@ pub(crate) struct RemindersUi {
 }
 
 fn state_id() -> Id {
-    Id::unique("mailcraft.modules.reminders")
+    Id::unique("iridium-mail.modules.reminders")
 }
 
 pub(crate) fn load(ctx: &egui::Context) -> RemindersUi {
@@ -326,7 +326,7 @@ fn window(ctx: &egui::Context, app: &mut App, st: &mut RemindersUi) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     #[test]
     fn labels() {
@@ -346,8 +346,8 @@ mod tests {
         ctx.run_ui(egui::RawInput::default(), |ui| show(ui.ctx(), &mut app)).textures_delta.clear();
         assert!(!load(&ctx).open);
         // A task reminder an hour ago.
-        let at = mailcraft_engine::cmd::calendar::pim::datetime_string(
-            mailcraft_engine::cmd::calendar::pim::add_secs(app.s.now(), -3600),
+        let at = iridium_mail_engine::cmd::calendar::pim::datetime_string(
+            iridium_mail_engine::cmd::calendar::pim::add_secs(app.s.now(), -3600),
             0,
         );
         app.run("tasks.new", json!({ "subject": "Pay rent", "reminder": at })).unwrap();
@@ -370,8 +370,8 @@ mod tests {
 
     /// Adds a task whose reminder came due an hour ago and forces a scan at the next frame.
     fn due_task(ctx: &egui::Context, app: &mut App, subject: &str) {
-        let at = mailcraft_engine::cmd::calendar::pim::datetime_string(
-            mailcraft_engine::cmd::calendar::pim::add_secs(app.s.now(), -3600),
+        let at = iridium_mail_engine::cmd::calendar::pim::datetime_string(
+            iridium_mail_engine::cmd::calendar::pim::add_secs(app.s.now(), -3600),
             0,
         );
         app.run("tasks.new", json!({ "subject": subject, "reminder": at })).unwrap();

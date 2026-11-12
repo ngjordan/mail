@@ -186,9 +186,9 @@ impl<B: Backend> Server<B> {
         json!({
             "protocolVersion": version,
             "capabilities": {"tools": {"listChanged": false}},
-            "serverInfo": {"name": "mailcraft", "title": "MailCraft", "version": env!("CARGO_PKG_VERSION")},
+            "serverInfo": {"name": "iridium-mail", "title": "Mail", "version": env!("CARGO_PKG_VERSION")},
             "instructions": format!(
-                "MailCraft mail client ({}). Everything MailCraft can do is a command: list_commands shows them, \
+                "Mail mail client ({}). Everything Mail can do is a command: list_commands shows them, \
                  run_command runs one by id. list_folders / list_messages / read_message read mail; select picks \
                  the folder and message commands act on; search filters the list. Mail is synthetic in the \
                  sample mailbox; in a real profile, commands change real data (undo with app.undo).",

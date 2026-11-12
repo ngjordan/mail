@@ -13,8 +13,8 @@ use egui_kittest::kittest::Queryable;
 use serde_json::{Value, json};
 
 use crate::{App, FileDialogs, FileFilter};
-use mailcraft_engine::sample::sample_session;
-use mailcraft_model::{AccountId, AccountKind, FolderRole, ItemId, Security};
+use iridium_mail_engine::sample::sample_session;
+use iridium_mail_model::{AccountId, AccountKind, FolderRole, ItemId, Security};
 
 fn harness(app: App) -> Harness<'static, App> {
     let mut h = crate::test_harness().with_size(egui::vec2(1280.0, 900.0)).build_ui_state(
@@ -216,7 +216,7 @@ fn add_account_guesses_servers_from_the_address() {
     assert_eq!((inc.host.as_str(), inc.port, inc.security), ("imap.example.org", 993, Security::Tls));
     let out = a.outgoing.as_ref().unwrap();
     assert_eq!((out.host.as_str(), out.port, out.security), ("smtp.example.org", 587, Security::StartTls));
-    let key = mailcraft_engine::accounts::secret_key(a.id, false);
+    let key = iridium_mail_engine::accounts::secret_key(a.id, false);
     assert_eq!(app.s.secrets.get(&key).as_deref(), Some("secret-pw"));
 }
 
@@ -306,7 +306,7 @@ fn change_account_prefills_and_keeps_the_password() {
     let app = h.state();
     let a = app.s.mailbox.account(AccountId(id)).unwrap();
     assert_eq!(a.display_name, "Work mail");
-    let key = mailcraft_engine::accounts::secret_key(AccountId(id), false);
+    let key = iridium_mail_engine::accounts::secret_key(AccountId(id), false);
     assert_eq!(app.s.secrets.get(&key).as_deref(), Some("pw-local-only"));
 }
 
@@ -334,9 +334,9 @@ fn set_port(h: &mut Harness<'_, App>, label: &str, port: u16) {
 /// Settings completes both steps.
 #[test]
 fn wizard_connects_to_a_local_server_without_encryption() {
-    let servers = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config {
+    let servers = iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config {
         users: vec![("ana@example.net".into(), "pw-ana-local".into())],
-        ..mailcraft_testmail::Config::default()
+        ..iridium_mail_testmail::Config::default()
     })
     .unwrap();
     let mut app = sample_app();
@@ -525,17 +525,16 @@ fn status_bar_shows_outbox_offline_and_retry() {
     assert!(h.query_by_label("Retry").is_some());
     h.get_by_label("1 message(s) in the Outbox could not be sent").click();
     step(&mut h);
-    let progress =
-        h.state().s.notices.iter().any(
-            |n| matches!(n, mailcraft_engine::Notice::OpenDialog(name, _) if name == "sendReceiveProgress"),
-        );
+    let progress = h.state().s.notices.iter().any(
+        |n| matches!(n, iridium_mail_engine::Notice::OpenDialog(name, _) if name == "sendReceiveProgress"),
+    );
     assert!(progress, "clicking the error opens Send/Receive Progress");
     assert_eq!(h.state().s.mailbox.mail.get(ItemId(item.0)).map(|m| m.folder), Some(outbox));
 }
 
 /// Puts the status of account `id` in the middle of a first download (as the worker reports it).
 fn downloading(app: &mut App, id: u32) {
-    let d = mailcraft_engine::sync::SyncProgress {
+    let d = iridium_mail_engine::sync::SyncProgress {
         folder: "Inbox".into(),
         folder_index: 3,
         folder_count: 12,
@@ -823,9 +822,9 @@ fn manual_setup_offers_pop3_with_server_copy_settings() {
     step(&mut h);
     let app = h.state();
     let a = app.s.mailbox.accounts.iter().find(|a| a.address == "lee@example.com").unwrap();
-    assert_eq!(mailcraft_engine::accounts::kind_label(&app.s, a), "pop3");
+    assert_eq!(iridium_mail_engine::accounts::kind_label(&app.s, a), "pop3");
     assert_eq!(a.incoming.as_ref().unwrap().port, 995);
-    let o = mailcraft_engine::accounts::account_options(&app.s, a.id);
+    let o = iridium_mail_engine::accounts::account_options(&app.s, a.id);
     assert!(o.pop3 && !o.leave_on_server);
 }
 
@@ -869,7 +868,7 @@ fn change_account_starts_and_cancels_an_oauth_sign_in() {
         let flow = app.s.sync.oauth.get(&AccountId(id)).cloned().unwrap();
         assert_eq!(flow.status, "waiting");
         assert!(flow.auth_url.as_deref().is_some_and(|u| u.contains("client_id=my-registered-app")));
-        let o = mailcraft_engine::accounts::account_options(&app.s, AccountId(id));
+        let o = iridium_mail_engine::accounts::account_options(&app.s, AccountId(id));
         assert_eq!(o.oauth.unwrap().client_id, "my-registered-app");
     }
     assert!(h.query_by_label_contains("Finish signing in in your browser").is_some());
@@ -885,8 +884,8 @@ fn change_account_starts_and_cancels_an_oauth_sign_in() {
 // Server lookup in the Add Account wizard
 
 /// Points the session's server lookup at the local test servers (autoconfig over HTTPS, fake DNS).
-fn local_lookup(app: &mut App, servers: &mailcraft_testmail::TestServers) {
-    use mailcraft_engine::sync::{ConnectOptions, DiscoverOptions, ResolverChoice};
+fn local_lookup(app: &mut App, servers: &iridium_mail_testmail::TestServers) {
+    use iridium_mail_engine::sync::{ConnectOptions, DiscoverOptions, ResolverChoice};
     app.s.sync.discovery = DiscoverOptions {
         resolver: ResolverChoice::Fixed(servers.dns_addr()),
         // The test server always answers, so a long timeout costs nothing; a short one made lookups miss
@@ -908,7 +907,8 @@ fn wait_for_settings(h: &mut Harness<'_, App>, title: &str) {
 
 #[test]
 fn add_account_uses_the_providers_autoconfig_before_guessing() {
-    let servers = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config::default()).unwrap();
+    let servers =
+        iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config::default()).unwrap();
     servers.set_autoconfig(
         "example.net",
         Some(
@@ -973,16 +973,17 @@ fn add_account_uses_the_providers_autoconfig_before_guessing() {
     );
     let out = a.outgoing.as_ref().unwrap();
     assert_eq!((out.port, out.security), (465, Security::Tls));
-    let o = mailcraft_engine::accounts::account_options(&app.s, a.id);
+    let o = iridium_mail_engine::accounts::account_options(&app.s, a.id);
     assert_eq!(o.download_months, Some(3));
     assert!(!o.slow_headers_only, "the box was on by default and was cleared");
 }
 
 #[test]
 fn add_account_points_out_servers_outside_the_domain_found_in_dns() {
-    let servers = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config::default()).unwrap();
+    let servers =
+        iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config::default()).unwrap();
     let srv = |port: u16, target: &str| {
-        vec![mailcraft_testmail::Srv { priority: 0, weight: 0, port, target: target.into() }]
+        vec![iridium_mail_testmail::Srv { priority: 0, weight: 0, port, target: target.into() }]
     };
     servers.set_srv("_imaps._tcp.example.org", srv(993, "imap.example.org"));
     servers.set_srv("_submission._tcp.example.org", srv(587, "smtp.hosting.example"));
@@ -1014,10 +1015,11 @@ fn add_account_points_out_servers_outside_the_domain_found_in_dns() {
 #[test]
 fn add_account_recognises_microsoft_365_by_mx_and_signs_in_with_oauth() {
     const TENANT: &str = "6f1a5c2e-0b7d-4c3a-9e8f-1d2c3b4a5e6f";
-    let servers = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config::default()).unwrap();
+    let servers =
+        iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config::default()).unwrap();
     servers.set_mx(
         "m365.example.net",
-        vec![mailcraft_testmail::Mx {
+        vec![iridium_mail_testmail::Mx {
             preference: 0,
             exchange: "m365-example-net.mail.protection.outlook.com".into(),
         }],
@@ -1097,10 +1099,11 @@ fn add_account_recognises_microsoft_365_by_mx_and_signs_in_with_oauth() {
 #[test]
 fn add_account_offers_microsoft_graph_for_microsoft_365() {
     const TENANT: &str = "6f1a5c2e-0b7d-4c3a-9e8f-1d2c3b4a5e6f";
-    let servers = mailcraft_testmail::TestServers::start(mailcraft_testmail::Config::default()).unwrap();
+    let servers =
+        iridium_mail_testmail::TestServers::start(iridium_mail_testmail::Config::default()).unwrap();
     servers.set_mx(
         "m365.example.net",
-        vec![mailcraft_testmail::Mx {
+        vec![iridium_mail_testmail::Mx {
             preference: 0,
             exchange: "m365-example-net.mail.protection.outlook.com".into(),
         }],
@@ -1133,7 +1136,7 @@ fn add_account_offers_microsoft_graph_for_microsoft_365() {
     let id = {
         let app = h.state();
         let a = app.s.mailbox.accounts.iter().find(|a| a.address == "robin@m365.example.net").unwrap();
-        assert_eq!(a.kind, mailcraft_model::AccountKind::Graph);
+        assert_eq!(a.kind, iridium_mail_model::AccountKind::Graph);
         assert_eq!(a.incoming.as_ref().unwrap().host, "https://graph.microsoft.com/v1.0");
         assert!(a.outgoing.is_none());
         let flow = app.s.sync.oauth.get(&a.id).cloned().unwrap();
@@ -1158,7 +1161,7 @@ fn add_account_knows_gmail_without_a_lookup() {
     let mut app = sample_app();
     app.s.view.work_offline = true;
     // No test servers at all: a consumer domain needs none.
-    app.s.sync.discovery = mailcraft_engine::sync::DiscoverOptions::offline();
+    app.s.sync.discovery = iridium_mail_engine::sync::DiscoverOptions::offline();
     crate::dialogs::open(&mut app, "addAccount", json!({}));
     let mut h = harness(app);
     set_text(&mut h, "Email address:", "kim@gmail.com");
@@ -1185,8 +1188,8 @@ fn add_account_knows_gmail_without_a_lookup() {
 
 #[test]
 fn add_account_name_never_comes_from_a_data_file() {
-    use mailcraft_engine::Session;
-    use mailcraft_model::Mailbox;
+    use iridium_mail_engine::Session;
+    use iridium_mail_model::Mailbox;
     // A fresh profile has only its local data file: Your name starts empty.
     let mut app = App::new(Session::new(Mailbox::new_local("Local Folders")));
     crate::dialogs::open(&mut app, "addAccount", json!({}));
@@ -1266,9 +1269,9 @@ fn imap_settings_offer_the_offline_window_and_save_it() {
     h.get_by_label("Save").click();
     step(&mut h);
     assert!(h.query_by_label("Account successfully updated").is_some(), "{:?}", h.state().ui.toast);
-    let o = mailcraft_engine::accounts::account_options(&h.state().s, AccountId(id));
+    let o = iridium_mail_engine::accounts::account_options(&h.state().s, AccountId(id));
     assert!(o.keep_offline);
-    assert_eq!(o.offline_window, mailcraft_engine::offline::OfflineWindow::ThreeMonths);
+    assert_eq!(o.offline_window, iridium_mail_engine::offline::OfflineWindow::ThreeMonths);
 }
 
 #[test]
@@ -1340,7 +1343,7 @@ fn pop_accounts_have_no_offline_window() {
 fn offline_wizard() -> Harness<'static, App> {
     let mut app = sample_app();
     app.s.view.work_offline = true;
-    app.s.sync.discovery = mailcraft_engine::sync::DiscoverOptions::offline();
+    app.s.sync.discovery = iridium_mail_engine::sync::DiscoverOptions::offline();
     crate::dialogs::open(&mut app, "addAccount", json!({}));
     harness(app)
 }
@@ -1475,7 +1478,7 @@ fn another_type_after_back_replaces_the_account_added() {
     let app = h.state();
     assert_eq!(app.s.mailbox.accounts.len(), before + 1);
     let a = app.s.mailbox.accounts.iter().find(|a| a.address == "ana@example.net").unwrap();
-    assert_eq!(mailcraft_engine::accounts::kind_label(&app.s, a), "pop3");
+    assert_eq!(iridium_mail_engine::accounts::kind_label(&app.s, a), "pop3");
 }
 
 #[test]

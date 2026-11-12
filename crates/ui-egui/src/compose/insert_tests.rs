@@ -9,9 +9,9 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use serde_json::json;
 
-use mailcraft_engine::Session;
-use mailcraft_engine::compose::{ComposeKind, ComposeState};
-use mailcraft_engine::model::{Block, Mailbox};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::compose::{ComposeKind, ComposeState};
+use iridium_mail_engine::model::{Block, Mailbox};
 
 use super::*;
 use crate::ribbon::state::dyn_items;
@@ -391,8 +391,8 @@ fn language_dialog_keeps_a_language_it_does_not_list() {
 fn message_options_keeps_a_save_sent_folder_past_the_list_limit() {
     // Regression: the choice was an index into a list cut to 300 folders; a folder past the cut showed as
     // "Sent Items (default)" and OK reset the message to it.
-    use mailcraft_engine::compose::SaveSentTo;
-    use mailcraft_engine::model::{FolderId, FolderRole};
+    use iridium_mail_engine::compose::SaveSentTo;
+    use iridium_mail_engine::model::{FolderId, FolderRole};
     let (mut app, cid) = app_with_body("x");
     let account = app.s.mailbox.default_account().map(|a| a.id).unwrap();
     let inbox = app.s.mailbox.role_folder(account, FolderRole::Inbox).unwrap();

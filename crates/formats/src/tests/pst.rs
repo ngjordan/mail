@@ -1,12 +1,12 @@
-//! PST reading against synthetic files built from the [MS-PST] specification (`mailcraft_testmail::pst`).
+//! PST reading against synthetic files built from the [MS-PST] specification (`iridium_mail_testmail::pst`).
 
 use std::sync::Arc;
 
-use mailcraft_model::{
+use iridium_mail_model::{
     BodyFormat, BusyStatus, FlagState, FolderKind, FolderRole, Importance, NoteColor, TaskPriority,
     TaskStatus,
 };
-use mailcraft_testmail::pst::{
+use iridium_mail_testmail::pst::{
     Crypt, ItemDef, Key, PS_PUBLIC_STRINGS, PSETID_ADDRESS, PSETID_APPOINTMENT, PSETID_COMMON, PSETID_NOTE,
     PSETID_TASK, PstBuilder, Value,
 };
@@ -182,7 +182,7 @@ fn reads_the_folder_tree_and_every_kind_of_item() {
     assert!(report.skipped[0].reason.contains("contact groups"), "{:?}", report.skipped);
     assert_eq!(report.stopped, None);
 
-    let mails: Vec<&(mailcraft_model::MailItem, mailcraft_store::Content)> = sink
+    let mails: Vec<&(iridium_mail_model::MailItem, iridium_mail_store::Content)> = sink
         .items
         .iter()
         .filter_map(|(_, i)| match i {
@@ -207,7 +207,7 @@ fn reads_the_folder_tree_and_every_kind_of_item() {
         other => panic!("flag {other:?}"),
     }
     let raw = content.source.as_ref().unwrap();
-    let parsed = mailcraft_mime::parse(raw).unwrap();
+    let parsed = iridium_mail_mime::parse(raw).unwrap();
     assert_eq!(parsed.attachments().len(), 1);
     assert_eq!(parsed.attachments()[0].filename, "numbers.csv");
     assert_eq!(parsed.attachments()[0].data, b"a,b\n1,2\n");
@@ -282,7 +282,7 @@ fn reads_permute_encoded_files_large_values_and_attached_messages() {
     assert_eq!(report.mail, 1, "{:?}", report.skipped);
     let PstItem::Mail(m) = &sink.items[0].1 else { panic!("not mail") };
     let raw = m.1.source.as_ref().unwrap();
-    let parsed = mailcraft_mime::parse(raw).unwrap();
+    let parsed = iridium_mail_mime::parse(raw).unwrap();
     let atts = parsed.attachments();
     assert_eq!(
         atts.len(),
@@ -554,8 +554,8 @@ fn calendar_items_keep_their_object_id_as_uid_and_others_never_repeat() {
     clean[16..20].fill(0);
     assert_eq!(uid("Global id"), hex(&clean));
     assert_eq!(uid("Carried uid"), "meeting-42@example.com");
-    assert!(uid("Damaged id").ends_with("@mailcraft.invalid"));
-    assert!(uid("No id").ends_with("@mailcraft.invalid"));
+    assert!(uid("Damaged id").ends_with("@iridium-mail.invalid"));
+    assert!(uid("No id").ends_with("@iridium-mail.invalid"));
 
     // Two different files (same node ids, same layout), and one file read twice: no UID repeats.
     let file = |subject: &str| {

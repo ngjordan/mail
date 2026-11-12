@@ -1,5 +1,5 @@
-//! Offscreen rendering (layer L3): paints a [`mailcraft_layout::DisplayList`] into an RGBA pixmap with
-//! tiny-skia, drawing glyph outlines from `mailcraft-fonts`. Used for headless screenshots (CLI `show`),
+//! Offscreen rendering (layer L3): paints a [`iridium_mail_layout::DisplayList`] into an RGBA pixmap with
+//! tiny-skia, drawing glyph outlines from `iridium-mail-fonts`. Used for headless screenshots (CLI `show`),
 //! golden-image tests and print preview. The interactive UI paints the same display list with egui instead.
 //!
 //! Interface (frozen for commit 2): [`Canvas`], [`render`], [`Canvas::to_png`].
@@ -15,7 +15,7 @@
 //!   [`Canvas`] is returned).
 //! - Axis-aligned lines, rectangle frames and text decorations are snapped to whole device pixels so 1 px rules
 //!   stay crisp; everything else is antialiased.
-//! - [`DisplayItem::StrokeRect`](mailcraft_layout::DisplayItem::StrokeRect) paints its border *inside* the
+//! - [`DisplayItem::StrokeRect`](iridium_mail_layout::DisplayItem::StrokeRect) paints its border *inside* the
 //!   rectangle (like a CSS border box).
 //! - Non-finite or absurd coordinates are skipped or clipped; rendering never panics.
 
@@ -26,9 +26,9 @@ pub mod svg;
 #[cfg(test)]
 mod tests;
 
-use mailcraft_fonts::FontDb;
-use mailcraft_geom::Color;
-use mailcraft_layout::DisplayList;
+use iridium_mail_fonts::FontDb;
+use iridium_mail_geom::Color;
+use iridium_mail_layout::DisplayList;
 
 /// Largest accepted canvas side, in device pixels.
 pub const MAX_DIMENSION: u32 = 16_384;

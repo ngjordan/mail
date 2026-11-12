@@ -11,7 +11,7 @@
 use egui::{Event, Id, Key, Order, Rect, Sense, pos2, vec2};
 use serde_json::json;
 
-use mailcraft_engine::compose::{ComposeState, DocPos};
+use iridium_mail_engine::compose::{ComposeState, DocPos};
 
 use super::editor::{EditorHost, leaf_chars};
 
@@ -45,7 +45,7 @@ struct State {
 }
 
 fn id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-mention", cid))
+    Id::unique(("iridium-mail-compose-mention", cid))
 }
 
 fn load(ctx: &egui::Context, cid: u64) -> State {

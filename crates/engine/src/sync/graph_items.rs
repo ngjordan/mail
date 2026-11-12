@@ -1,5 +1,5 @@
 //! Microsoft Graph contacts, To Do tasks and events (REST v1.0 resources `contact`, `todoTask`, `event`) to
-//! and from MailCraft's [`Contact`], [`Task`] and [`Appointment`].
+//! and from Mail's [`Contact`], [`Task`] and [`Appointment`].
 //!
 //! **Contacts.** Name parts (`givenName`, `middleName`, `surname`, `title`, `generation`), `displayName`,
 //! `fileAs`, `companyName`, `department`, `jobTitle`, `emailAddresses` (three), `businessPhones` /
@@ -12,7 +12,7 @@
 //! `completedDateTime`, the reminder (`isReminderOn`, `reminderDateTime`), `categories` and `recurrence`.
 //!
 //! **Events.** `subject`, `body` (text; HTML is read as its text), `location`, `start` / `end` (with their
-//! zones: a Windows zone name or an IANA one, read through MailCraft's zone table; times are asked for in
+//! zones: a Windows zone name or an IANA one, read through Mail's zone table; times are asked for in
 //! UTC and the zone the event was made in is `originalStartTimeZone`), `isAllDay`, `showAs`, the reminder,
 //! `attendees` (with their answers), `organizer` (read only), `categories`, `sensitivity`, `importance`, and
 //! a series' `recurrence` (pattern and range) ↔ RRULE. A series' exceptions are events of type `exception`
@@ -22,13 +22,15 @@
 //! only those whose value differs from the server's copy read the same way (see `graph_pim.rs`). Server
 //! data is untrusted: lists and texts are capped and nothing panics on odd input.
 
-use mailcraft_formats::ics::tz::{TimeZone, builtin, builtin_name, iana_of_windows, windows_of_iana};
-use mailcraft_formats::ics::value::{civil, local_secs};
-use mailcraft_mime::Mailbox;
-use mailcraft_model::calendar::{AttendeeRole, ResponseStatus};
-use mailcraft_model::contact::PostalAddress;
-use mailcraft_model::task::{TaskPriority, TaskRecurrence, TaskStatus};
-use mailcraft_model::{Appointment, Attendee, BusyStatus, Contact, DateTime, Importance, Recurrence, Task};
+use iridium_mail_formats::ics::tz::{TimeZone, builtin, builtin_name, iana_of_windows, windows_of_iana};
+use iridium_mail_formats::ics::value::{civil, local_secs};
+use iridium_mail_mime::Mailbox;
+use iridium_mail_model::calendar::{AttendeeRole, ResponseStatus};
+use iridium_mail_model::contact::PostalAddress;
+use iridium_mail_model::task::{TaskPriority, TaskRecurrence, TaskStatus};
+use iridium_mail_model::{
+    Appointment, Attendee, BusyStatus, Contact, DateTime, Importance, Recurrence, Task,
+};
 use serde_json::{Map, Value, json};
 
 const DAY: i64 = 86_400;
@@ -65,7 +67,7 @@ fn body_text(v: Option<&Value>) -> String {
     let Some(b) = v else { return String::new() };
     let content = text(b.get("content"));
     if b.get("contentType").and_then(Value::as_str).is_some_and(|t| t.eq_ignore_ascii_case("html")) {
-        mailcraft_html::html_to_text(&content).trim_end().to_owned()
+        iridium_mail_html::html_to_text(&content).trim_end().to_owned()
     } else {
         content.trim_end_matches(['\r', '\n']).to_owned()
     }
@@ -79,7 +81,7 @@ fn body_of(s: &str) -> Value {
 // Contacts
 // ---------------------------------------------------------------------------------------------------------
 
-/// The contact properties MailCraft writes.
+/// The contact properties Mail writes.
 pub(super) const CONTACT_MAPPED: [&str; 28] = [
     "givenName",
     "middleName",
@@ -279,9 +281,9 @@ pub(super) fn from_contact(c: &Contact) -> Map<String, Value> {
 
 /// Where a Graph time is.
 pub(super) enum Zone {
-    /// A zone MailCraft knows (its IANA name, as MailCraft spells it).
+    /// A zone Mail knows (its IANA name, as Mail spells it).
     Named(TimeZone, &'static str),
-    /// UTC, or a zone MailCraft does not know (read as UTC).
+    /// UTC, or a zone Mail does not know (read as UTC).
     Utc,
 }
 
@@ -300,7 +302,7 @@ pub(super) fn zone_named(name: &str) -> Zone {
     }
 }
 
-/// True when MailCraft knows the zone a Graph time zone name stands for, or the name says UTC: times in it
+/// True when Mail knows the zone a Graph time zone name stands for, or the name says UTC: times in it
 /// can be compared with the service's to the second (an unknown zone is read as UTC, which drifts by the
 /// zone's offset and its daylight saving time).
 pub(super) fn zone_known(name: &str) -> bool {
@@ -317,7 +319,7 @@ pub(super) fn zone_known(name: &str) -> bool {
 /// The local midnight (civil seconds) of the day an all-day time falls on. A time that is a midnight is that
 /// day as written; another one (the service gives all-day times in the zone the request asked for, so an
 /// event made in Berlin comes as 22:00 UTC the evening before) is the instant `unix` seen in `zone`, the
-/// zone the event was made in (the user's offset when MailCraft does not know that zone), to the nearest
+/// zone the event was made in (the user's offset when Mail does not know that zone), to the nearest
 /// midnight.
 pub(super) fn all_day_local(unix: i64, zone: &Zone, user_offset: i32) -> i64 {
     if unix.rem_euclid(DAY) == 0 {
@@ -703,7 +705,7 @@ fn until_day(v: &str, zone: &Zone) -> Option<i64> {
 // Tasks
 // ---------------------------------------------------------------------------------------------------------
 
-/// The task properties MailCraft writes.
+/// The task properties Mail writes.
 pub(super) const TASK_MAPPED: [&str; 11] = [
     "title",
     "body",
@@ -835,7 +837,7 @@ pub(super) fn from_task(t: &Task) -> Map<String, Value> {
 // Events
 // ---------------------------------------------------------------------------------------------------------
 
-/// The event properties MailCraft writes.
+/// The event properties Mail writes.
 pub(super) const EVENT_MAPPED: [&str; 14] = [
     "subject",
     "body",
@@ -1008,7 +1010,7 @@ pub(super) fn to_appointments(
     Some((out, uid))
 }
 
-/// The Graph zone of an appointment: its own zone when MailCraft knows it, else UTC.
+/// The Graph zone of an appointment: its own zone when Mail knows it, else UTC.
 fn zone_for(zone: Option<&str>) -> Zone {
     zone.map_or(Zone::Utc, zone_named)
 }
@@ -1198,7 +1200,7 @@ mod tests {
                         "end": {"dateTime": "2027-05-13T07:00:00", "timeZone": "UTC"}});
         let a = appointment_of(&la, 120).unwrap();
         assert_eq!(a.start.unix + 120 * 60, parse_local("2027-05-12T00:00:00").unwrap());
-        // A zone MailCraft does not know: to the nearest midnight in the user's offset.
+        // A zone Mail does not know: to the nearest midnight in the user's offset.
         let custom = json!({"isAllDay": true, "originalStartTimeZone": "tzone://Microsoft/Custom",
                             "start": {"dateTime": "2027-05-09T22:00:00", "timeZone": "UTC"}});
         let a = appointment_of(&custom, 60).unwrap();

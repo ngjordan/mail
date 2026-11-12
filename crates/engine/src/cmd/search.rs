@@ -1,7 +1,7 @@
 //! Search commands (`search.*`): the query in `ViewState::search`, its scope, the Search tab refiners,
 //! Recent Searches, Search Tools (Indexing Status, Advanced Find) and match highlights.
 //!
-//! Queries use the `mailcraft-search` language (free text, `from:`, `to:`, `cc:`, `subject:`, `body:`,
+//! Queries use the `iridium-mail-search` language (free text, `from:`, `to:`, `cc:`, `subject:`, `body:`,
 //! `attachments:`, `hasattachments:`, `isread:`, `isflagged:`, `importance:`, `category:`, `folder:`,
 //! `received:`/`sent:` with relative dates, dates and ranges, `size:`, `kind:`, AND/OR/NOT, parentheses,
 //! quoted phrases; prefix matching, case and diacritics ignored). Evaluation goes through the session's
@@ -13,8 +13,8 @@ use super::folder::{current_folder, dialog};
 use super::util::{opt_bool, opt_str, opt_u64};
 use crate::search_index::{self, MAX_RECENT};
 use crate::{CmdError, CmdResult, CommandSpec, SearchScope, Session, always};
-use mailcraft_model::{FolderId, ItemId, MailItem};
-use mailcraft_search::Field;
+use iridium_mail_model::{FolderId, ItemId, MailItem};
+use iridium_mail_search::Field;
 
 #[allow(clippy::too_many_arguments)]
 fn spec(
@@ -217,7 +217,7 @@ fn summary(s: &Session) -> Value {
         .collect();
     json!({
         "query": s.view.search,
-        "parsed": mailcraft_search::parse(&s.view.search).to_string(),
+        "parsed": iridium_mail_search::parse(&s.view.search).to_string(),
         "scope": scope_name(s.view.search_scope),
         "includeDeleted": s.search.include_deleted,
         "results": hits.len(),
@@ -376,7 +376,7 @@ fn scope(s: &mut Session, p: &Value) -> CmdResult {
     Ok(out)
 }
 
-fn searched(s: &Session, account: mailcraft_model::AccountId) -> bool {
+fn searched(s: &Session, account: iridium_mail_model::AccountId) -> bool {
     search_index::searched_stores(s).contains(&account)
 }
 
@@ -498,8 +498,8 @@ fn refine(s: &mut Session, p: &Value) -> CmdResult {
     }
     let date = |key: &str, default: &str| -> Result<String, CmdError> {
         let when = if value.is_empty() { default } else { value };
-        let parsed = mailcraft_search::parse(&token(key, when));
-        if matches!(parsed, mailcraft_search::Query::Term(mailcraft_search::Term::Invalid(..))) {
+        let parsed = iridium_mail_search::parse(&token(key, when));
+        if matches!(parsed, iridium_mail_search::Query::Term(iridium_mail_search::Term::Invalid(..))) {
             return Err(CmdError::Params(format!("unknown date or range `{when}`")));
         }
         Ok(token(key, when))
@@ -532,8 +532,8 @@ fn refine(s: &mut Session, p: &Value) -> CmdResult {
         "sent" => date("sent", "this week")?,
         "size" => {
             let v = if value.is_empty() { "large" } else { value };
-            let parsed = mailcraft_search::parse(&token("size", v));
-            if !matches!(parsed, mailcraft_search::Query::Term(mailcraft_search::Term::Size(_))) {
+            let parsed = iridium_mail_search::parse(&token("size", v));
+            if !matches!(parsed, iridium_mail_search::Query::Term(iridium_mail_search::Term::Size(_))) {
                 return Err(CmdError::Params(format!("unknown size `{v}`")));
             }
             token("size", v)
@@ -575,7 +575,7 @@ const CLASSES: &[&str] = &[
 ];
 
 /// Add Form Field: the item properties a condition can test, grouped by form (group, field label, type).
-/// The labels name the properties of `mailcraft_search::Doc::props` (compared without spaces).
+/// The labels name the properties of `iridium_mail_search::Doc::props` (compared without spaces).
 pub const FORM_FIELDS: &[(&str, &str, FieldType)] = &[
     ("Frequently-used fields", "Subject", FieldType::Text),
     ("Frequently-used fields", "From", FieldType::Text),
@@ -683,17 +683,18 @@ pub fn field_conditions(query: &str) -> Vec<Value> {
     terms(query)
         .into_iter()
         .filter_map(|t| {
-            let mailcraft_search::Query::Term(mailcraft_search::Term::Prop(p)) = mailcraft_search::parse(&t)
+            let iridium_mail_search::Query::Term(iridium_mail_search::Term::Prop(p)) =
+                iridium_mail_search::parse(&t)
             else {
                 return None;
             };
             let field = FORM_FIELDS
                 .iter()
-                .find(|(_, l, _)| mailcraft_search::doc::prop_id(l) == p.name)
+                .find(|(_, l, _)| iridium_mail_search::doc::prop_id(l) == p.name)
                 .map_or(p.label.clone(), |(_, l, _)| (*l).to_owned());
             let ftype = FORM_FIELDS
                 .iter()
-                .find(|(_, l, _)| mailcraft_search::doc::prop_id(l) == p.name)
+                .find(|(_, l, _)| iridium_mail_search::doc::prop_id(l) == p.name)
                 .map_or(FieldType::Text, |(_, _, t)| *t);
             let sym = p.op.symbol();
             let cond = conditions_of(ftype)
@@ -738,7 +739,7 @@ pub fn field_term(field: &str, condition: Option<&str>, value: &str) -> Result<S
     let name = field.trim();
     let Some((_, label, ftype)) = FORM_FIELDS.iter().find(|(_, l, _)| {
         l.eq_ignore_ascii_case(name)
-            || mailcraft_search::doc::prop_id(l) == mailcraft_search::doc::prop_id(name)
+            || iridium_mail_search::doc::prop_id(l) == iridium_mail_search::doc::prop_id(name)
     }) else {
         return Err(CmdError::Params(format!(
             "unknown field `{}`",
@@ -783,7 +784,7 @@ fn normal_date(v: &str) -> Option<String> {
     if !(1..=9999).contains(&y)
         || !(1..=12).contains(&m)
         || d == 0
-        || i64::from(d) > i64::from(mailcraft_mime::date::days_in_month(i64::from(y), m))
+        || i64::from(d) > i64::from(iridium_mail_mime::date::days_in_month(i64::from(y), m))
     {
         return None;
     }
@@ -819,8 +820,8 @@ pub fn advanced_query(p: &Value) -> Result<String, CmdError> {
         };
         let t = token(key, when);
         if matches!(
-            mailcraft_search::parse(&t),
-            mailcraft_search::Query::Term(mailcraft_search::Term::Invalid(..))
+            iridium_mail_search::parse(&t),
+            iridium_mail_search::Query::Term(iridium_mail_search::Term::Invalid(..))
         ) {
             return Err(CmdError::Params(format!("unknown time `{when}`")));
         }
@@ -831,8 +832,8 @@ pub fn advanced_query(p: &Value) -> Result<String, CmdError> {
 
 /// Advanced Find › Look for: the item kinds a name stands for (`messages`, the default; `any`;
 /// `appointments`, `contacts`, `tasks`, `notes`).
-pub fn look_for_kinds(name: &str) -> Result<Vec<mailcraft_search::DocKind>, CmdError> {
-    use mailcraft_search::DocKind;
+pub fn look_for_kinds(name: &str) -> Result<Vec<iridium_mail_search::DocKind>, CmdError> {
+    use iridium_mail_search::DocKind;
     Ok(match name {
         "messages" | "" => vec![DocKind::Mail],
         "any" => DocKind::ALL.to_vec(),
@@ -845,9 +846,9 @@ pub fn look_for_kinds(name: &str) -> Result<Vec<mailcraft_search::DocKind>, CmdE
 }
 
 /// The folder kind holding items of `kind`.
-fn folder_kind_of(kind: mailcraft_search::DocKind) -> mailcraft_model::FolderKind {
-    use mailcraft_model::FolderKind;
-    use mailcraft_search::DocKind;
+fn folder_kind_of(kind: iridium_mail_search::DocKind) -> iridium_mail_model::FolderKind {
+    use iridium_mail_model::FolderKind;
+    use iridium_mail_search::DocKind;
     match kind {
         DocKind::Mail => FolderKind::Mail,
         DocKind::Appointment => FolderKind::Calendar,
@@ -876,15 +877,15 @@ fn advanced_find(s: &mut Session, p: &Value) -> CmdResult {
     } else {
         vec![folder.0]
     };
-    let mail_only = kinds == [mailcraft_search::DocKind::Mail];
+    let mail_only = kinds == [iridium_mail_search::DocKind::Mail];
     let folder_kind = s.mailbox.folder(folder).map(|f| f.kind);
-    let holds = |k: &mailcraft_search::DocKind| Some(folder_kind_of(*k)) == folder_kind;
+    let holds = |k: &iridium_mail_search::DocKind| Some(folder_kind_of(*k)) == folder_kind;
     let filter = if mail_only || (kinds.len() == 1 && kinds.iter().any(holds)) {
-        mailcraft_search::Filter { folders: Some(subtree.into_iter().collect()), kinds: kinds.clone() }
+        iridium_mail_search::Filter { folders: Some(subtree.into_iter().collect()), kinds: kinds.clone() }
     } else {
-        let wanted: Vec<mailcraft_model::FolderKind> = kinds.iter().map(|k| folder_kind_of(*k)).collect();
+        let wanted: Vec<iridium_mail_model::FolderKind> = kinds.iter().map(|k| folder_kind_of(*k)).collect();
         let folders = s.mailbox.folders.values().filter(|f| wanted.contains(&f.kind)).map(|f| f.id.0);
-        mailcraft_search::Filter { folders: Some(folders.collect()), kinds: kinds.clone() }
+        iridium_mail_search::Filter { folders: Some(folders.collect()), kinds: kinds.clone() }
     };
     let ids: Vec<ItemId> = if q.is_empty() {
         every_item(s, &filter)
@@ -898,10 +899,10 @@ fn advanced_find(s: &mut Session, p: &Value) -> CmdResult {
 
 /// Every item of `filter`'s kinds in its folders: messages newest first, then appointments, contacts,
 /// tasks and notes (Advanced Find › Find Now with no criteria).
-fn every_item(s: &Session, filter: &mailcraft_search::Filter) -> Vec<ItemId> {
-    use mailcraft_search::DocKind;
+fn every_item(s: &Session, filter: &iridium_mail_search::Filter) -> Vec<ItemId> {
+    use iridium_mail_search::DocKind;
     let mb = &s.mailbox;
-    let wanted = |k: DocKind, folder: mailcraft_model::FolderId| {
+    let wanted = |k: DocKind, folder: iridium_mail_model::FolderId| {
         (filter.kinds.is_empty() || filter.kinds.contains(&k))
             && filter.folders.as_ref().is_none_or(|f| f.contains(&folder.0))
     };
@@ -986,7 +987,7 @@ fn highlights(s: &mut Session, p: &Value) -> CmdResult {
                 .mail
                 .get(ItemId(id))
                 .ok_or_else(|| CmdError::Params(format!("no message with id {id}")))?;
-            let people = |list: &[mailcraft_model::Address]| {
+            let people = |list: &[iridium_mail_model::Address]| {
                 list.iter()
                     .map(|a| match &a.name {
                         Some(n) => format!("{n} <{}>", a.addr),
@@ -1009,7 +1010,7 @@ fn highlights(s: &mut Session, p: &Value) -> CmdResult {
         (None, None) => return Err(CmdError::Params("`text` (string) or `id` (number) required".into())),
     };
     let q = opt_str(p, "query").map(str::to_owned).unwrap_or_else(|| s.view.search.clone());
-    let ranges = mailcraft_search::highlights(&mailcraft_search::parse(&q), field, &text);
+    let ranges = iridium_mail_search::highlights(&iridium_mail_search::parse(&q), field, &text);
     let chars = |b: usize| text.get(..b).map_or(0, |t| t.chars().count());
     let out: Vec<Value> = ranges
         .iter()
@@ -1024,7 +1025,7 @@ fn highlights(s: &mut Session, p: &Value) -> CmdResult {
 mod tests {
     use super::*;
     use crate::Notice;
-    use mailcraft_model::{Address, AttachmentMeta, DateTime, FlagState, FolderRole, Importance, Mailbox};
+    use iridium_mail_model::{Address, AttachmentMeta, DateTime, FlagState, FolderRole, Importance, Mailbox};
 
     const NOW: i64 = 1_791_000_000;
 
@@ -1275,7 +1276,7 @@ mod tests {
             &mut s,
             MailItem {
                 subject: "Salary".into(),
-                sensitivity: mailcraft_model::Sensitivity::Private,
+                sensitivity: iridium_mail_model::Sensitivity::Private,
                 ..Default::default()
             },
         );
@@ -1402,8 +1403,8 @@ mod tests {
     fn locations_to_search_include_and_leave_out_stores() {
         let mut s = session();
         add(&mut s, MailItem { subject: "Budget".into(), ..Default::default() });
-        let acct = s.mailbox.add_account(mailcraft_model::Account {
-            kind: mailcraft_model::AccountKind::Local,
+        let acct = s.mailbox.add_account(iridium_mail_model::Account {
+            kind: iridium_mail_model::AccountKind::Local,
             display_name: "Archive file".into(),
             ..Default::default()
         });

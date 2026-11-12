@@ -158,7 +158,7 @@ Context|status-bar|Header Items in View|view.statusBar
 Context|status-bar|Unread Items in View 777|view.statusBar
 Context|status-bar|Unseen Items in View|view.statusBar
 Context|status-bar|Reminders 13|view.statusBar
-Context|status-bar|Group Notifications|-|Group notifications come from Microsoft 365 Groups, a cloud service MailCraft does not connect to
+Context|status-bar|Group Notifications|-|Group notifications come from Microsoft 365 Groups, a cloud service Mail does not connect to
 Context|status-bar|View Shortcuts|view.statusBar
 Context|status-bar|Zoom Slider|view.statusBar
 Context|status-bar|Zoom 10%|view.statusBar

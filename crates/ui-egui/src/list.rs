@@ -14,7 +14,7 @@
 //! folders are dimmed with their folder name in italics. Left / Right collapse / expand the focused
 //! conversation. Turning Show as Conversations on or off asks for the scope ([`ask_conversation_scope`]).
 //!
-//! What the view settings add (`mailcraft_engine::cmd::view::mail`): the column layout shows the folder's
+//! What the view settings add (`iridium_mail_engine::cmd::view::mail`): the column layout shows the folder's
 //! columns in their order, labels, formats and widths (drag a header edge to resize; the header's context
 //! menu adds, removes and formats columns); rows take the font of the view's Conditional Formatting rules;
 //! the hover buttons are the saved Quick Actions; the category column applies the Quick Click category;
@@ -30,13 +30,13 @@ use egui::{
     Color32, EventFilter, FontFamily, FontId, Galley, Id, Key, Modifiers, Painter, Pos2, Rect, Role, Sense,
     Stroke, Ui, UiBuilder, WidgetInfo, pos2, vec2,
 };
-use mailcraft_engine::Session;
-use mailcraft_engine::cmd::view::mail::{self as mailview, ColumnKind, ColumnSpec};
-use mailcraft_engine::queries::{self, ConversationRow, ItemRow, ListRow, RowStyle};
-use mailcraft_engine::search_index::{self, Field};
+use iridium_mail_engine::Session;
+use iridium_mail_engine::cmd::view::mail::{self as mailview, ColumnKind, ColumnSpec};
+use iridium_mail_engine::queries::{self, ConversationRow, ItemRow, ListRow, RowStyle};
+use iridium_mail_engine::search_index::{self, Field};
 #[cfg(test)]
-use mailcraft_model::FolderId;
-use mailcraft_model::{
+use iridium_mail_model::FolderId;
+use iridium_mail_model::{
     ArrangeBy, FlagState, FocusClass, FolderRole, ListFilter, ReadingPanePos, SortOrder, ViewLayout,
     ViewSettings,
 };
@@ -52,7 +52,7 @@ pub struct DraggedItems(pub Vec<u64>);
 
 /// Id of the list's keyboard-focus widget (the list body).
 pub fn focus_id() -> Id {
-    Id::unique("mailcraft.list.focus")
+    Id::unique("iridium-mail.list.focus")
 }
 
 /// True while the message list has keyboard focus (Up/Down/Home/End/PgUp/PgDn/Enter belong to the list then).
@@ -329,7 +329,7 @@ struct ListState {
 }
 
 fn state_id() -> Id {
-    Id::unique("mailcraft.list.state")
+    Id::unique("iridium-mail.list.state")
 }
 
 /// The messages in the main window's list order, the order Previous / Next Item walk
@@ -337,10 +337,10 @@ fn state_id() -> Id {
 /// list changes ([`fingerprint`], as the list's own rows), not once per window per frame: with thousands of
 /// messages in the folder that rebuild held up every frame of the main window while a message window was
 /// open.
-pub fn visible_ids(ctx: &egui::Context, s: &Session) -> Arc<Vec<mailcraft_model::ItemId>> {
+pub fn visible_ids(ctx: &egui::Context, s: &Session) -> Arc<Vec<iridium_mail_model::ItemId>> {
     let key = fingerprint(s);
-    let id = Id::unique("mailcraft.list.visible-ids");
-    if let Some((k, ids)) = ctx.data(|d| d.get_temp::<(u64, Arc<Vec<mailcraft_model::ItemId>>)>(id))
+    let id = Id::unique("iridium-mail.list.visible-ids");
+    if let Some((k, ids)) = ctx.data(|d| d.get_temp::<(u64, Arc<Vec<iridium_mail_model::ItemId>>)>(id))
         && k == key
     {
         return ids;
@@ -389,7 +389,7 @@ fn fingerprint(s: &Session) -> u64 {
 /// Download state (header only, marked to download) of the listed items: marking and downloading change no
 /// undo entry, so the cache compares this too.
 fn download_signature(s: &Session, rows: &[ListRow]) -> u64 {
-    use mailcraft_engine::sync::cmds;
+    use iridium_mail_engine::sync::cmds;
     let mut h = DefaultHasher::new();
     for r in rows {
         if let ListRow::Item(i) = r {
@@ -670,7 +670,7 @@ struct ScopePrompt {
 }
 
 fn scope_prompt_id() -> Id {
-    Id::unique("mailcraft.list.convscope")
+    Id::unique("iridium-mail.list.convscope")
 }
 
 /// Asks whether Show as Conversations changes for this folder or for all mailboxes before toggling it
@@ -693,7 +693,7 @@ pub fn conversation_scope_prompt(ctx: &egui::Context, app: &mut App) {
     let Some(p) = ctx.data(|d| d.get_temp::<ScopePrompt>(scope_prompt_id())) else { return };
     // Some(Some(scope)) = answered, Some(None) = cancelled.
     let mut choice: Option<Option<&str>> = None;
-    let modal = egui::Modal::new(Id::unique("mailcraft.list.convscope.modal")).show(ctx, |ui| {
+    let modal = egui::Modal::new(Id::unique("iridium-mail.list.convscope.modal")).show(ctx, |ui| {
         ui.set_max_width(360.0);
         let text = if p.on {
             "Arrange messages by conversation in:"
@@ -772,7 +772,7 @@ fn header(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode) {
         let color = if on { th.text } else { th.text_muted };
         let t = Text::new(ui, label, 14.0, on, color, 120.0, 1);
         let tab = Rect::from_min_size(pos2(x - 4.0, row_a.top() + 6.0), vec2(t.width() + 8.0, 30.0));
-        let resp = ui.interact(tab, Id::unique(("mailcraft.list.tab", i)), Sense::click());
+        let resp = ui.interact(tab, Id::unique(("iridium-mail.list.tab", i)), Sense::click());
         if resp.hovered() && !on {
             painter.rect_filled(tab, 3.0, th.hover);
         }
@@ -797,7 +797,7 @@ fn header(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode) {
     // Sort direction (right edge).
     let desc = c.vs.order == SortOrder::Descending;
     let sort_rect = Rect::from_min_size(pos2(row_a.right() - 32.0, row_a.top() + 8.0), vec2(24.0, 24.0));
-    let sort_resp = ui.interact(sort_rect, Id::unique("mailcraft.list.sortdir"), Sense::click());
+    let sort_resp = ui.interact(sort_rect, Id::unique("iridium-mail.list.sortdir"), Sense::click());
     if sort_resp.hovered() {
         painter.rect_filled(sort_rect, 3.0, th.hover);
     }
@@ -821,7 +821,7 @@ fn header(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode) {
     let t = Text::new(ui, &by, 13.0, false, th.text, 160.0, 1);
     let bw = t.width() + 30.0;
     let by_rect = Rect::from_min_size(pos2(sort_rect.left() - 4.0 - bw, row_a.top() + 8.0), vec2(bw, 24.0));
-    let by_resp = ui.interact(by_rect, Id::unique("mailcraft.list.arrange"), Sense::click());
+    let by_resp = ui.interact(by_rect, Id::unique("iridium-mail.list.arrange"), Sense::click());
     if by_resp.hovered() {
         painter.rect_filled(by_rect, 3.0, th.hover);
     }
@@ -836,7 +836,7 @@ fn header(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode) {
         vec2(rect.width(), 30.0),
     );
     if let Some((n, senders)) = &c.other_new {
-        let resp = ui.interact(row_b, Id::unique("mailcraft.list.otherbanner"), Sense::click());
+        let resp = ui.interact(row_b, Id::unique("iridium-mail.list.otherbanner"), Sense::click());
         if resp.hovered() {
             painter.rect_filled(row_b.shrink2(vec2(6.0, 1.0)), 3.0, th.hover);
         }
@@ -857,7 +857,7 @@ fn header(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode) {
     if let Some(notice) = &c.search_notice {
         let t = Text::new(ui, notice, 12.0, false, th.text_muted, row_b.width() - 24.0, 2);
         t.paint_left(&painter, row_b, row_b.left() + 12.0);
-        let resp = ui.interact(row_b, Id::unique("mailcraft.list.searchnotice"), Sense::hover());
+        let resp = ui.interact(row_b, Id::unique("iridium-mail.list.searchnotice"), Sense::hover());
         resp.widget_info(|| WidgetInfo::labeled(Role::Label, true, notice));
         resp.on_hover_text(notice);
     }
@@ -880,7 +880,7 @@ fn outgoing(role: Option<FolderRole>) -> bool {
 
 /// Id of a column's resize drag (memory holds the px dragged so far).
 fn resize_id(col: &str) -> Id {
-    Id::unique(("mailcraft.list.colsize", col))
+    Id::unique(("iridium-mail.list.colsize", col))
 }
 
 fn column_header(ui: &mut Ui, app: &mut App, c: &Cached, row: Rect) {
@@ -892,7 +892,7 @@ fn column_header(ui: &mut Ui, app: &mut App, c: &Cached, row: Rect) {
     for (i, x, w) in layout_columns(&c.columns, row.width()) {
         let Some(col) = c.columns.get(i) else { continue };
         let cell = Rect::from_min_size(pos2(row.left() + x, row.top()), vec2(w, row.height()));
-        let resp = ui.interact(cell, Id::unique(("mailcraft.list.colhdr", col.id)), Sense::click());
+        let resp = ui.interact(cell, Id::unique(("iridium-mail.list.colhdr", col.id)), Sense::click());
         let arrange = column_arrange(col, out);
         if resp.hovered() && arrange.is_some() {
             painter.rect_filled(cell, 0.0, th.hover);
@@ -942,7 +942,7 @@ fn column_header(ui: &mut Ui, app: &mut App, c: &Cached, row: Rect) {
                     ui,
                     app,
                     "view.arrangeBy",
-                    json!({ "key": mailcraft_engine::cmd::view::arrange_name(a) }),
+                    json!({ "key": iridium_mail_engine::cmd::view::arrange_name(a) }),
                 );
             }
         }
@@ -950,7 +950,7 @@ fn column_header(ui: &mut Ui, app: &mut App, c: &Cached, row: Rect) {
 
         // Right edge: drag to resize (committed as the column's width when released).
         let edge = Rect::from_center_size(pos2(cell.right(), cell.center().y), vec2(6.0, row.height()));
-        let grip = ui.interact(edge, Id::unique(("mailcraft.list.colgrip", col.id)), Sense::drag());
+        let grip = ui.interact(edge, Id::unique(("iridium-mail.list.colgrip", col.id)), Sense::drag());
         let grip = grip.on_hover_cursor(egui::CursorIcon::ResizeHorizontal);
         let rid = resize_id(col.id);
         if grip.dragged() {
@@ -1030,9 +1030,10 @@ fn body(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode, st: &mut
     st.last_focus = focus_now;
 
     let mut child = ui.new_child(UiBuilder::new().max_rect(rect));
-    egui::ScrollArea::vertical().id_salt("mailcraft.list.scroll").auto_shrink([false, false]).show_viewport(
-        &mut child,
-        |ui, viewport| {
+    egui::ScrollArea::vertical()
+        .id_salt("iridium-mail.list.scroll")
+        .auto_shrink([false, false])
+        .show_viewport(&mut child, |ui, viewport| {
             ui.set_min_height(total);
             let origin = ui.max_rect().min;
             let width = ui.max_rect().width();
@@ -1059,8 +1060,7 @@ fn body(ui: &mut Ui, app: &mut App, c: &Cached, rect: Rect, mode: Mode, st: &mut
                     None => {}
                 }
             }
-        },
-    );
+        });
 }
 
 fn keyboard(ui: &mut Ui, app: &mut App, c: &Cached, st: &ListState) {
@@ -1185,7 +1185,7 @@ fn toggle_group(ui: &Ui, app: &mut App, label: &str, collapsed: bool) {
 #[allow(clippy::too_many_arguments)]
 fn group_row(ui: &mut Ui, app: &mut App, r: Rect, label: &str, count: usize, collapsed: bool, depth: u8) {
     let th = app.theme.clone();
-    let resp = ui.interact(r, Id::unique(("mailcraft.list.group", label)), Sense::click());
+    let resp = ui.interact(r, Id::unique(("iridium-mail.list.group", label)), Sense::click());
     let painter = ui.painter().clone();
     let fill = if resp.hovered() { th.hover } else { th.group_header };
     painter.rect_filled(r.shrink2(vec2(0.0, 1.0)), 0.0, fill);
@@ -1367,7 +1367,7 @@ fn item_row(
     // A message listed again (under each of its categories) gets its own ids too.
     let part: u32 =
         if row.conversation.as_ref().is_some_and(|c| c.header) { 1 } else { 0 } + 2 * u32::from(row.repeat);
-    let resp = ui.interact(r, Id::unique(("mailcraft.list.row", id, part)), Sense::click_and_drag());
+    let resp = ui.interact(r, Id::unique(("iridium-mail.list.row", id, part)), Sense::click_and_drag());
     let hovered = resp.contains_pointer() && !egui::DragAndDrop::has_any_payload(ui.ctx());
     // The hovered message for hover shortcuts; header rows leave it to the message's own (child) row.
     if part.is_multiple_of(2) && row.kind.is_none() {
@@ -1426,7 +1426,7 @@ fn item_row(
     if flag_active(c)
         && let Some(flag) = slots.flag
     {
-        let flag_resp = ui.interact(flag, Id::unique(("mailcraft.list.flag", id, part)), Sense::click());
+        let flag_resp = ui.interact(flag, Id::unique(("iridium-mail.list.flag", id, part)), Sense::click());
         let flag_tip = if row.flag_complete {
             "Clear flag"
         } else if row.flagged {
@@ -1444,7 +1444,7 @@ fn item_row(
         }
     }
     if let Some(cat) = slots.category {
-        let cat_resp = ui.interact(cat, Id::unique(("mailcraft.list.category", id, part)), Sense::click());
+        let cat_resp = ui.interact(cat, Id::unique(("iridium-mail.list.category", id, part)), Sense::click());
         if cat_resp.hovered() {
             outline(cat);
         }
@@ -1456,7 +1456,7 @@ fn item_row(
     }
     for (action, rect) in &slots.actions {
         let a_resp =
-            ui.interact(*rect, Id::unique(("mailcraft.list.action", id, part, *action)), Sense::click());
+            ui.interact(*rect, Id::unique(("iridium-mail.list.action", id, part, *action)), Sense::click());
         if a_resp.hovered() {
             outline(*rect);
         }
@@ -1529,7 +1529,7 @@ fn paint_conversation_glyph(painter: &Painter, c: Pos2, expanded: bool, color: C
 
 /// The glyph of a header row toggles the conversation without changing the selection.
 fn conversation_glyph(ui: &Ui, app: &mut App, g: Rect, row: &ItemRow, cv: &ConversationRow) {
-    let resp = ui.interact(g, Id::unique(("mailcraft.list.convglyph", row.id.0)), Sense::click());
+    let resp = ui.interact(g, Id::unique(("iridium-mail.list.convglyph", row.id.0)), Sense::click());
     let label = if cv.expanded { "Collapse conversation" } else { "Expand conversation" };
     if resp.hovered() {
         ui.painter().rect_stroke(
@@ -2045,7 +2045,7 @@ fn drag_preview(ui: &Ui, app: &App) {
     let verb = if copy { "Copy" } else { "Move" };
     let label = if n == 1 { format!("{verb} 1 item") } else { format!("{verb} {n} items") };
     let painter =
-        ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("mailcraft.list.dragchip")));
+        ctx.layer_painter(egui::LayerId::new(egui::Order::Tooltip, Id::unique("iridium-mail.list.dragchip")));
     let galley = painter.layout_no_wrap(label, FontId::proportional(12.5), app.theme.text);
     let rect = Rect::from_min_size(pos + vec2(14.0, 10.0), galley.size() + vec2(16.0, 8.0));
     painter.rect_filled(rect, 4.0, app.theme.pane);
@@ -2075,7 +2075,7 @@ mod tests {
             .collect();
         assert_eq!(marked, vec!["budget"]);
     }
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     fn harness(app: App, size: egui::Vec2) -> Harness<'static, App> {
         crate::test_harness().with_size(size).build_ui_state(
@@ -2152,7 +2152,7 @@ mod tests {
         let mut s = sample_session();
         let _ = s.run("view.focusedInbox", &json!({"on": false}));
         let inbox = s.selection.folder;
-        let ids: Vec<mailcraft_model::ItemId> = s.mailbox.items_in(inbox).iter().map(|m| m.id).collect();
+        let ids: Vec<iridium_mail_model::ItemId> = s.mailbox.items_in(inbox).iter().map(|m| m.id).collect();
         let newest = s.mailbox.items_in(inbox).iter().map(|m| m.received.unix).max().unwrap();
         for id in &ids {
             s.mailbox.mail.get_mut(*id).unwrap().categories.clear();
@@ -2299,7 +2299,7 @@ mod tests {
         let base = s.mailbox.mail.ids().map(|k| k.0).max().unwrap_or(0) + 1;
         for i in 0..3000u64 {
             let mut m = template.clone();
-            m.id = mailcraft_model::ItemId(base + i);
+            m.id = iridium_mail_model::ItemId(base + i);
             m.subject = format!("Bulk message {i}");
             m.received.unix = now - 60 - i64::try_from(i).unwrap() * 3600;
             s.mailbox.mail.insert(m.id, m);
@@ -2401,7 +2401,7 @@ mod tests {
         assert!(h.query_by_label("Flag this message").is_none(), "flag clicks need the Flag Quick Action");
         h.get_by_label("Pin").click();
         h.run();
-        assert!(mailview::pinned(&h.state().s).contains(&mailcraft_model::ItemId(id)));
+        assert!(mailview::pinned(&h.state().s).contains(&iridium_mail_model::ItemId(id)));
         assert!(h.query_all_by_label_contains("Pinned").next().is_some(), "pinned group and row");
     }
 
@@ -2412,10 +2412,14 @@ mod tests {
             .into_iter()
             .map(|(id, _)| id)
             .find(|id| {
-                app.s.mailbox.mail.get(mailcraft_model::ItemId(*id)).is_some_and(|m| m.categories.is_empty())
+                app.s
+                    .mailbox
+                    .mail
+                    .get(iridium_mail_model::ItemId(*id))
+                    .is_some_and(|m| m.categories.is_empty())
             })
             .unwrap();
-        let category = mailcraft_engine::cmd::categories::quick_click_category(&app.s).unwrap();
+        let category = iridium_mail_engine::cmd::categories::quick_click_category(&app.s).unwrap();
         let mut h = harness(app, vec2(420.0, 1400.0));
         h.run();
         let before = h.query_all_by_label("No Categories").count();
@@ -2429,14 +2433,14 @@ mod tests {
                     .s
                     .mailbox
                     .mail
-                    .get(mailcraft_model::ItemId(**id))
+                    .get(iridium_mail_model::ItemId(**id))
                     .is_some_and(|m| m.categories.is_empty())
             })
             .position(|id| *id == target)
             .unwrap();
         h.query_all_by_label("No Categories").nth(nth).unwrap().click();
         h.run();
-        let m = h.state().s.mailbox.mail.get(mailcraft_model::ItemId(target)).unwrap();
+        let m = h.state().s.mailbox.mail.get(iridium_mail_model::ItemId(target)).unwrap();
         assert!(m.categories.iter().any(|c| c.eq_ignore_ascii_case(&category)));
     }
 
@@ -2457,8 +2461,8 @@ mod tests {
         let mut s = sample_session();
         let ids = item_ids(&App::new(sample_session()));
         let (id, _) = ids.get(1).cloned().unwrap();
-        s.selection.items = vec![mailcraft_model::ItemId(id)];
-        s.selection.focus = Some(mailcraft_model::ItemId(id));
+        s.selection.items = vec![iridium_mail_model::ItemId(id)];
+        s.selection.focus = Some(iridium_mail_model::ItemId(id));
         s.run("mail.flag", &json!({"ids": [id]})).unwrap();
         s.selection.items.clear();
         s.selection.focus = None;
@@ -2515,7 +2519,7 @@ mod tests {
     /// Inbox with a four-message conversation (one reply in Sent Items, one forward) and two single messages,
     /// conversations on. Returns the session and the ids (lone, reply b1, forward f1, sent s1, original a1).
     fn conv_session() -> (Session, [u64; 5]) {
-        use mailcraft_model::{Address, DateTime, MailItem, Mailbox};
+        use iridium_mail_model::{Address, DateTime, MailItem, Mailbox};
         let now = 1_791_000_000;
         let mut s = Session::new(Mailbox::new_local("Test"));
         let acct = s.mailbox.accounts.first().map(|a| a.id).unwrap();
@@ -2585,7 +2589,7 @@ mod tests {
         h.key_press(Key::ArrowDown);
         h.run();
         assert_eq!(h.state().s.selection.focus.map(|f| f.0), Some(s1), "the Sent Items child");
-        assert_eq!(h.state().s.mailbox.mail.get(mailcraft_model::ItemId(s1)).map(|m| m.folder), {
+        assert_eq!(h.state().s.mailbox.mail.get(iridium_mail_model::ItemId(s1)).map(|m| m.folder), {
             let st = &h.state().s;
             st.mailbox.role_folder(st.current_account().unwrap(), FolderRole::SentItems)
         });

@@ -7,17 +7,17 @@
 //! `https://ews.invalid/<contacts|calendar|tasks>/<folder id>/` (the reserved `.invalid` name never reaches
 //! the network), an item's address comes from its UID like a resource name made here
 //! ([`pim::resource_url`]), and its entity tag is the item's EWS change key. Items are read with GetItem
-//! into the model and handed over as MailCraft's own vCard / iCalendar text; writes read that text back
+//! into the model and handed over as Mail's own vCard / iCalendar text; writes read that text back
 //! into the model and send its properties (CreateItem, or UpdateItem with only the properties whose value
-//! differs from the server's item read the same way, so what MailCraft does not show is left alone).
+//! differs from the server's item read the same way, so what Mail does not show is left alone).
 //! Writes carry the change key last read: an item changed on the server meanwhile is a failed
 //! precondition (HTTP 412), as on a DAV server.
 //!
-//! **UIDs.** Contacts and tasks have no UID on Exchange: MailCraft writes its own into a named property
-//! (`MailCraftUid`) so the address stays the same. Calendar items have one (`UID`); an item made elsewhere
+//! **UIDs.** Contacts and tasks have no UID on Exchange: Mail writes its own into a named property
+//! (`MailUid`) so the address stays the same. Calendar items have one (`UID`); an item made elsewhere
 //! without either gets a UID from its item id.
 //!
-//! **Meetings** are created and updated with `SendMeetingInvitations="SendToNone"`: MailCraft mails
+//! **Meetings** are created and updated with `SendMeetingInvitations="SendToNone"`: Mail mails
 //! invitations itself, the server never does on its behalf. A series' modified occurrences are read as
 //! exceptions (RECURRENCE-ID) and its deleted occurrences as exception dates; edits of single occurrences
 //! made here (a removed or changed occurrence) are not written back yet: such an update is refused with an
@@ -26,15 +26,15 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
-use mailcraft_model::calendar::{Attendee, AttendeeRole, BusyStatus, Recurrence, ResponseStatus};
-use mailcraft_model::contact::PostalAddress;
-use mailcraft_model::task::{TaskPriority, TaskStatus};
-use mailcraft_model::{Appointment, Contact, DateTime, Importance, Task};
-use mailcraft_net::NetError;
-use mailcraft_net::autoconfig::Element;
-use mailcraft_net::dav::{Fetched, Listing, Precondition, Resource};
-use mailcraft_net::ews::{EwsClient, ITEM_UID, esc, extended_named, is_code, strings};
-use mailcraft_net::http::{percent_decode, percent_encode};
+use iridium_mail_model::calendar::{Attendee, AttendeeRole, BusyStatus, Recurrence, ResponseStatus};
+use iridium_mail_model::contact::PostalAddress;
+use iridium_mail_model::task::{TaskPriority, TaskStatus};
+use iridium_mail_model::{Appointment, Contact, DateTime, Importance, Task};
+use iridium_mail_net::NetError;
+use iridium_mail_net::autoconfig::Element;
+use iridium_mail_net::dav::{Fetched, Listing, Precondition, Resource};
+use iridium_mail_net::ews::{EwsClient, ITEM_UID, esc, extended_named, is_code, strings};
+use iridium_mail_net::http::{percent_decode, percent_encode};
 
 use super::ews::parse_datetime;
 use super::pim::{self, PimKind};
@@ -93,22 +93,22 @@ fn tag(change_key: &str) -> String {
 const LIST_SHAPE_CAL: &str = concat!(
     "<t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>",
     r#"<t:FieldURI FieldURI="calendar:UID"/><t:FieldURI FieldURI="calendar:CalendarItemType"/>"#,
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const LIST_SHAPE: &str = concat!(
     "<t:BaseShape>IdOnly</t:BaseShape><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const FULL_SHAPE: &str = concat!(
     "<t:BaseShape>AllProperties</t:BaseShape><t:BodyType>Text</t:BodyType><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
     "</t:AdditionalProperties>"
 );
 const FULL_SHAPE_CAL: &str = concat!(
     "<t:BaseShape>AllProperties</t:BaseShape><t:BodyType>Text</t:BodyType><t:AdditionalProperties>",
-    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailCraftUid" PropertyType="String"/>"#,
+    r#"<t:ExtendedFieldURI DistinguishedPropertySetId="PublicStrings" PropertyName="MailUid" PropertyType="String"/>"#,
     r#"<t:FieldURI FieldURI="calendar:RequiredAttendees"/><t:FieldURI FieldURI="calendar:OptionalAttendees"/>"#,
     r#"<t:FieldURI FieldURI="calendar:Resources"/><t:FieldURI FieldURI="calendar:ModifiedOccurrences"/>"#,
     r#"<t:FieldURI FieldURI="calendar:DeletedOccurrences"/>"#,
@@ -135,7 +135,7 @@ pub(super) fn occurrence_signature(data: &str, tz_offset_min: i32) -> Option<(Ve
 }
 
 fn uid_of(el: &Element, id: &str) -> String {
-    extended_named(el, "MailCraftUid")
+    extended_named(el, "MailUid")
         .or_else(|| el.child_text("UID").map(str::to_owned))
         .map(|u| u.trim().to_owned())
         .filter(|u| !u.is_empty())
@@ -148,7 +148,7 @@ fn item_id(el: &Element) -> Option<(String, String)> {
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Fields: the properties MailCraft maps, in schema order, for creating and for updating
+// Fields: the properties Mail maps, in schema order, for creating and for updating
 // ---------------------------------------------------------------------------------------------------
 
 /// One mapped property of an item.
@@ -214,7 +214,7 @@ fn importance_of(s: Option<&str>) -> Importance {
     }
 }
 
-fn mailbox_xml(m: &mailcraft_mime::Mailbox) -> String {
+fn mailbox_xml(m: &iridium_mail_mime::Mailbox) -> String {
     let name = m
         .name
         .as_deref()
@@ -224,14 +224,14 @@ fn mailbox_xml(m: &mailcraft_mime::Mailbox) -> String {
     format!("<t:Mailbox>{name}<t:EmailAddress>{}</t:EmailAddress></t:Mailbox>", esc(&m.addr))
 }
 
-fn mailbox_of(el: &Element) -> Option<mailcraft_mime::Mailbox> {
+fn mailbox_of(el: &Element) -> Option<iridium_mail_mime::Mailbox> {
     let m = el.child("Mailbox")?;
     let addr = m.child_text("EmailAddress")?.to_owned();
     let name = m.child_text("Name").map(str::to_owned).filter(|n| !n.is_empty());
-    Some(mailcraft_mime::Mailbox { name, addr })
+    Some(iridium_mail_mime::Mailbox { name, addr })
 }
 
-/// The phone keys of EWS ([MS-OXWSCDATA] PhoneNumberKeyType) for MailCraft's phone kinds.
+/// The phone keys of EWS ([MS-OXWSCDATA] PhoneNumberKeyType) for Mail's phone kinds.
 const PHONES: [(&str, &str); 11] = [
     ("Business", "BusinessPhone"),
     ("Business 2", "BusinessPhone2"),
@@ -970,7 +970,7 @@ impl<'a> Store<'a> {
         Ok(Listing { collection: collection.to_owned(), resources, dropped })
     }
 
-    /// The items at `urls` as MailCraft's vCard / iCalendar text.
+    /// The items at `urls` as Mail's vCard / iCalendar text.
     pub(super) fn multiget(&self, urls: &[String]) -> Result<Vec<Fetched>, NetError> {
         let wanted: Vec<(String, String)> = urls
             .iter()
@@ -1095,7 +1095,7 @@ impl<'a> Store<'a> {
                     return Err(NetError::Protocol(format!("{collection} is not an Exchange folder")));
                 };
                 let uid = if uid.trim().is_empty() {
-                    format!("mailcraft-{:016x}", pim::fnv(url.as_bytes()))
+                    format!("iridium-mail-{:016x}", pim::fnv(url.as_bytes()))
                 } else {
                     uid
                 };
@@ -1191,7 +1191,7 @@ impl<'a> Store<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mailcraft_net::autoconfig::parse_xml_with;
+    use iridium_mail_net::autoconfig::parse_xml_with;
 
     fn el(xml: &str) -> Element {
         parse_xml_with(xml, 1 << 20, 10_000).unwrap()

@@ -3,7 +3,7 @@
 //! Display goes through [`crate::body::show_doc_with`] (layout + paint, reading area): the editor keeps a
 //! [`crate::body::BodyView`] per compose, feeds it the compose selection (so the body painter draws the
 //! highlight) and uses the layout it painted with for hit testing, caret placement
-//! ([`mailcraft_layout::Layout::caret_rect`]) and caret movement over the line boxes. The editor's own
+//! ([`iridium_mail_layout::Layout::caret_rect`]) and caret movement over the line boxes. The editor's own
 //! interaction sits on top of the painted body, so the body's read-only selection handling never runs here.
 //!
 //! Every change goes through the host's command runner (`App::run` for compose windows): typing →
@@ -52,10 +52,10 @@ use egui::{
 };
 use serde_json::{Value, json};
 
-use mailcraft_engine::cmd::review::LiveProofing;
-use mailcraft_engine::compose::{ComposeState, DocPos, SpellIssue};
-use mailcraft_layout::{DisplayItem, Layout, LayoutOptions, LineBox, TextPos, layout_doc};
-use mailcraft_model::{Block, Doc, Inline};
+use iridium_mail_engine::cmd::review::LiveProofing;
+use iridium_mail_engine::compose::{ComposeState, DocPos, SpellIssue};
+use iridium_mail_layout::{DisplayItem, Layout, LayoutOptions, LineBox, TextPos, layout_doc};
+use iridium_mail_model::{Block, Doc, Inline};
 
 use crate::App;
 use crate::body::{BodyOptions, BodyView};
@@ -82,7 +82,7 @@ pub const NO_SUGGESTIONS: &str = "(No spelling suggestions)";
 /// The egui id of the body editor of compose `cid` (focus target; also used by `keys` to tell whether the body
 /// has keyboard focus).
 pub fn editor_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-body", cid))
+    Id::unique(("iridium-mail-compose-body", cid))
 }
 
 /// Whether the body editor of compose `cid` has keyboard focus.
@@ -162,7 +162,7 @@ impl EditorHost for App {
         true
     }
     fn live_proofing(&self) -> LiveProofing {
-        mailcraft_engine::cmd::review::live_proofing(&self.s)
+        iridium_mail_engine::cmd::review::live_proofing(&self.s)
     }
     fn refresh_spelling(&mut self, cid: u64) {
         // Nothing is checked while typing when nothing is marked; F7 checks on demand.
@@ -171,19 +171,19 @@ impl EditorHost for App {
                 .s
                 .composes
                 .get(&cid)
-                .is_some_and(|c| mailcraft_engine::cmd::review::spelling_stale(&self.s, c))
+                .is_some_and(|c| iridium_mail_engine::cmd::review::spelling_stale(&self.s, c))
         {
             return;
         }
         // Never waits for an installed dictionary: it is read in the background and the body re-checked.
-        let sp = mailcraft_engine::cmd::review::compose_speller_live(&self.s, cid);
+        let sp = iridium_mail_engine::cmd::review::compose_speller_live(&self.s, cid);
         if let Some(c) = self.s.composes.get_mut(&cid) {
             // Stale after an edit, or checked under proofing options that changed since.
-            mailcraft_engine::cmd::review::spell_check(&sp, c, false, 1);
+            iridium_mail_engine::cmd::review::spell_check(&sp, c, false, 1);
         }
     }
     fn suggest(&self, cid: u64, word: &str) -> Vec<String> {
-        mailcraft_engine::cmd::review::compose_speller_live(&self.s, cid).suggest(word, MENU_SUGGESTIONS)
+        iridium_mail_engine::cmd::review::compose_speller_live(&self.s, cid).suggest(word, MENU_SUGGESTIONS)
     }
     fn open_spelling(&mut self, ctx: &egui::Context, cid: u64) {
         super::spelling::open(ctx, self, cid);
@@ -196,10 +196,10 @@ impl EditorHost for App {
         self.s.settings.bool("mail.other.pasteOptions")
     }
     fn mentions(&self) -> bool {
-        mailcraft_engine::cmd::compose::mentions_enabled(&self.s).is_none()
+        iridium_mail_engine::cmd::compose::mentions_enabled(&self.s).is_none()
     }
     fn mention_suggestions(&self, query: &str) -> Vec<(String, String)> {
-        mailcraft_engine::queries::address_suggestions(&self.s, query, super::mention::MAX_PEOPLE)
+        iridium_mail_engine::queries::address_suggestions(&self.s, query, super::mention::MAX_PEOPLE)
             .into_iter()
             .map(|g| (g.display, g.address))
             .collect()
@@ -211,7 +211,7 @@ impl EditorHost for App {
         let previewing = self.s.composes.get(&cid).is_some_and(|c| c.preview.is_some());
         // Errors (a choice that does not apply here) only mean there is nothing to preview: no toast.
         match choice {
-            Some((command, params)) if mailcraft_engine::cmd::compose::live_preview_on(&self.s) => {
+            Some((command, params)) if iridium_mail_engine::cmd::compose::live_preview_on(&self.s) => {
                 let p = json!({"compose": cid, "command": command, "params": params});
                 let _ = self.s.run("compose.livePreview", &p);
             }
@@ -241,7 +241,7 @@ struct PreviewRequest {
 }
 
 fn preview_request_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-live-preview", cid))
+    Id::unique(("iridium-mail-compose-live-preview", cid))
 }
 
 /// Live Preview (File › Options › General › "Enable Live Preview"): a gallery calls this every frame the
@@ -249,7 +249,7 @@ fn preview_request_id(cid: u64) -> Id {
 /// the body editor of compose `cid` then shows the body with that choice applied, without applying it, and
 /// stops as soon as no request comes.
 pub fn request_live_preview(ctx: &egui::Context, cid: u64, command: &str, params: &Value) {
-    if !mailcraft_engine::cmd::compose::PREVIEW_COMMANDS.contains(&command) {
+    if !iridium_mail_engine::cmd::compose::PREVIEW_COMMANDS.contains(&command) {
         return;
     }
     let req = PreviewRequest {
@@ -294,7 +294,7 @@ struct Mem {
     /// List markers patched into the cached layout (see [`patch_markers`]).
     markers: Vec<(Vec<usize>, usize, String, String)>,
     /// View Gridlines: cell rectangles of borderless tables, for (doc key, width, zoom).
-    grid: Option<(u64, u32, u32, Vec<mailcraft_geom::Rect>)>,
+    grid: Option<(u64, u32, u32, Vec<iridium_mail_geom::Rect>)>,
 }
 
 /// A paste the Paste Options button can redo in another mode.
@@ -312,7 +312,7 @@ pub const PASTE_MODES: [(&str, &str); 3] =
     [("keepSource", "Keep Source Formatting"), ("merge", "Merge Formatting"), ("textOnly", "Keep Text Only")];
 
 fn paste_mode_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-paste-mode", cid))
+    Id::unique(("iridium-mail-compose-paste-mode", cid))
 }
 
 /// Pastes the system clipboard into compose `cid` with `mode` (ribbon Paste › Keep Source Formatting /
@@ -329,7 +329,7 @@ pub fn request_paste(ctx: &egui::Context, cid: u64, mode: &'static str) {
 fn patch_markers(
     layout: &mut Layout,
     markers: &[(Vec<usize>, usize, String, String)],
-    db: &mailcraft_fonts::FontDb,
+    db: &iridium_mail_fonts::FontDb,
 ) -> bool {
     let mut changed = false;
     for (list, item, text, default) in markers {
@@ -873,11 +873,11 @@ fn take_actions(ui: &Ui) -> Vec<Act> {
 }
 
 fn last_paste_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-last-paste", cid))
+    Id::unique(("iridium-mail-compose-last-paste", cid))
 }
 
 fn last_copy_id() -> Id {
-    Id::unique("mailcraft-compose-last-copy")
+    Id::unique("iridium-mail-compose-last-copy")
 }
 
 /// The text the last Copy / Cut in a message body put on the clipboard, and the compose it came from.
@@ -954,7 +954,7 @@ pub(crate) fn paste_clipboard(
 }
 
 fn refocus_id(cid: u64) -> Id {
-    Id::unique(("mailcraft-compose-refocus", cid))
+    Id::unique(("iridium-mail-compose-refocus", cid))
 }
 
 /// Gives the body editor of compose `cid` keyboard focus again once the click that ran a ribbon command is
@@ -1139,7 +1139,7 @@ fn apply(
                 let Some(data) = picture else {
                     continue;
                 };
-                let b64 = mailcraft_mime::transfer::encode_base64_flat(&data);
+                let b64 = iridium_mail_mime::transfer::encode_base64_flat(&data);
                 host.run("format.paste", json!({"compose": cid, "image": b64}));
             }
             Act::Cmd(id, params) => {
@@ -1349,18 +1349,18 @@ fn bordered(doc: &Doc) -> (Doc, bool) {
 
 /// View Gridlines: the cell rectangles of tables that have no borders (layout coordinates).
 pub(crate) fn gridlines(
-    db: &mailcraft_fonts::FontDb,
+    db: &iridium_mail_fonts::FontDb,
     doc: &Doc,
     width: f32,
     zoom: f32,
-) -> Vec<mailcraft_geom::Rect> {
+) -> Vec<iridium_mail_geom::Rect> {
     let (with_borders, any) = bordered(doc);
     if !any {
         return Vec::new();
     }
     let opts = LayoutOptions { width, zoom, ..LayoutOptions::default() };
     let plain = layout_doc(doc, db, &opts);
-    let shown: Vec<mailcraft_geom::Rect> = plain
+    let shown: Vec<iridium_mail_geom::Rect> = plain
         .display
         .items
         .iter()
@@ -1382,7 +1382,7 @@ pub(crate) fn gridlines(
 }
 
 /// Dashed gridlines.
-fn paint_gridlines(ui: &Ui, rects: &[mailcraft_geom::Rect], origin: Pos2) {
+fn paint_gridlines(ui: &Ui, rects: &[iridium_mail_geom::Rect], origin: Pos2) {
     let clip = ui.clip_rect();
     let painter = ui.painter().with_clip_rect(clip);
     for r in rects {
@@ -1401,7 +1401,7 @@ fn paint_gridlines(ui: &Ui, rects: &[mailcraft_geom::Rect], origin: Pos2) {
 
 /// The picture under `p` (layout coordinates) as the char range it occupies, from the body's objects
 /// (the k-th display of a source is its k-th occurrence in the body).
-fn object_at(layout: &Layout, c: &ComposeState, p: mailcraft_geom::Point) -> Option<(DocPos, DocPos)> {
+fn object_at(layout: &Layout, c: &ComposeState, p: iridium_mail_geom::Point) -> Option<(DocPos, DocPos)> {
     let mut seen: Vec<&str> = Vec::new();
     for item in &layout.display.items {
         let DisplayItem::Image { rect, src, .. } = item else {
@@ -1410,7 +1410,7 @@ fn object_at(layout: &Layout, c: &ComposeState, p: mailcraft_geom::Point) -> Opt
         let k = seen.iter().filter(|s| **s == src.as_str()).count();
         seen.push(src);
         if p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h {
-            let objects = mailcraft_engine::cmd::format::body_objects(c);
+            let objects = iridium_mail_engine::cmd::format::body_objects(c);
             let obj = objects.iter().filter(|o| o.src == *src).nth(k)?;
             let end = DocPos::new(obj.at.path.clone(), obj.at.offset.saturating_add(1));
             return Some((obj.at.clone(), end));
@@ -1419,9 +1419,9 @@ fn object_at(layout: &Layout, c: &ComposeState, p: mailcraft_geom::Point) -> Opt
     None
 }
 
-/// The content id of the chart, SmartArt graphic or 3D model picture under `p`, if any (pictures MailCraft
+/// The content id of the chart, SmartArt graphic or 3D model picture under `p`, if any (pictures Mail
 /// drew and kept the recipe of).
-fn editable_picture(layout: &Layout, c: &ComposeState, p: mailcraft_geom::Point) -> Option<String> {
+fn editable_picture(layout: &Layout, c: &ComposeState, p: iridium_mail_geom::Point) -> Option<String> {
     layout.display.items.iter().rev().find_map(|item| {
         let DisplayItem::Image { rect, src, .. } = item else { return None };
         if !(p.x >= rect.x && p.x <= rect.x + rect.w && p.y >= rect.y && p.y <= rect.y + rect.h) {
@@ -1500,7 +1500,7 @@ fn paint_squiggles(ui: &Ui, layout: &Layout, issues: &[SpellIssue], origin: Pos2
         .iter()
         .take(MAX_SQUIGGLES)
         .cloned()
-        .partition(|i| mailcraft_engine::cmd::review::is_refinement(&i.kind));
+        .partition(|i| iridium_mail_engine::cmd::review::is_refinement(&i.kind));
     for (x0, x1, base, _) in issue_spans(layout, &refine) {
         let y = origin.y + base + (2.5 * zoom).max(2.0);
         if y < clip.top() - 4.0 || y > clip.bottom() + 4.0 {
@@ -1770,7 +1770,7 @@ pub(crate) fn body_editor_in(
     let focused_before = ctx.memory(|m| m.has_focus(id));
 
     // Background and body (the body painter draws the selection handed to it).
-    let bg = crate::body::map_color(c.body.background.unwrap_or(mailcraft_geom::Color::WHITE), dark);
+    let bg = crate::body::map_color(c.body.background.unwrap_or(iridium_mail_geom::Color::WHITE), dark);
     ui.painter().rect_filled(rect, 0.0, bg);
     // Drawings behind the text.
     let behind_shown = super::drawing::displayed(c, mem.view.layout.as_ref(), zoom);
@@ -1793,7 +1793,7 @@ pub(crate) fn body_editor_in(
     {
         let text_rect = Rect::from_min_size(origin, vec2(text_w, est_h.max(line_h)));
         let mut child =
-            ui.new_child(UiBuilder::new().max_rect(text_rect).id_salt(("mailcraft-compose-doc", cid)));
+            ui.new_child(UiBuilder::new().max_rect(text_rect).id_salt(("iridium-mail-compose-doc", cid)));
         let opts = BodyOptions {
             dark,
             zoom,
@@ -1845,7 +1845,7 @@ pub(crate) fn body_editor_in(
     let body_start = c.body_start();
     let Mem { view, doc, preferred_x, drag_anchor, reveal, menu, paint_due, .. } = &mut mem;
     let layout = view.layout.as_ref();
-    let local = |p: Pos2| mailcraft_geom::Point { x: p.x - origin.x, y: p.y - origin.y };
+    let local = |p: Pos2| iridium_mail_geom::Point { x: p.x - origin.x, y: p.y - origin.y };
     let hit = |p: Pos2| -> DocPos {
         layout.and_then(|l| l.hit_pos(local(p))).map(to_doc).unwrap_or_else(|| body_start.clone())
     };
@@ -2079,10 +2079,20 @@ pub(crate) fn body_editor_in(
         }
         ctx.output_mut(|o| {
             o.ime = Some(egui::output::IMEOutput {
+                // The editor owns the IME context, and this is its first generation:
+                // the app has no focus-tracking of its own.
+                // ponytail: the generation never changes, so the platform IME is not told
+                // that this same editor was re-focused; count focus changes when that
+                // matters for the input method in use.
+                owner: editor_id(cid),
+                context_generation: 0,
                 purpose: egui::IMEPurpose::Normal,
                 rect,
                 cursor_rect: caret,
                 should_interrupt_composition: false,
+                reset_request: None,
+                change_cause: egui::output::ImeChangeCause::Other,
+                surrounding_text: egui::output::IMESurroundingText::Unavailable,
             });
         });
     }
@@ -2126,7 +2136,7 @@ fn paste_options_button(ui: &mut Ui, host: &mut dyn EditorHost, cid: u64, rect: 
     }
     let at = Rect::from_min_size(rect.right_bottom() - vec2(132.0, 30.0), vec2(124.0, 24.0));
     let mut pick: Option<&'static str> = None;
-    let mut child = ui.new_child(UiBuilder::new().max_rect(at).id_salt(("mailcraft-paste-options", cid)));
+    let mut child = ui.new_child(UiBuilder::new().max_rect(at).id_salt(("iridium-mail-paste-options", cid)));
     let r = child.menu_button("(Ctrl) Paste Options", |ui| {
         for (mode, label) in PASTE_MODES {
             if ui.radio(last.mode == mode, label).clicked() {
@@ -2159,10 +2169,10 @@ mod tests {
         let mut c = ComposeState::default();
         c.insert_text("one\ntwo\nthree");
         c.select_all();
-        c.toggle_list(Some(mailcraft_model::rich::ListKind::Numbered { start: 1 }));
-        let fmt = mailcraft_engine::compose::ListFormat::from_key("upperRoman").unwrap();
+        c.toggle_list(Some(iridium_mail_model::rich::ListKind::Numbered { start: 1 }));
+        let fmt = iridium_mail_engine::compose::ListFormat::from_key("upperRoman").unwrap();
         assert!(c.set_list_format(vec![fmt], false));
-        let db = mailcraft_fonts::FontDb::bundled();
+        let db = iridium_mail_fonts::FontDb::bundled();
         let mut layout =
             layout_doc(&c.body, &db, &LayoutOptions { width: 400.0, ..LayoutOptions::default() });
         let texts = |l: &Layout| -> Vec<String> {
@@ -2220,7 +2230,7 @@ mod tests {
                     ],
                 },
                 Block::List {
-                    kind: mailcraft_model::rich::ListKind::Bullet,
+                    kind: iridium_mail_model::rich::ListKind::Bullet,
                     items: vec![vec![Block::Paragraph {
                         style: Default::default(),
                         inlines: vec![Inline::Text { text: "item".into(), style: Default::default() }],
@@ -2274,7 +2284,7 @@ mod tests {
     #[test]
     fn squiggles_span_the_flagged_word() {
         let doc = Doc::from_plain_text("Helo world\nfine wrld");
-        let db = mailcraft_fonts::FontDb::bundled();
+        let db = iridium_mail_fonts::FontDb::bundled();
         let layout = layout_doc(&doc, &db, &LayoutOptions { width: 400.0, ..LayoutOptions::default() });
         let issue = |path: usize, a: usize, b: usize| SpellIssue {
             start: DocPos::new(vec![path], a),
@@ -2310,7 +2320,7 @@ mod tests {
             ],
             ..Doc::default()
         };
-        let db = mailcraft_fonts::FontDb::bundled();
+        let db = iridium_mail_fonts::FontDb::bundled();
         let layout = layout_doc(&doc, &db, &LayoutOptions { width: 400.0, ..LayoutOptions::default() });
         let marks = mark_glyphs(&layout, &doc, -1.0, 1.0e6);
         let glyphs: String = marks.iter().map(|m| m.0).collect();
@@ -2323,13 +2333,13 @@ mod tests {
 
     #[test]
     fn gridlines_only_for_tables_without_borders() {
-        let db = mailcraft_fonts::FontDb::bundled();
-        let open = mailcraft_html::html_to_doc(
+        let db = iridium_mail_fonts::FontDb::bundled();
+        let open = iridium_mail_html::html_to_doc(
             "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>",
         );
         let rects = gridlines(&db, &open, 400.0, 1.0);
         assert!(rects.len() >= 4, "{rects:?}");
-        let boxed = mailcraft_html::html_to_doc("<table border=\"1\"><tr><td>a</td></tr></table>");
+        let boxed = iridium_mail_html::html_to_doc("<table border=\"1\"><tr><td>a</td></tr></table>");
         assert!(matches!(boxed.blocks.first(), Some(Block::Table { border: true, .. })), "{boxed:?}");
         assert!(gridlines(&db, &boxed, 400.0, 1.0).is_empty());
         assert!(gridlines(&db, &Doc::from_plain_text("no table"), 400.0, 1.0).is_empty());
@@ -2340,7 +2350,7 @@ mod tests {
         let mut c = ComposeState::default();
         c.insert_text("ab");
         c.insert_image(
-            mailcraft_engine::compose::InlineImage {
+            iridium_mail_engine::compose::InlineImage {
                 content_id: "p1@x".into(),
                 filename: "p.png".into(),
                 mime_type: "image/png".into(),
@@ -2350,7 +2360,7 @@ mod tests {
             Some(40.0),
             Some(30.0),
         );
-        let db = mailcraft_fonts::FontDb::bundled();
+        let db = iridium_mail_fonts::FontDb::bundled();
         let layout = layout_doc(&c.body, &db, &LayoutOptions { width: 400.0, ..LayoutOptions::default() });
         let r = layout
             .display
@@ -2361,11 +2371,11 @@ mod tests {
                 _ => None,
             })
             .unwrap();
-        let hit =
-            object_at(&layout, &c, mailcraft_geom::Point { x: r.x + r.w / 2.0, y: r.y + r.h / 2.0 }).unwrap();
+        let hit = object_at(&layout, &c, iridium_mail_geom::Point { x: r.x + r.w / 2.0, y: r.y + r.h / 2.0 })
+            .unwrap();
         assert_eq!(hit.1.offset, hit.0.offset + 1);
         assert_eq!(leaf_chars(&c.body, &hit.0.path).get(hit.0.offset), Some(&'\u{fffc}'));
-        assert!(object_at(&layout, &c, mailcraft_geom::Point { x: r.x - 30.0, y: r.y - 30.0 }).is_none());
+        assert!(object_at(&layout, &c, iridium_mail_geom::Point { x: r.x - 30.0, y: r.y - 30.0 }).is_none());
     }
 
     fn png(w: u32, h: u32) -> Vec<u8> {
@@ -2385,7 +2395,7 @@ mod tests {
             ("bad@x", "b.png", "image/png", b"junk".to_vec()),
         ] {
             c.insert_image(
-                mailcraft_engine::compose::InlineImage {
+                iridium_mail_engine::compose::InlineImage {
                     content_id: cid.into(),
                     filename: name.into(),
                     mime_type: mime.into(),
@@ -2399,7 +2409,7 @@ mod tests {
         assert_eq!(inline_picture(&c, "cid:P1@x").map(<[u8]>::len), Some(png(6, 3).len()));
         assert!(inline_picture(&c, "cid:missing").is_none());
         assert!(inline_picture(&c, "https://example.com/a.png").is_none());
-        let db = mailcraft_fonts::FontDb::bundled();
+        let db = iridium_mail_fonts::FontDb::bundled();
         let layout = layout_doc(&c.body, &db, &LayoutOptions { width: 400.0, ..LayoutOptions::default() });
         let ctx = egui::Context::default();
         let screen = Rect::from_min_size(Pos2::ZERO, vec2(800.0, 600.0));

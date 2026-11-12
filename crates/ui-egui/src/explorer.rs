@@ -10,8 +10,8 @@
 //! viewport (see `with_shell`).
 
 use egui::{ViewportBuilder, ViewportId};
-use mailcraft_engine::{Module, Selection};
-use mailcraft_model::FolderId;
+use iridium_mail_engine::{Module, Selection};
+use iridium_mail_model::FolderId;
 use serde_json::json;
 
 use crate::{App, Surface};
@@ -82,13 +82,13 @@ pub fn open(app: &mut App, folder: FolderId) -> Option<u64> {
 }
 
 pub(crate) fn viewport_id(id: u64) -> ViewportId {
-    ViewportId::from_hash_of(("mailcraft.explorer", id))
+    ViewportId::from_hash_of(("iridium-mail.explorer", id))
 }
 
-/// Title of an explorer window: "<folder> - MailCraft".
+/// Title of an explorer window: "<folder> - Mail".
 pub fn title(app: &App, w: &ExplorerWindow) -> String {
     let name = app.s.mailbox.folder(w.selection.folder).map(|f| f.name.clone()).unwrap_or_default();
-    if name.is_empty() { "MailCraft".to_owned() } else { format!("{name} - MailCraft") }
+    if name.is_empty() { "Mail".to_owned() } else { format!("{name} - Mail") }
 }
 
 /// Draws the explorer windows (once per frame, from the shell).
@@ -116,8 +116,8 @@ pub fn explorer_windows(ctx: &egui::Context, app: &mut App) {
                 crate::keys::handle(&ctx, app, Surface::Main);
                 let rect = ui.max_rect();
                 let frame = app.frame_for(rect.width(), rect.height());
-                let mut window =
-                    ui.new_child(egui::UiBuilder::new().id_salt(("mailcraft_explorer", id)).max_rect(rect));
+                let mut window = ui
+                    .new_child(egui::UiBuilder::new().id_salt(("iridium_mail_explorer", id)).max_rect(rect));
                 window.set_clip_rect(rect);
                 crate::chrome::main_window(&mut window, app, &frame);
                 ctx.input(|i| i.viewport().close_requested())
@@ -141,14 +141,14 @@ pub fn explorer_windows(ctx: &egui::Context, app: &mut App) {
 mod tests {
     use super::*;
     use egui::Vec2;
-    use mailcraft_engine::sample::sample_session;
+    use iridium_mail_engine::sample::sample_session;
 
     #[test]
     fn open_in_new_window_keeps_its_own_folder_and_selection() {
         let mut app = App::new(sample_session());
         let inbox = app.s.selection.folder;
         let acct = app.s.mailbox.folder_account(inbox).unwrap();
-        let sent = app.s.mailbox.role_folder(acct, mailcraft_model::FolderRole::SentItems).unwrap();
+        let sent = app.s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::SentItems).unwrap();
         let main_sel = app.s.selection.clone();
         app.run("folder.openInNewWindow", json!({"folder": sent.0}));
         crate::dialogs::take_notices(&mut app);
@@ -179,7 +179,7 @@ mod tests {
         let mut s = sample_session();
         let inbox = s.selection.folder;
         let acct = s.mailbox.folder_account(inbox).unwrap();
-        let sent = s.mailbox.role_folder(acct, mailcraft_model::FolderRole::SentItems).unwrap();
+        let sent = s.mailbox.role_folder(acct, iridium_mail_model::FolderRole::SentItems).unwrap();
         s.run("folder.openInNewWindow", &json!({"folder": sent.0})).unwrap();
         let mut h = crate::test_harness().with_size(Vec2::new(1400.0, 900.0)).build_ui_state(
             |ui, app: &mut App| {

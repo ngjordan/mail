@@ -1,5 +1,5 @@
 //! Control channel: newline-delimited JSON over a local TCP socket (127.0.0.1, port from
-//! MAILCRAFT_CONTROL_PORT) so tests and agents can drive the running app: run commands, query state, press
+//! IRIDIUM_MAIL_CONTROL_PORT) so tests and agents can drive the running app: run commands, query state, press
 //! keys, request screenshots, resize the window (keys area). Protocol: `docs/control-protocol.md`.
 //!
 //! A background thread accepts connections; each connection thread reads request lines and hands them to the
@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
-use mailcraft_engine::queries;
+use iridium_mail_engine::queries;
 
 use crate::{App, Surface};
 
@@ -91,7 +91,7 @@ impl Control {
         let ctx: Arc<Mutex<Option<egui::Context>>> = Arc::new(Mutex::new(None));
         let (stop2, ctx2) = (Arc::clone(&stop), Arc::clone(&ctx));
         let spawned = std::thread::Builder::new()
-            .name("mailcraft-control".into())
+            .name("iridium-mail-control".into())
             .spawn(move || accept_loop(listener, tx, stop2, ctx2));
         if let Err(e) = spawned {
             log::error!("control channel: cannot start the listener thread: {e}");
@@ -104,9 +104,9 @@ impl Control {
         })
     }
 
-    /// Starts on the port in `MAILCRAFT_CONTROL_PORT`, if set and valid.
+    /// Starts on the port in `IRIDIUM_MAIL_CONTROL_PORT`, if set and valid.
     pub fn from_env() -> Option<Control> {
-        let port = std::env::var("MAILCRAFT_CONTROL_PORT").ok()?.trim().parse::<u16>().ok()?;
+        let port = std::env::var("IRIDIUM_MAIL_CONTROL_PORT").ok()?.trim().parse::<u16>().ok()?;
         Control::start(port)
     }
 
@@ -152,7 +152,7 @@ impl Control {
 /// failed bind is not retried) and answers queued requests. Call once per frame on the main window's context.
 pub fn frame(ctx: &egui::Context, app: &mut App) {
     let Some(port) = app.ui.control_port else { return };
-    let id = egui::Id::unique("mailcraft.control");
+    let id = egui::Id::unique("iridium-mail.control");
     let slot = ctx.data_mut(|d| d.get_temp::<SharedControl>(id));
     let slot = match slot {
         Some(s) => s,
@@ -186,7 +186,7 @@ fn accept_loop(
         let Ok(stream) = stream else { continue };
         let (tx, ctx, stop) = (tx.clone(), Arc::clone(&ctx), Arc::clone(&stop));
         let spawned = std::thread::Builder::new()
-            .name("mailcraft-control-conn".into())
+            .name("iridium-mail-control-conn".into())
             .spawn(move || serve(stream, tx, ctx, stop));
         if let Err(e) = spawned {
             log::error!("control channel: cannot start a connection thread: {e}");
@@ -398,7 +398,7 @@ fn query(app: &App, what: &str, req: &Value) -> Result<Value, String> {
                 .and_then(Value::as_u64)
                 .or_else(|| s.selection.focus.map(|i| i.0))
                 .ok_or("`item` (number) required (nothing is focused)")?;
-            to_value(&queries::reading_header(s, mailcraft_model::ItemId(item)))
+            to_value(&queries::reading_header(s, iridium_mail_model::ItemId(item)))
         }
         "ui" => Ok(json!({
             "ribbonTab": to_value(&app.ui.ribbon_tab)?,

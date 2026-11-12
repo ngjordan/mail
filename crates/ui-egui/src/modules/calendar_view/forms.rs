@@ -10,10 +10,10 @@
 
 use serde_json::Value;
 
-use mailcraft_engine::cmd::calendar::{
+use iridium_mail_engine::cmd::calendar::{
     self as engine_cal, ALL_DAY_REMINDER_MIN, APPOINTMENT_FORM, MEETING_FORM,
 };
-use mailcraft_model::FolderId;
+use iridium_mail_model::FolderId;
 
 use super::super::common::{ModState, day_string, parse_day_time, today};
 use super::super::editors;
@@ -34,7 +34,7 @@ pub(crate) fn is_form(name: &str, p: &Value) -> bool {
 pub(super) fn take_notices(app: &mut App, st: &mut ModState) -> bool {
     let mut found: Option<(String, Value)> = None;
     app.s.notices.retain(|n| match n {
-        mailcraft_engine::Notice::OpenDialog(name, p) if is_form(name, p) => {
+        iridium_mail_engine::Notice::OpenDialog(name, p) if is_form(name, p) => {
             found = Some((name.clone(), p.clone()));
             false
         }

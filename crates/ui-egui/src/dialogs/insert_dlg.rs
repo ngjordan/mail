@@ -10,7 +10,7 @@ use serde_json::json;
 use super::common::{Dlg, Out, btn, btn_en, footer, muted, primary, window, with_state};
 use super::compose_dlg::cmd;
 use crate::App;
-use mailcraft_engine::cmd::insert::{DEFAULT_CATEGORY, GALLERIES};
+use iridium_mail_engine::cmd::insert::{DEFAULT_CATEGORY, GALLERIES};
 
 pub(crate) fn show(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Option<Out> {
     Some(match d.name {
@@ -89,7 +89,7 @@ fn create_block(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
         |st, app| {
             window(ctx, app, d, title, 420.0, |ui, app| {
                 let gallery = gallery_key(&st.gallery);
-                let entries = mailcraft_engine::cmd::insert::gallery_entries(&app.s, cid, gallery);
+                let entries = iridium_mail_engine::cmd::insert::gallery_entries(&app.s, cid, gallery);
                 let mut categories: Vec<String> = vec![DEFAULT_CATEGORY.to_owned()];
                 for b in &entries {
                     if !b.category.is_empty()
@@ -218,9 +218,9 @@ fn organizer(ctx: &Context, app: &mut App, d: &Dlg<'_>, only: Option<&'static st
                     Some(g) => GALLERIES.iter().copied().filter(|x| *x == g).collect(),
                     None => GALLERIES.to_vec(),
                 };
-                let entries: Vec<mailcraft_engine::compose::BuildingBlock> = galleries
+                let entries: Vec<iridium_mail_engine::compose::BuildingBlock> = galleries
                     .iter()
-                    .flat_map(|g| mailcraft_engine::cmd::insert::gallery_entries(&app.s, cid, g))
+                    .flat_map(|g| iridium_mail_engine::cmd::insert::gallery_entries(&app.s, cid, g))
                     .collect();
                 if st
                     .pick
@@ -269,7 +269,7 @@ fn organizer(ctx: &Context, app: &mut App, d: &Dlg<'_>, only: Option<&'static st
                         let picked = st.pick.as_ref().and_then(|(g, n)| entries.iter().find(|b| &b.gallery == g && &b.name == n));
                         match picked {
                             Some(b) => {
-                                let text: String = mailcraft_model::Doc { blocks: b.blocks.clone(), ..Default::default() }
+                                let text: String = iridium_mail_model::Doc { blocks: b.blocks.clone(), ..Default::default() }
                                     .text_content()
                                     .chars()
                                     .take(400)
@@ -352,7 +352,7 @@ fn equation_texture(ctx: &Context, text: &str) -> Option<egui::TextureHandle> {
     {
         return tex;
     }
-    let tex = mailcraft_engine::cmd::insert::equation_png(text).and_then(|(png, _, _)| {
+    let tex = iridium_mail_engine::cmd::insert::equation_png(text).and_then(|(png, _, _)| {
         let img = image::load_from_memory(&png).ok()?.to_rgba8();
         let size = [usize::try_from(img.width()).ok()?, usize::try_from(img.height()).ok()?];
         let color = egui::ColorImage::from_rgba_unmultiplied(size, img.as_raw());
@@ -389,7 +389,7 @@ fn insert_at_caret(ctx: &Context, id: egui::Id, text: &mut String, piece: &str) 
 /// from, the structures gallery (fractions, scripts, radicals, integrals, large operators, brackets,
 /// functions, accents, limits and operators) and a short guide to the notation.
 fn equation(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
-    use mailcraft_engine::cmd::insert::EQUATION_PRESETS;
+    use iridium_mail_engine::cmd::insert::EQUATION_PRESETS;
     let cid = compose_of(d);
     let edit = d.get("edit").and_then(serde_json::Value::as_str).map(str::to_owned).filter(|e| !e.is_empty());
     let text = d.str("text");
@@ -509,7 +509,7 @@ const MAX_FOLDER_ITEMS: usize = 1000;
 
 /// The items of folder `fid` as (id, label), newest first for mail.
 pub(crate) fn folder_items(app: &App, fid: u64) -> Vec<(u64, String)> {
-    use mailcraft_model::{FolderId, FolderKind};
+    use iridium_mail_model::{FolderId, FolderKind};
     let mb = &app.s.mailbox;
     let fid = FolderId(fid);
     let untitled =
@@ -571,7 +571,7 @@ struct ItemState {
 /// Attachment or Text only.
 fn insert_item(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     use super::common::{Pick, folder_tree};
-    use mailcraft_model::FolderKind;
+    use iridium_mail_model::FolderKind;
     const KINDS: &[FolderKind] =
         &[FolderKind::Mail, FolderKind::Contacts, FolderKind::Calendar, FolderKind::Tasks, FolderKind::Notes];
     let cid = compose_of(d);
@@ -1211,7 +1211,7 @@ struct SymbolState {
     special: bool,
 }
 
-/// Special Characters: (name, character). Names are MailCraft's own.
+/// Special Characters: (name, character). Names are Mail's own.
 pub(crate) const SPECIAL_CHARACTERS: [(&str, char); 20] = [
     ("Em dash", '\u{2014}'),
     ("En dash", '\u{2013}'),
@@ -1237,7 +1237,7 @@ pub(crate) const SPECIAL_CHARACTERS: [(&str, char); 20] = [
 
 /// The characters a symbol font offers in the dialog: (label for the tooltip, character).
 fn symbol_font_chars(font: &str) -> Vec<(String, char)> {
-    mailcraft_engine::cmd::insert::symbol_fonts::characters(font)
+    iridium_mail_engine::cmd::insert::symbol_fonts::characters(font)
         .into_iter()
         .map(|(code, ch)| (format!("{font}: {code}"), ch))
         .collect()
@@ -1308,7 +1308,7 @@ fn symbol(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                 }
                 let names: Vec<&str> = SYMBOL_SUBSETS.iter().map(|(n, ..)| *n).collect();
                 let mut fonts: Vec<&str> = vec!["(normal text)"];
-                fonts.extend(mailcraft_engine::cmd::insert::symbol_fonts::SYMBOL_FONTS);
+                fonts.extend(iridium_mail_engine::cmd::insert::symbol_fonts::SYMBOL_FONTS);
                 ui.horizontal(|ui| {
                     ui.label("Font:");
                     super::common::combo_idx(ui, ("sym-font", d.uid), &mut st.font, &fonts, 140.0);
@@ -1407,7 +1407,7 @@ const OFFICE_THEME_FILTER: [&str; 2] = ["thmx", "xml"];
 /// Every theme file Browse for Themes opens.
 const ALL_THEME_FILTER: [&str; 3] = ["thmx", "xml", "json"];
 
-/// Browse for Themes: a theme file (MailCraft theme, .json) to apply; it joins the Themes gallery.
+/// Browse for Themes: a theme file (Mail theme, .json) to apply; it joins the Themes gallery.
 fn browse_themes(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let cid = compose_of(d);
     with_state(
@@ -1427,7 +1427,7 @@ fn browse_themes(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                             &[
                                 crate::FileFilter::new("All themes", &ALL_THEME_FILTER),
                                 crate::FileFilter::new("Office themes", &OFFICE_THEME_FILTER),
-                                crate::FileFilter::new("MailCraft themes", &THEME_FILTER),
+                                crate::FileFilter::new("Mail themes", &THEME_FILTER),
                             ],
                             &st.path,
                         )
@@ -1501,7 +1501,7 @@ fn save_theme(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                                 "Save Current Theme",
                                 &[
                                     crate::FileFilter::new("Office themes", &["thmx"]),
-                                    crate::FileFilter::new("MailCraft themes", &THEME_FILTER),
+                                    crate::FileFilter::new("Mail themes", &THEME_FILTER),
                                 ],
                                 &suggested,
                             ) {
@@ -1589,7 +1589,7 @@ fn language_choices(current: &str, installed: &[String]) -> (Vec<(String, String
         if tag.is_empty() || choices.iter().any(|(t, _)| t.eq_ignore_ascii_case(&tag)) {
             continue;
         }
-        let name = match mailcraft_engine::translate::language_name(&tag) {
+        let name = match iridium_mail_engine::translate::language_name(&tag) {
             Some(n) => format!("{n} ({tag})"),
             None => tag.clone(),
         };
@@ -1616,8 +1616,10 @@ fn language(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
     let installed: Vec<String> =
         d.arr("dictionaries").iter().filter_map(|v| v.as_str().map(str::to_owned)).collect();
     let (choices, pick) = language_choices(&current, &installed);
-    let checked =
-        choices.iter().map(|(tag, _)| mailcraft_engine::cmd::review::has_dictionary(&app.s, tag)).collect();
+    let checked = choices
+        .iter()
+        .map(|(tag, _)| iridium_mail_engine::cmd::review::has_dictionary(&app.s, tag))
+        .collect();
     let init =
         LangState { choices, checked, pick, was: pick, no_proof: d.bool("noProof"), error: String::new() };
     with_state(
@@ -1640,7 +1642,7 @@ fn language(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                 muted(
                     ui,
                     app,
-                    "\u{2713} Spelling is checked: English with MailCraft's dictionary, other languages with the \
+                    "\u{2713} Spelling is checked: English with Mail's dictionary, other languages with the \
                      dictionaries installed on this computer.",
                 );
                 if !st.checked.get(st.pick).copied().unwrap_or(true) && !st.no_proof {
@@ -1714,8 +1716,8 @@ fn thesaurus(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                         st.pick = None;
                     }
                 });
-                let syns = mailcraft_engine::cmd::review::synonyms(&st.shown);
-                let head = mailcraft_engine::cmd::review::thesaurus_headword(&st.shown);
+                let syns = iridium_mail_engine::cmd::review::synonyms(&st.shown);
+                let head = iridium_mail_engine::cmd::review::thesaurus_headword(&st.shown);
                 ui.label(RichText::new(head.unwrap_or(st.shown.as_str())).strong().size(16.0));
                 egui::ScrollArea::vertical().id_salt(("thes", d.uid)).max_height(260.0).show(ui, |ui| {
                     if syns.is_empty() {
@@ -1757,7 +1759,7 @@ fn thesaurus(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
 
 /// Why Read Aloud cannot speak without a backend.
 pub(crate) const NO_SPEECH: &str =
-    "Speech is not available in this version of MailCraft; the text that would be read is shown below.";
+    "Speech is not available in this version of Mail; the text that would be read is shown below.";
 
 /// Read Aloud: plays the text paragraph by paragraph through the platform's speech, with Play/Pause,
 /// Previous, Next, Stop and a reading speed; the paragraph being read is highlighted.

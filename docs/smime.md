@@ -1,6 +1,6 @@
 # S/MIME: signed and encrypted mail
 
-MailCraft signs, encrypts, verifies and decrypts mail with S/MIME (RFC 8551). Everything is done in the app
+Mail signs, encrypts, verifies and decrypts mail with S/MIME (RFC 8551). Everything is done in the app
 in pure Rust (`crates/smime`, RustCrypto); no OpenSSL and no system crypto service is needed, so the desktop
 and the browser builds behave the same.
 
@@ -20,7 +20,7 @@ authority as a `.pfx` / `.p12` file protected by a password.
 
 **Where keys are kept.** `certificates.json` in the profile folder holds the certificates and each private
 key *sealed* (an encrypted PKCS #8). The secret that opens a sealed key is stored with the account passwords:
-in the operating system's keyring when MailCraft uses it, otherwise in `secrets.json` (see
+in the operating system's keyring when Mail uses it, otherwise in `secrets.json` (see
 [accounts.md](accounts.md)). Decrypted messages are never written to disk; they are opened in memory when shown.
 
 ## Sending

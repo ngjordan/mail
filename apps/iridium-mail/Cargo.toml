@@ -1,0 +1,27 @@
+[package]
+name = "iridium-mail"
+description = "Mail desktop app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+iridium-mail-engine.workspace = true
+iridium-mail-ui-egui.workspace = true
+# The window's logic: the session, the UI and the platform glue.
+iridium-mail-shell.workspace = true
+eframe.workspace = true
+egui.workspace = true
+log.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# wgpu as a second renderer (IRIDIUM_MAIL_RENDERER=wgpu): Direct3D 12 on Windows, Vulkan or Metal elsewhere.
+eframe = { workspace = true, features = ["wgpu"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

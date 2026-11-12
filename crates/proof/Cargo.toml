@@ -1,6 +1,6 @@
 [package]
-name = "mailcraft-proof"
-description = "Spelling and simple grammar checks for the MailCraft compose editor"
+name = "iridium-mail-proof"
+description = "Spelling and simple grammar checks for the Mail compose editor"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

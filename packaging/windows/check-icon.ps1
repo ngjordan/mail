@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Checks that the Windows build carries the MailCraft icon where the shell looks for it.
+  Checks that the Windows build carries the Mail icon where the shell looks for it.
 
-      packaging/windows/check-icon.ps1 -Exe <mailcraft.exe> [-Msi <mailcraft-....msi>]
+      packaging/windows/check-icon.ps1 -Exe <iridium-mail.exe> [-Msi <iridium-mail-....msi>]
 
-  1. mailcraft.exe has an icon group resource (RT_GROUP_ICON). Explorer, the taskbar and pinned shortcuts
+  1. iridium-mail.exe has an icon group resource (RT_GROUP_ICON). Explorer, the taskbar and pinned shortcuts
      use it; build.rs embeds it when a resource compiler is found.
   2. The MSI's Icon table names its icon with an .ico extension. Windows Installer extracts shortcut icons
      under that name and reads their format from the extension; without it the Start menu shows a blank icon.
@@ -17,7 +17,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-Add-Type -Namespace MailCraft -Name Res -MemberDefinition @"
+Add-Type -Namespace Mail -Name Res -MemberDefinition @"
 [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
 public static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
 [DllImport("kernel32.dll", SetLastError = true)]
@@ -30,16 +30,16 @@ public delegate bool EnumResNameProc(IntPtr module, IntPtr type, IntPtr name, In
 $failed = $false
 $path = (Resolve-Path $Exe).Path
 # LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE: read resources without running the file.
-$module = [MailCraft.Res]::LoadLibraryEx($path, [IntPtr]::Zero, 0x22)
+$module = [Mail.Res]::LoadLibraryEx($path, [IntPtr]::Zero, 0x22)
 if ($module -eq [IntPtr]::Zero) {
     Write-Host "check-icon: cannot open $path"
     exit 1
 }
 $script:groups = 0
-$callback = [MailCraft.Res+EnumResNameProc] { param($m, $t, $n, $p) $script:groups++; return $true }
+$callback = [Mail.Res+EnumResNameProc] { param($m, $t, $n, $p) $script:groups++; return $true }
 # RT_GROUP_ICON = 14.
-[void][MailCraft.Res]::EnumResourceNames($module, [IntPtr]14, $callback, [IntPtr]::Zero)
-[void][MailCraft.Res]::FreeLibrary($module)
+[void][Mail.Res]::EnumResourceNames($module, [IntPtr]14, $callback, [IntPtr]::Zero)
+[void][Mail.Res]::FreeLibrary($module)
 if ($script:groups -lt 1) {
     Write-Host "check-icon: $path has no icon resource (was a resource compiler found by build.rs?)"
     $failed = $true

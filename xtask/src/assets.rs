@@ -1,6 +1,6 @@
 //! `cargo xtask assets`: every file under `assets/` has a row in ATTRIBUTION.md, icon SVGs are well-formed
 //! and self-contained (no external references, no embedded images or scripts), and the generated app icon
-//! files exist next to `assets/app-icon/mailcraft.svg`.
+//! files exist next to `assets/app-icon/iridium-mail.svg`.
 
 use std::path::Path;
 
@@ -284,8 +284,8 @@ mod tests {
         assert!(!glob_match("assets/icons/*.svg", "assets/icons/README.md"));
         assert!(glob_match("assets/**", "assets/a/b/c.png"));
         assert!(glob_match(
-            "assets/app-icon/hicolor/**/mailcraft.png",
-            "assets/app-icon/hicolor/16x16/apps/mailcraft.png"
+            "assets/app-icon/hicolor/**/iridium-mail.png",
+            "assets/app-icon/hicolor/16x16/apps/iridium-mail.png"
         ));
         assert!(glob_match("assets/fonts/Inter-?egular.ttf", "assets/fonts/Inter-Regular.ttf"));
         assert!(glob_match("a", "a"));

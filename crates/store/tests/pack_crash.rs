@@ -12,11 +12,11 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-use mailcraft_model::{FolderId, ItemId, MailItem};
-use mailcraft_store::packs::{self, pack_path};
-use mailcraft_store::{BodyStore, Db, Op, SqlStore};
+use iridium_mail_model::{FolderId, ItemId, MailItem};
+use iridium_mail_store::packs::{self, pack_path};
+use iridium_mail_store::{BodyStore, Db, Op, SqlStore};
 
-const CHILD_ENV: &str = "MAILCRAFT_PACK_CRASH_DIR";
+const CHILD_ENV: &str = "IRIDIUM_MAIL_PACK_CRASH_DIR";
 const PROGRESS: &str = "progress.txt";
 const PER_ROUND: u64 = 25;
 /// Packs roll over this small in the child, so most batches cross into a new pack (and some kills land
@@ -98,7 +98,7 @@ fn verify(dir: &Path) -> (usize, usize) {
             let m = mb.mail.get(ItemId(r * 100 + j + 1)).unwrap_or_else(|| panic!("round {r} item {j}"));
             assert_eq!(bodies.source(m.blob.as_ref().unwrap()).unwrap(), source(r, j));
         }
-        assert!(bodies.has_source(&mailcraft_store::BlobKey::for_data(&source(r, 99)).to_string()));
+        assert!(bodies.has_source(&iridium_mail_store::BlobKey::for_data(&source(r, 99)).to_string()));
     }
     // Every row of every round, finished or not, names content that is there and intact.
     for m in mb.mail.items() {
@@ -110,7 +110,7 @@ fn verify(dir: &Path) -> (usize, usize) {
     // Counts agree with the rows.
     for f in 1..=3 {
         assert_eq!(
-            mailcraft_store::MailRepo::counts(&mailcraft_store::SqlRepo::new(db.clone()), FolderId(f)),
+            iridium_mail_store::MailRepo::counts(&iridium_mail_store::SqlRepo::new(db.clone()), FolderId(f)),
             mb.mail.counts(FolderId(f))
         );
     }

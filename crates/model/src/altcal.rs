@@ -195,7 +195,7 @@ mod tests {
 
     /// Days since 1970-01-01 of a Gregorian date.
     fn day(y: i64, m: u8, d: u8) -> i64 {
-        mailcraft_mime::date::days_from_civil(y, m, d)
+        iridium_mail_mime::date::days_from_civil(y, m, d)
     }
 
     #[test]

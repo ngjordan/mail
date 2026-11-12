@@ -3,7 +3,7 @@
 //! press moves the keyboard focus to the next of them and Enter runs it, as menus do on the desktop.
 //!
 //! Labels mark the key with `&` ("&Copy", "Mark as Un&read"); `&&` is a literal `&`, and text that is not
-//! MailCraft's own (folder, category and quick step names) goes through [`literal`] first. The By Date menu's
+//! Mail's own (folder, category and quick step names) goes through [`literal`] first. The By Date menu's
 //! Arrange by entries take their letter with Alt ([`Access::alt`]).
 //!
 //! The letters typed in a menu reach only the innermost open menu: [`crate::keys`] leaves plain letters,
