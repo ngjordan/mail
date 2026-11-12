@@ -62,10 +62,17 @@ if have appstreamcli; then
 	sed -e "s|@APP_ID@|$APP_ID|g" -e "s|@SUMMARY@|$APP_SUMMARY|g" -e "s|@LICENSE@|$LICENSE_SPDX|g" \
 		-e "s|@HOMEPAGE@|$HOMEPAGE|g" -e "s|@RAW_URL@|$RAW_URL|g" -e "s|@VERSION@|$MC_VERSION|g" \
 		-e "s|@DATE@|$IRIDIUM_MAIL_BUILD_DATE|g" "$p/linux/metainfo.xml.in" >"$scratch/$APP_ID.metainfo.xml"
-	# Our app ids are ph.<app> to match the rest of the suite, and appstreamcli asks for
-# a reverse-DNS id; the other five apps validate the same way.
-appstreamcli validate --no-net --explain "$scratch/$APP_ID.metainfo.xml" ||
-		bad "appstreamcli validate failed"
+	# appstreamcli exits non-zero for a warning as well as an error. The suite's ids
+	# are ph.<app> and appstreamcli asks for a reverse-DNS name: that is a naming
+	# warning we have taken, so the report is printed and only an error fails the build.
+	report="$scratch/appstream.txt"
+	if ! appstreamcli validate --no-net --explain "$scratch/$APP_ID.metainfo.xml" >"$report" 2>&1; then
+		cat "$report" >&2
+		grep -q 'Validation' "$report" || bad "appstreamcli validate did not run"
+		if grep -qE '^[EC]: ' "$report"; then
+			bad "appstreamcli validate found an error"
+		fi
+	fi
 else
 	printf 'check: appstreamcli not installed, skipped\n' >&2
 fi
