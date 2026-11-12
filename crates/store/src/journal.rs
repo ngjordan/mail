@@ -46,6 +46,10 @@ const SNAPSHOT_PREFIX_V1: &str = "{\"iridium_mail_snapshot\":1,\"generation\":";
 /// profile is a mailbox, and refusing to open one because the key changed would lose
 /// the mail in it.
 const SNAPSHOT_PREFIX_LEGACY: &str = "{\"mailcraft_snapshot\":";
+/// The generation prefixes before the rename. Without them the generation of an old
+/// snapshot read as 0, and the stale-journal check never fired.
+const SNAPSHOT_PREFIX_LEGACY_V2: &str = "{\"mailcraft_snapshot\":2,\"generation\":";
+const SNAPSHOT_PREFIX_LEGACY_V1: &str = "{\"mailcraft_snapshot\":1,\"generation\":";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SnapshotFile {
@@ -196,7 +200,9 @@ pub fn peek_snapshot_generation(dir: &Path) -> Result<u64> {
 pub fn parse_generation_prefix(head: &[u8]) -> Option<u64> {
     let rest = head
         .strip_prefix(SNAPSHOT_PREFIX.as_bytes())
-        .or_else(|| head.strip_prefix(SNAPSHOT_PREFIX_V1.as_bytes()))?;
+        .or_else(|| head.strip_prefix(SNAPSHOT_PREFIX_V1.as_bytes()))
+        .or_else(|| head.strip_prefix(SNAPSHOT_PREFIX_LEGACY_V2.as_bytes()))
+        .or_else(|| head.strip_prefix(SNAPSHOT_PREFIX_LEGACY_V1.as_bytes()))?;
     let digits: Vec<u8> = rest.iter().copied().take_while(u8::is_ascii_digit).take(20).collect();
     std::str::from_utf8(&digits).ok()?.parse().ok()
 }
@@ -237,6 +243,9 @@ pub fn read_snapshot_full(dir: &Path) -> Result<SnapshotRead> {
 /// beside the database, and this one opens `store.db`.
 pub const SQLITE_MARKER_FORMAT: u32 = 3;
 const SQLITE_MARKER_PREFIX: &str = "{\"iridium_mail_snapshot\":3,";
+/// The same marker before the rename. A profile written then kept its mail in a
+/// SQLite store, and was refused as "holds both a legacy mailbox.json and a store.db".
+const SQLITE_MARKER_PREFIX_LEGACY: &str = "{\"mailcraft_snapshot\":3,";
 
 /// Writes the marker `mailbox.json` of a SQLite profile.
 pub fn write_sqlite_marker(dir: &Path) -> Result<()> {
@@ -266,7 +275,11 @@ pub fn is_sqlite_marker(dir: &Path) -> Result<bool> {
         }
         filled += n;
     }
-    Ok(head.get(..filled).unwrap_or(&[]).starts_with(SQLITE_MARKER_PREFIX.as_bytes()))
+    let head = head.get(..filled).unwrap_or(&[]);
+    // The marker before the rename is the legacy prefix: a profile written then was
+    // refused as "holds both a legacy mailbox.json and a store.db".
+    Ok(head.starts_with(SQLITE_MARKER_PREFIX.as_bytes())
+        || head.starts_with(SQLITE_MARKER_PREFIX_LEGACY.as_bytes()))
 }
 
 /// Writes a snapshot atomically.

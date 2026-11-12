@@ -216,21 +216,34 @@ fn save_on_exit(s: &mut Session) {
     }
 }
 
+/// The folder the profile used before the rename. A profile written then is still the
+/// user's profile: the folder is where their mail, drafts and rules live.
+pub const PROFILE_FOLDER_LEGACY: &str = "MailCraft";
+
 /// The profile folder: the platform's data folder, under the app's own name.
+///
+/// The folder before the rename is used when the new one does not exist, so a rename
+/// does not silently start a new, empty profile.
 pub fn default_profile() -> Option<PathBuf> {
     let env = |k: &str| std::env::var_os(k).filter(|v| !v.is_empty()).map(PathBuf::from);
-    if cfg!(target_os = "windows") {
-        return env("APPDATA")
-            .or_else(|| env("USERPROFILE").map(|h| h.join("AppData").join("Roaming")))
-            .map(|d| d.join("iridium-mail"));
+    let base = if cfg!(target_os = "windows") {
+        env("APPDATA").or_else(|| env("USERPROFILE").map(|h| h.join("AppData").join("Roaming")))?
+    } else if cfg!(target_os = "macos") {
+        env("HOME")?.join("Library").join("Application Support")
+    } else {
+        env("XDG_DATA_HOME")
+            .filter(|p| p.is_absolute())
+            .or_else(|| env("HOME").map(|h| h.join(".local").join("share")))?
+    };
+    let current = base.join("iridium-mail");
+    if current.exists() {
+        return Some(current);
     }
-    if cfg!(target_os = "macos") {
-        return env("HOME").map(|h| h.join("Library").join("Application Support").join("iridium-mail"));
+    let legacy = base.join(PROFILE_FOLDER_LEGACY);
+    if legacy.exists() {
+        return Some(legacy);
     }
-    env("XDG_DATA_HOME")
-        .filter(|p| p.is_absolute())
-        .or_else(|| env("HOME").map(|h| h.join(".local").join("share")))
-        .map(|d| d.join("iridium-mail"))
+    Some(current)
 }
 
 #[cfg(test)]

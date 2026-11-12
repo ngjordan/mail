@@ -67,6 +67,10 @@ impl RawStore for Keychain {
     }
 }
 
+/// The keychain service name before the app was renamed. Secrets stored then are read
+/// from there and moved to the current name.
+pub const LEGACY_SERVICE: &str = "MailCraft";
+
 impl Keychain {
     /// Opens the platform store for `service` and checks that it answers (a lookup of an entry that does not
     /// exist must report "no entry", not a failure).
@@ -105,8 +109,22 @@ impl Keychain {
     }
 
     /// The secret stored under `key`, `None` when there is none. A damaged chunked secret is an error.
+    ///
+    /// A secret stored before the app was renamed lives under the old service name. It is
+    /// read there and written under the current name, so an account keeps its password
+    /// instead of asking for it again.
     pub fn get(&self, key: &str) -> Result<Option<String>, String> {
-        chunked_get(self, key)
+        if let Some(secret) = chunked_get(self, key)? {
+            return Ok(Some(secret));
+        }
+        if self.service != LEGACY_SERVICE {
+            let legacy = Keychain { service: LEGACY_SERVICE.to_owned() };
+            if let Some(secret) = chunked_get(&legacy, key)? {
+                let _ = chunked_set(self, key, &secret);
+                return Ok(Some(secret));
+            }
+        }
+        Ok(None)
     }
 
     /// Stores (or replaces) the secret under `key`, split over several entries when it is long.

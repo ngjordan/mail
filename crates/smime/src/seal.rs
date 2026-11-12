@@ -25,8 +25,11 @@ use zeroize::Zeroizing;
 
 use crate::{Result, SmimeError};
 
+// The labels below are the FILE FORMAT, not branding: they derive the key and mark the
+// file. Renaming them made every password-protected file written before the rename
+// unreadable ("the password is wrong"). Keep them as they were.
 /// Encrypted in front of the data in version 1; checked when it is opened.
-const MARKER: &[u8] = b"iridium-mail-sealed-v1\n";
+const MARKER: &[u8] = b"mailcraft-sealed-v1\n";
 /// PBKDF2 rounds below this are refused when opening (a file asking for fewer is not ours or was altered).
 pub const MIN_ROUNDS: u32 = 1_000;
 /// PBKDF2 rounds above this are refused when opening: a hostile file could otherwise make every password
@@ -95,9 +98,9 @@ fn prf(key: &[u8], label: &[u8]) -> Result<[u8; 32]> {
 fn keys(password: &str, salt: &[u8; 16], rounds: u32) -> Result<Keys> {
     let master = derive(password, salt, rounds);
     Ok(Keys {
-        enc: Zeroizing::new(prf(master.as_ref(), b"iridium-mail-seal-v2 encryption key")?),
-        mac: Zeroizing::new(prf(master.as_ref(), b"iridium-mail-seal-v2 authentication key")?),
-        check: prf(master.as_ref(), b"iridium-mail-seal-v2 password check")?,
+        enc: Zeroizing::new(prf(master.as_ref(), b"mailcraft-seal-v2 encryption key")?),
+        mac: Zeroizing::new(prf(master.as_ref(), b"mailcraft-seal-v2 authentication key")?),
+        check: prf(master.as_ref(), b"mailcraft-seal-v2 password check")?,
     })
 }
 
@@ -105,7 +108,7 @@ fn keys(password: &str, salt: &[u8; 16], rounds: u32) -> Result<Keys> {
 /// count, salt and IV.
 fn header(context: &[u8], rounds: u32, salt: &[u8; 16], iv: &[u8; 16]) -> Vec<u8> {
     let mut h = Vec::with_capacity(64usize.saturating_add(context.len()));
-    h.extend_from_slice(b"iridium-mail-seal-v2\0");
+    h.extend_from_slice(b"mailcraft-seal-v2\0");
     h.extend_from_slice(&u64::try_from(context.len()).unwrap_or(u64::MAX).to_be_bytes());
     h.extend_from_slice(context);
     h.extend_from_slice(&rounds.to_be_bytes());
