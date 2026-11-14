@@ -1759,7 +1759,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "insert.screenshot is registered and takes a path, base64 data, a window title or clip:true; the engine cannot capture the screen itself, so it opens the saved-picture dialog with the reason (insert.rs:2069-2090)."
 
 [verdict."compose-link-2"]
 title = "Link"
@@ -1983,7 +1983,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "This is Outlook's Insert > Screenshot source menu: the visible windows of a desktop app, offered as screenshot sources. Mail offers a window list (screenWindows) and passes the chosen window title, but it cannot capture a screen itself, so there is no per-window capture (insert.rs:2069)."
 
 [verdict."compose-13-reminder-s"]
 title = "13 Reminder(s)"
@@ -1991,7 +1991,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "This is Outlook's Insert > Screenshot source menu: a running app's window offered as a screenshot source. Mail's window list covers windows by title only, and the engine cannot capture a screen itself (insert.rs:2069)."
 
 [verdict."compose-downloads"]
 title = "Downloads"
@@ -1999,7 +1999,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "This is Outlook's Insert > Screenshot source menu: the Downloads folder offered as a screenshot source. Mail offers Insert a Saved Screenshot for a file on disk, but not the Downloads folder as a source (insert.rs:2069)."
 
 [verdict."compose-download-microsoft-office-365-for-windows-and-mac-mi"]
 title = "Download Microsoft Office 365 for Windows and Mac \\/Microsoft 365 — Mozilla Firefox"
@@ -2007,7 +2007,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "This is Outlook's Insert > Screenshot source menu: a browser window offered as a screenshot source. Mail lists windows by title, so a browser window can be named, but the engine cannot capture a screen itself (insert.rs:2069)."
 
 [verdict."compose-screen-clipping"]
 title = "Screen Clipping"
@@ -2015,7 +2015,7 @@ verdict = "PARTIAL"
 level = "read"
 evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
 commands = ["insert.screenshot"]
-note = "the engine cannot capture the screen: it inserts a picture the desktop app or the user supplies (data_base64 or path) and otherwise opens a dialog asking for a saved file"
+note = "Screen Clipping is offered: insert.screenshot with clip:true opens the region picker (compose.ribbon:547, insert.rs:2088)."
 
 [verdict."compose-gallery-of-25-items-e-g-country-vs-rock-pptx-how-do"]
 title = "(gallery of 25 items, e.g. Country vs Rock.pptx, How do media texts communicate meaning.docx, What are media texts saying.docx)"
