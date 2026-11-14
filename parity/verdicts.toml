@@ -2011,11 +2011,11 @@ note = "This is Outlook's Insert > Screenshot source menu: a browser window offe
 
 [verdict."compose-screen-clipping"]
 title = "Screen Clipping"
-verdict = "PARTIAL"
+verdict = "REAL"
 level = "read"
-evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/engine/src/cmd/insert.rs:2069"]
+evidence = ["crates/engine/src/cmd/insert.rs:4148", "crates/ui-egui/src/compose/capture.rs:18"]
 commands = ["insert.screenshot"]
-note = "Screen Clipping is offered: insert.screenshot with clip:true opens the region picker (compose.ribbon:547, insert.rs:2088)."
+note = "insert.screenshot with clip:true starts a capture whose whole-screen result opens the Screen Clipping dialog to drag the region (capture.rs:18, insert.rs:2088)."
 
 [verdict."compose-gallery-of-25-items-e-g-country-vs-rock-pptx-how-do"]
 title = "(gallery of 25 items, e.g. Country vs Rock.pptx, How do media texts communicate meaning.docx, What are media texts saying.docx)"
