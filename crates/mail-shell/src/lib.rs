@@ -15,8 +15,12 @@ use std::time::Instant;
 use iridium_mail_engine::Session;
 use iridium_mail_ui_egui::App;
 
+// Desktop only: no system clipboard, native dialogs or screen capture in a tab; their hooks stay unset.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod capture;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod clipboard;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod file_dialogs;
 pub mod installed_fonts;
 pub mod speech;
@@ -77,9 +81,12 @@ impl Shell {
         if let Some(url) = &launch.mailto {
             app.run("mail.newFromMailto", serde_json::json!({ "url": url }));
         }
+        #[cfg(not(target_arch = "wasm32"))]
         file_dialogs::install(&mut app);
+        #[cfg(not(target_arch = "wasm32"))]
         clipboard::install();
         installed_fonts::install();
+        #[cfg(not(target_arch = "wasm32"))]
         capture::install();
         speech::install();
         app.ui.control_port = launch.control_port;
@@ -185,6 +192,7 @@ fn open_session(launch: &Launch) -> Session {
         log::warn!("cannot create {}: {e}", dir.display());
     }
     match Session::open_with(&dir, launch.store.unwrap_or_else(iridium_mail_engine::StoreKind::from_env)) {
+        #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
         Ok(mut s) => {
             // File › Options › Advanced › "Enable troubleshooting logging" (read at start-up).
             match iridium_mail_engine::troubleshoot::start(&s.settings, &dir) {
@@ -194,6 +202,7 @@ fn open_session(launch: &Launch) -> Session {
             }
             // Account secrets live in the OS credential store where there is one; otherwise
             // the profile's unencrypted secrets file stays in use (Account Settings says so).
+            #[cfg(not(target_arch = "wasm32"))]
             match s.use_os_keyring() {
                 Ok(at) => log::info!("account secrets: {at}"),
                 Err(e) => log::warn!("OS keyring not used, secrets stay in the profile file: {e}"),
