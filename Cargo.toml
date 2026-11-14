@@ -52,6 +52,14 @@ unicode-width = "0.2"
 egui = { version = "0.37", features = ["monochrome_emoji_fonts"] }
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 # `clipboard` (the system clipboard in egui-winit) became optional in eframe 0.37; it was always on before.
+# `glow` is on for the native build: the app offers the OpenGL renderer and
+# `eframe::App::on_exit` takes a GL context when the feature is on. A browser
+# tab has no GL context, so the web build leaves it off and the app's on_exit
+# takes nothing (see apps/iridium-mail/src/main.rs).
+# No `glow` here: a workspace dependency's features are inherited by every
+# crate that depends on it, and the glow feature changes eframe's `on_exit`
+# signature for the whole graph. The app's own binary asks for it in its own
+# manifest, where it only affects the app.
 eframe = { version = "0.37", default-features = false, features = ["default_fonts","wayland", "x11", "accesskit", "links", "clipboard"] }
 egui_kittest = "0.37"
 # Raster decoding (MIT OR Apache-2.0): PNG, JPEG (zune-jpeg) and GIF only, for contact pictures, pasted and

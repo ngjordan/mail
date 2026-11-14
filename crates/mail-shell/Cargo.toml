@@ -15,7 +15,6 @@ iridium-mail-engine.workspace = true
 iridium-mail-ui-egui.workspace = true
 # Family names of installed fonts (the compose Font list).
 iridium-mail-fonts.workspace = true
-eframe.workspace = true
 egui.workspace = true
 log.workspace = true
 # Native open/save/folder dialogs (MIT).
@@ -24,13 +23,23 @@ serde_json.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # wgpu as a second renderer (IRIDIUM_MAIL_RENDERER=wgpu): Direct3D 12 on Windows, Vulkan or Metal elsewhere.
-eframe = { workspace = true, features = ["wgpu"] }
+# The workspace's eframe has the glow feature, because the app's own binary
+# offers the OpenGL renderer. The shell does not: a browser tab has no GL
+# context, and the feature changes eframe's on_exit signature. `wgpu` is the
+# second renderer (IRIDIUM_MAIL_RENDERER=wgpu): Direct3D 12 on Windows, Vulkan
+# or Metal elsewhere.
+eframe = { workspace = true, default-features = false, features = ["default_fonts", "wayland", "x11", "accesskit", "links", "clipboard", "wgpu"] }
 # HTML and pictures on the system clipboard (rich paste into compose).
 arboard.workspace = true
 # Encodes clipboard pictures (RGBA) as PNG for the compose editor; decodes portal screenshots.
 image.workspace = true
 
 # Screen capture (Insert › Screenshot): X11 and the desktop portal.
+# The browser build: eframe without the glow feature, because a browser tab
+# has no GL context and the feature changes eframe's on_exit signature.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+eframe = { workspace = true, default-features = false, features = ["default_fonts", "accesskit", "links", "clipboard"] }
+
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 x11rb.workspace = true
 zbus.workspace = true
