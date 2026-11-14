@@ -10,4 +10,4 @@
 
 **Evidence:** 1569 verdict(s) rest on a handler that was read; 0 rest on the command being registered only.
 
-Catalogue rows: 1698. Verdicts recorded: 1698. Registry ids: 971.
+Catalogue rows: 1698. Verdicts recorded: 1698. Registry ids: 1011.
