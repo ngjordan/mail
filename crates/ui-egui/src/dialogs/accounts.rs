@@ -2075,8 +2075,10 @@ fn page_done(ui: &mut Ui, app: &mut App, st: &mut Wizard) -> Out {
         }
     });
     if !out.keeps() && st.change.is_none() && !app.s.view.work_offline {
-        // Start the first send/receive of the new account (errors arrive in the status bar).
-        let _ = try_run(app, "sendReceive.group", json!({"name": st.address.trim()}));
+        // Start the first send/receive of the new account; a refusal shows as a toast.
+        if let Err(e) = try_run(app, "sendReceive.group", json!({"name": st.address.trim()})) {
+            app.ui.toast = Some((e, 0.0));
+        }
     }
     out
 }

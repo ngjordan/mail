@@ -81,8 +81,10 @@ fn pick_stationery(ctx: &Context, app: &mut App, d: &Dlg<'_>) -> Out {
                     None => chosen,
                 };
                 let Some(id) = pick else { return Out::Keep };
-                if st.make_default {
-                    let _ = save(app, &[("mail.compose.stationery", json!(id))]);
+                if st.make_default
+                    && let Some(e) = save(app, &[("mail.compose.stationery", json!(id))])
+                {
+                    app.ui.toast = Some((e, 0.0));
                 }
                 app.run("mail.newEmail", json!({"stationery": id}));
                 Out::Close
